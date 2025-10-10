@@ -1,10 +1,10 @@
-# Welcome to the Company-Wide Prompt Hub 🚀
+# Welcome to Claude Kit 🚀
 
 This repository is the central library for all AI prompts and agent configurations used across the organization. Its purpose is to foster collaboration, maintain high standards, and accelerate our work by sharing effective and well-tested prompts and specialized agents.
 
 ## Repository Structure
 
-The hub is organized into a plugin-based architecture to make prompts and agents easy to discover and use:
+The repository is organized into a plugin-based architecture to make prompts and agents easy to discover and use:
 
 - **`/plugins`**: Contains specialized agent configurations organized by use case:
   - **`/plugins/developer`**: Development-focused agents and prompts
