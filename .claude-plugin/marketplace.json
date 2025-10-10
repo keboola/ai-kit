@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "prompt-hub-plugins",
+  "version": "1.0.0",
+  "description": "Company-wide prompt hub plugins for Claude Code including developer tools with code review and security analysis agents",
+  "owner": {
+    "name": "Your Company Name",
+    "email": "support@yourcompany.com"
+  },
+  "plugins": [
+    {
+      "name": "developer",
+      "description": "Developer toolkit with specialized agents for code review and security analysis",
+      "version": "1.0.0",
+      "author": {
+        "name": "Your Company Name",
+        "email": "support@yourcompany.com"
+      },
+      "source": "./plugins/developer",
+      "category": "development"
+    }
+  ]
+}
