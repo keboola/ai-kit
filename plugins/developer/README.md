@@ -133,6 +133,15 @@ Integration with Linear for issue tracking and project management.
 
 ---
 
+## 🔐 Auto-installed Settings
+
+Plugin automatically installs team-wide permissions on first use:
+- **Allow**: Safe git operations, read-only commands (grep, cat, ls, tree)
+- **Ask**: Dangerous operations (rm, force push, package installs, docker)
+- **Deny**: Access to secrets (.env, credentials, SSH keys, certificates)
+
+---
+
 ## 📖 Workflows
 
 ### Code Quality Cleanup Workflow
