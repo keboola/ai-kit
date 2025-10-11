@@ -11,6 +11,10 @@ The repository is organized into a plugin-based architecture to make prompts and
     - **`/plugins/developer/agents`**: Claude Code agent configurations
       - `code-reviewer.md`: Expert code reviewer for bugs, security, quality, and project guidelines
       - `code-security.md`: Security-focused review across multiple languages with automated scanning
+      - `code-mess-detector.md`: Analyzes rapid prototyping code for quality issues and generates detailed reports
+      - `code-mess-fixer.md`: Systematically fixes issues identified by the mess detector
+    - **`/plugins/developer/commands`**: Slash commands for quick automation
+      - `create-pr.md`: AI-powered pull request creation with auto-generated descriptions
 - **`.claude-plugin`**: Configuration for Claude Code plugin integration
 - **`README.md`**: (This file) The main entry point and guide for the repository
 - **`LICENSE`**: MIT license for the repository
@@ -28,7 +32,7 @@ Expert code reviewer specializing in modern software development. Reviews code f
 
 **Model**: Sonnet | **Color**: Green
 
-#### Security Agent (`security`)
+#### Security Agent (`code-security`)
 Pragmatic application security engineer for multi-language code review. Features:
 - Cross-language security analysis (Python, Go, PHP, JavaScript, etc.)
 - Automated security scanning (bandit, gosec, semgrep, npm audit, etc.)
@@ -37,6 +41,27 @@ Pragmatic application security engineer for multi-language code review. Features
 - Tracks security posture across commits
 
 **Model**: Sonnet | **Color**: Red
+
+#### Code Mess Detector (`code-mess-detector`)
+Analyzes code written during rapid prototyping for common quality issues. Detects:
+- Inconsistent naming and poor structure
+- Missing error handling and documentation
+- Code duplication and magic numbers
+- Dead code and debug statements
+- Generates detailed JSON report with fix suggestions
+- Works in tandem with code-mess-fixer for cleanup workflow
+
+**Model**: Sonnet | **Color**: Yellow
+
+#### Code Mess Fixer (`code-mess-fixer`)
+Systematically applies fixes based on code-mess-detector reports. Features:
+- Reads detection report and prioritizes by severity
+- Applies safe, targeted fixes automatically
+- Tracks progress and updates report status
+- Skips complex changes requiring manual review
+- Perfect for cleaning up after "vibe-coding" sessions
+
+**Model**: Sonnet | **Color**: Blue
 
 ## How to Contribute
 
@@ -59,7 +84,7 @@ These agents are designed to work with Claude Code. To use them:
 
 1. **Clone or sync the repository** to your local machine
 2. **Link the agents** to your project using Claude Code's plugin system
-3. **Invoke agents** directly from Claude Code using the agent name (e.g., `/code-reviewer` or `/security`)
+3. **Invoke agents** directly from Claude Code using the agent name (e.g., `@code-reviewer` or `@code-security`)
 
 For development use cases, you can clone the entire repository or set up a sparse checkout of specific plugin directories you need.
 
