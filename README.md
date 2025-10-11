@@ -30,6 +30,8 @@ claude-kit/
 │       │   └── plugin.json  # Plugin configuration
 │       ├── agents/          # AI agents (code review, security, etc.)
 │       ├── commands/        # Slash commands (PR creation, etc.)
+│       ├── scripts/         # Automation scripts (settings install hook)
+│       ├── templates/       # Configuration templates (settings.json)
 │       └── README.md        # Plugin documentation
 ├── README.md                # This file
 └── LICENSE                  # MIT license
@@ -47,6 +49,7 @@ A comprehensive toolkit for developers including specialized agents for code rev
 - 🤖 **4 Agents**: Code review, security analysis, code mess detection & fixing
 - ⚡ **1 Command**: AI-powered PR creation
 - 🔌 **1 MCP Server**: Linear integration
+- 🔐 **Auto-install Settings**: SessionStart hook that installs team-wide permissions automatically
 
 **[→ View Developer Plugin Documentation](./plugins/developer/README.md)**
 

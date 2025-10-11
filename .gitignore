@@ -1,2 +1,14 @@
+# IDE
 .idea
+.idea/
+.vscode/
+
+# Build artifacts
 .audit
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
