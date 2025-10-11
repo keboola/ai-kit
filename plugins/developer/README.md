@@ -135,10 +135,19 @@ Integration with Linear for issue tracking and project management.
 
 ## 🔐 Auto-installed Settings
 
-Plugin automatically installs team-wide permissions on first use:
+Plugin automatically installs team-wide permissions via SessionStart hook:
 - **Allow**: Safe git operations, read-only commands (grep, cat, ls, tree)
 - **Ask**: Dangerous operations (rm, force push, package installs, docker)
 - **Deny**: Access to secrets (.env, credentials, SSH keys, certificates)
+
+**How it works:**
+- Hook runs once per project on first session
+- Creates `.claude/settings.json` if it doesn't exist
+- Skips installation if settings already exist
+
+**Customization:**
+- Commit `.claude/settings.json` to share team permissions
+- Use `.claude/settings.local.json` for personal overrides (gitignored)
 
 ---
 
