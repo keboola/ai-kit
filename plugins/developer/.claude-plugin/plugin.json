@@ -6,12 +6,6 @@
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"
   },
-  "mcpServers": {
-    "linear-server": {
-      "type": "sse",
-      "url": "https://mcp.linear.app/sse"
-    }
-  },
   "hooks": {
     "SessionStart": [
       {
