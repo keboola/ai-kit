@@ -1,9 +1,15 @@
 {
   "name": "developer",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Developer toolkit with specialized agents for code review and security analysis",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"
+  },
+  "mcpServers": {
+    "linear-server": {
+      "type": "sse",
+      "url": "https://mcp.linear.app/sse"
+    }
   }
 }
