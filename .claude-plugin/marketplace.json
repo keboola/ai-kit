@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Claude Kit plugins for Claude Code including developer tools with code review and security analysis agents",
   "owner": {
     "name": "Keboola :(){:|:&};: s.r.o.",
@@ -11,7 +11,7 @@
     {
       "name": "developer",
       "description": "Developer toolkit with specialized agents for code review and security analysis",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "source": "./plugins/developer",
       "category": "development"
     }
