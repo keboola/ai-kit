@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.1.2",
-  "description": "Claude Kit plugins for Claude Code including developer tools with code review and security analysis agents",
+  "version": "1.2.0",
+  "description": "Claude Kit plugins for Claude Code including developer tools and Keboola component development agents",
   "owner": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"
@@ -13,6 +13,13 @@
       "description": "Developer toolkit with specialized agents for code review and security analysis",
       "version": "1.1.2",
       "source": "./plugins/developer",
+      "category": "development"
+    },
+    {
+      "name": "component-developer",
+      "description": "Specialized toolkit for building Keboola Python components with best practices and patterns",
+      "version": "1.0.0",
+      "source": "./plugins/component-developer",
       "category": "development"
     }
   ]

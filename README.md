@@ -53,6 +53,22 @@ A comprehensive toolkit for developers including specialized agents for code rev
 
 **[→ View Developer Plugin Documentation](./plugins/developer/README.md)**
 
+### Component Developer Plugin
+
+**Location**: [`./plugins/component-developer`](./plugins/component-developer)
+
+A specialized toolkit for building production-ready Keboola Python components following best practices and architectural patterns.
+
+**Features:**
+- 🤖 **1 Agent**: Keboola component builder with comprehensive knowledge
+- 🏗️ **Component Architecture**: Cookiecutter template integration
+- 📋 **Configuration Schemas**: JSON Schema with UI elements
+- 📊 **CSV Processing**: Memory-efficient patterns
+- 🔄 **State Management**: Incremental data processing
+- 🚀 **CI/CD Integration**: Developer Portal and deployment workflows
+
+**[→ View Component Developer Plugin Documentation](./plugins/component-developer/README.md)**
+
 ## Development
 
 ### Validation
