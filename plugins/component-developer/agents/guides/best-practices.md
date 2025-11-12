@@ -110,6 +110,26 @@ def run(self):
     params = self.configuration.parameters  # No validation!
 ```
 
+### Output Paths Pattern
+```python
+# ✅ DO: Use correct ComponentBase attributes
+def _save_results(self, data: dict):
+    # For files (JSON, text, images, etc.)
+    output_path = self.files_out_path / "data.json"
+    with open(output_path, 'w') as f:
+        json.dump(data, f)
+
+    # For CSV tables
+    table = self.create_out_table_definition("output.csv")
+    with open(table.full_path, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+
+# ❌ DON'T: Use non-existent data_path_out
+def _save_results(self, data: dict):
+    output_path = self.data_path_out / "data.json"  # AttributeError!
+```
+
 ### State Management Pattern
 ```python
 # ✅ DO: Use state for incremental loads
@@ -165,6 +185,7 @@ Before committing code, verify:
 - [ ] CSV processing uses generators
 - [ ] Error handling uses proper exit codes
 - [ ] Configuration validated early
+- [ ] Output paths use `files_out_path` or `tables_out_path` (not `data_path_out`)
 - [ ] State management implemented (if incremental)
 - [ ] Tests written and passing
 - [ ] Documentation updated

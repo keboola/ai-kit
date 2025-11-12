@@ -172,10 +172,11 @@ After implementing any Python code:
 
 - Always check IDE warnings and fix them before committing
 - Type warnings often indicate real bugs
-- "May be static" warnings improve code clarity and testability
+- **"May be static" warnings MUST be fixed** - add `@staticmethod` decorator immediately
 - Keep `run()` method clean and readable (~20-30 lines)
 - Extract logic blocks > 10-15 lines into separate methods
 - Method names should eliminate the need for comments
+- **Use `@staticmethod` on ALL methods that don't access `self`** - this includes utility methods like `_initialize_client()`, `_extract_data()`, `_generate_suggestions()`, etc.
 
 ### When to Reference Documentation
 
