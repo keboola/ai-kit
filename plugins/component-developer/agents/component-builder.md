@@ -30,6 +30,7 @@ Follow Keboola's architectural patterns:
 
 - Use `CommonInterface` base class
 - Implement clean `run()` method as workflow orchestrator
+- **Separate API clients** into dedicated files for complex integrations (e.g., `anthropic_client.py`, `playwright_client.py`)
 - Process CSV files with generators for memory efficiency
 - Handle errors with proper exit codes (1 for user, 2 for system)
 - Implement state management for incremental processing

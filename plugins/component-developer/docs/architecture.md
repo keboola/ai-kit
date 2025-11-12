@@ -116,6 +116,236 @@ if __name__ == '__main__':
         sys.exit(2)
 ```
 
+## API Client Organization
+
+For components that integrate with external APIs or services, **separate API client logic into dedicated client files** when:
+
+1. The API integration is complex (multiple endpoints, authentication, retry logic)
+2. The client code would exceed ~100 lines
+3. The client might be reusable across multiple methods
+4. You want to isolate external service dependencies for testing
+
+### When to Create Separate Client Files
+
+**✅ DO create separate client files:**
+- Complex API integrations (Anthropic, OpenAI, Salesforce, etc.)
+- Browser automation setup (Playwright, Selenium)
+- Database connections with connection pooling
+- Services requiring authentication, retry logic, or rate limiting
+
+**❌ DON'T create separate client files:**
+- Simple HTTP requests (use `requests` directly in component.py)
+- Single-endpoint APIs with no special logic
+- When the "client" would be < 50 lines of trivial wrapper code
+
+### Example Structure
+
+```
+src/
+├── component.py           # Main component orchestration
+├── configuration.py       # Pydantic configuration
+├── anthropic_client.py    # Claude API client
+└── playwright_client.py   # Browser automation client
+```
+
+### Example: Anthropic Client
+
+**src/anthropic_client.py:**
+```python
+"""Claude AI client for web scraping tasks."""
+
+import logging
+from typing import Any
+
+import anthropic
+from anthropic.types import MessageParam
+
+
+class AnthropicClient:
+    """Wrapper for Anthropic Claude API with scraping-specific methods."""
+
+    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
+        self.client = anthropic.Anthropic(api_key=api_key)
+        self.model = model
+        logging.info(f"Initialized Anthropic client with model {model}")
+
+    def extract_data_from_html(
+        self,
+        page_title: str,
+        page_content: str,
+        extraction_prompt: str,
+    ) -> str:
+        """
+        Extract structured data from HTML using Claude AI.
+
+        Args:
+            page_title: Title of the webpage
+            page_content: HTML content (will be truncated to 10k chars)
+            extraction_prompt: User's data extraction instructions
+
+        Returns:
+            Claude's response as JSON string
+        """
+        system_prompt = """You are a web scraping expert.
+Extract requested data and return as JSON:
+{
+    "data": [{"field": "value"}, ...],
+    "metadata": {"url": "...", "timestamp": "...", "total_records": N}
+}"""
+
+        user_message: MessageParam = {
+            "role": "user",
+            "content": (
+                f"Page Title: {page_title}\n\n"
+                f"Request: {extraction_prompt}\n\n"
+                f"HTML Content:\n{page_content[:10000]}\n\n"
+                f"Extract data in JSON format."
+            ),
+        }
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[user_message],
+        )
+
+        response_text = response.content[0].text
+        logging.debug(f"Claude response: {response_text[:200]}...")
+        return response_text
+
+    def generate_prompt_improvements(
+        self, original_prompt: str, metadata: dict[str, Any]
+    ) -> str:
+        """Generate suggestions for improving extraction prompts."""
+        user_message: MessageParam = {
+            "role": "user",
+            "content": (
+                f"Analyze this prompt: {original_prompt}\n\n"
+                f"Results: {metadata}\n\n"
+                f"Provide 3-5 suggestions as JSON."
+            ),
+        }
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            messages=[user_message],
+        )
+
+        return response.content[0].text
+```
+
+**src/playwright_client.py:**
+```python
+"""Playwright browser automation client."""
+
+import logging
+from pathlib import Path
+
+from playwright.sync_api import Browser, Page, Playwright, sync_playwright
+
+
+class PlaywrightClient:
+    """Wrapper for Playwright browser automation."""
+
+    def __init__(self, headless: bool = True):
+        self.headless = headless
+        self.playwright_ctx: Playwright | None = None
+        self.browser: Browser | None = None
+        self.page: Page | None = None
+        logging.info("Initializing Playwright browser client")
+
+    def start(self):
+        """Initialize and start browser."""
+        self.playwright_ctx = sync_playwright().start()
+        self.browser = self.playwright_ctx.chromium.launch(headless=self.headless)
+        self.page = self.browser.new_page()
+        logging.info("Browser started successfully")
+
+    def navigate(self, url: str, timeout: int = 30000):
+        """Navigate to URL with timeout."""
+        if not self.page:
+            raise RuntimeError("Browser not started. Call start() first.")
+        logging.info(f"Navigating to {url}")
+        self.page.goto(url, timeout=timeout)
+
+    def get_content(self) -> tuple[str, str]:
+        """Get page title and HTML content."""
+        if not self.page:
+            raise RuntimeError("Browser not started")
+        return self.page.title(), self.page.content()
+
+    def screenshot(self, path: Path):
+        """Capture screenshot to file."""
+        if not self.page:
+            raise RuntimeError("Browser not started")
+        self.page.screenshot(path=str(path))
+        logging.info(f"Screenshot saved: {path}")
+
+    def close(self):
+        """Clean up browser resources."""
+        if self.page:
+            self.page.close()
+        if self.browser:
+            self.browser.close()
+        if self.playwright_ctx:
+            self.playwright_ctx.stop()
+        logging.info("Browser closed")
+```
+
+**Using clients in component.py:**
+```python
+from anthropic_client import AnthropicClient
+from playwright_client import PlaywrightClient
+
+class Component(ComponentBase):
+    def __init__(self):
+        super().__init__()
+        self.ai_client: AnthropicClient | None = None
+        self.browser_client: PlaywrightClient | None = None
+
+    def run(self):
+        try:
+            params = self._validate_configuration()
+
+            # Initialize clients
+            self.ai_client = AnthropicClient(params.anthropic_api_key)
+            self.browser_client = PlaywrightClient(headless=True)
+            self.browser_client.start()
+
+            # Use clients
+            self.browser_client.navigate(params.target_url, params.timeout * 1000)
+            title, content = self.browser_client.get_content()
+
+            data = self.ai_client.extract_data_from_html(title, content, params.prompt)
+            # ... process data
+
+        finally:
+            if self.browser_client:
+                self.browser_client.close()
+```
+
+### Benefits of Separate Client Files
+
+1. **Testability**: Mock clients easily in unit tests
+2. **Reusability**: Share client code across multiple component methods
+3. **Separation of Concerns**: Keep API logic separate from business logic
+4. **Maintainability**: Changes to API integration don't affect component logic
+5. **Type Safety**: Dedicated classes provide better type hints and IDE support
+
+### When Not to Separate
+
+For simple cases, keep it in component.py:
+
+```python
+# ✅ FINE - Simple API call, keep in component.py
+def _fetch_data(self, url: str) -> dict:
+    response = requests.get(url, headers={"Authorization": f"Bearer {self.api_key}"})
+    response.raise_for_status()
+    return response.json()
+```
+
 ## Configuration Schema
 
 Create robust configuration schemas with proper UI elements:
