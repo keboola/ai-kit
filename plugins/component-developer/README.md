@@ -57,6 +57,9 @@ my-component/
 
 **1. Cookiecutter Template Integration**
 - Uses official template: `cookiecutter gh:keboola/cookiecutter-python-component`
+- Automatically removes cookiecutter example files from `data/` directory
+- Creates component-specific `data/config.json` with example parameters for local testing
+- Keeps empty `data/` folder structure (not committed to git)
 - Generates proper project structure
 - Sets up CI/CD pipelines automatically
 
@@ -166,6 +169,16 @@ The agent ensures you follow Keboola's best practices:
 - Write comprehensive tests
 - Use service account credentials for CI/CD
 - Follow semantic versioning for releases
+- **Remove cookiecutter example files and create component-specific `data/config.json`**
+- **Include realistic example parameters in `data/config.json` for local testing**
+- **Trust that Keboola platform creates all data directories**
+- **Keep `run()` as orchestrator - extract logic to private methods**
+- **Use self-documenting method names**
+- **Format code with `ruff format .` before committing**
+- **Run `ruff check --fix .` to catch linting issues**
+- **Add proper type hints to all functions**
+- **Check and fix IDE type warnings**
+- **Use `@staticmethod` for methods that don't use `self`**
 
 ### ❌ DON'T:
 
@@ -178,6 +191,114 @@ The agent ensures you follow Keboola's best practices:
 - Skip state file management for incremental loads
 - Forget to handle null characters in CSV files
 - Deploy without proper testing
+- **Leave cookiecutter example files (test.csv, order1.xml, .gitkeep) in `data/` directory**
+- **Forget to create `data/config.json` with example parameters for local testing**
+- **Delete entire `data/` directory structure (keep empty folders + config.json)**
+- **Call `mkdir()` for platform-managed directories (in/, out/, tables/, files/)**
+- **Write monolithic `run()` methods with 100+ lines**
+- **Use comments to explain what code does (use method names)**
+- **Commit unformatted code (always run ruff first)**
+- **Ignore IDE type warnings (they often indicate bugs)**
+- **Use plain `dict` for typed API calls**
+- **Ignore "may be static" warnings**
+
+---
+
+## 🎨 Code Quality & Formatting
+
+All components use **Ruff** for code formatting and linting:
+
+```bash
+# Format code
+ruff format .
+
+# Lint and auto-fix issues
+ruff check --fix .
+```
+
+**Why Ruff?**
+- ⚡ 10-100x faster than flake8/black/isort
+- 🔧 Combines formatter + linter in one tool
+- ✅ Enforces consistent code style
+- 🚀 Included in cookiecutter template
+- 🔄 Integrated in CI/CD pipeline
+
+The agent automatically formats code with ruff after writing or modifying Python files.
+
+## 🔍 Type Hints & Type Safety
+
+All components enforce **proper type hints** for better IDE support and early error detection:
+
+```python
+# ✅ CORRECT - With proper types
+from anthropic.types import MessageParam
+
+user_msg: MessageParam = {
+    "role": "user",
+    "content": "Extract data from this page"
+}
+```
+
+**Common IDE Warning:**
+> `Expected type 'Iterable[MessageParam]', got 'list[dict[str, str]]' instead`
+
+**Fix:** Import and use library-specific types
+```python
+from anthropic.types import MessageParam
+
+# Type annotate your variables
+message: MessageParam = {"role": "user", "content": "..."}
+messages: list[MessageParam] = [message]
+```
+
+**Type Hints Best Practices:**
+- ✅ Import types from source libraries (`anthropic.types`, `keboola.component.dao`)
+- ✅ Annotate all function parameters and return types
+- ✅ Check IDE for type warnings (red squiggles)
+- ✅ Use `Optional[T]` for nullable values
+- ✅ Use `@staticmethod` decorator when method doesn't use `self`
+- ❌ Don't ignore type warnings
+- ❌ Don't use bare `dict`/`list` without type parameters
+- ❌ Don't ignore "may be static" warnings
+
+---
+
+## 🏗️ Self-Documenting Workflow Pattern
+
+Keep your `run()` method clean and readable by extracting complex logic into well-named private methods:
+
+**❌ Bad - Monolithic:**
+```python
+def run(self):
+    # 100+ lines of mixed logic here...
+```
+
+**✅ Good - Self-Documenting:**
+```python
+def run(self):
+    """Orchestrates the component workflow."""
+    params = self._validate_and_get_configuration()
+    state = self._load_previous_state()
+
+    input_data = self._process_input_tables()
+    results = self._perform_business_logic(input_data, params, state)
+
+    self._save_output_tables(results)
+    self._update_state(results)
+```
+
+**Key Benefits:**
+- ✅ `run()` reads like a story
+- ✅ Easy to test each step independently
+- ✅ Method names replace comments
+- ✅ Clear separation of concerns
+
+**Guidelines:**
+- Extract logic blocks > 10-15 lines
+- One method = one purpose
+- Use descriptive method names
+- Add type hints to all methods
+- Mark utility methods as `@staticmethod`
 
 ---
 

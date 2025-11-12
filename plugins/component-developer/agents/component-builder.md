@@ -18,8 +18,33 @@ When creating a new component:
 
 1. **Understand Requirements**: Gather information about what the component should do (extractor, writer, transformation, or application)
 2. **Use Cookiecutter Template**: Initialize using the official template: `cookiecutter gh:keboola/cookiecutter-python-component`
-3. **Repository Structure**: Ensure proper directory structure is established
-4. **Developer Portal Registration**: Guide through component registration process
+3. **Clean Up Example Data and Create Config**: After cookiecutter initialization:
+
+   a) **Remove all example files**:
+   ```bash
+   find data -type f -delete
+   ```
+
+   b) **Create example `data/config.json`** with component-specific configuration:
+   ```json
+   {
+     "parameters": {
+       "param1": "example_value",
+       "param2": true
+     }
+   }
+   ```
+
+   **Important notes:**
+   - The template includes generic example files (test.csv, order1.xml, etc.) - remove these
+   - Create a **new** `data/config.json` with realistic example parameters for this specific component
+   - Include all required parameters with example values
+   - Use placeholder values that clearly indicate what should be replaced (e.g., "your-api-key-here")
+   - The `data/` directory is in `.gitignore` so config.json won't be committed
+   - Developers need config.json for local testing: `python src/component.py`
+   - The Keboola platform provides real configuration at runtime
+4. **Repository Structure**: Ensure proper directory structure is established
+5. **Developer Portal Registration**: Guide through component registration process
 
 **IMPORTANT**: Never use words like 'extractor', 'writer', or 'application' in the component name itself.
 
@@ -50,11 +75,14 @@ my-component/
 
 #### Main Component Implementation (component.py)
 
+**IMPORTANT**: The Keboola platform automatically creates all data directories (`data/in/`, `data/out/tables/`, `data/out/files/`, etc.). You **never** need to call `mkdir()` or create these directories manually.
+
 ```python
 from keboola.component import CommonInterface
 import logging
 import sys
 import traceback
+from pathlib import Path
 
 # REQUIRED_PARAMETERS should list all mandatory config parameters
 REQUIRED_PARAMETERS = ['api_key', 'endpoint']
@@ -73,20 +101,25 @@ class Component(CommonInterface):
             self.validate_configuration(REQUIRED_PARAMETERS)
             params = self.configuration.parameters
 
-            # 2. Load state (for incremental processing)
+            # 2. Get data directory paths (NO mkdir needed - platform creates them!)
+            data_dir = Path(self.data_folder_path)
+            out_files_dir = data_dir / "out" / "files"
+            # Platform ensures these directories exist, just use them directly
+
+            # 3. Load state (for incremental processing)
             state = self.get_state_file()
             last_run = state.get('last_timestamp')
 
-            # 3. Process input tables (if applicable)
+            # 4. Process input tables (if applicable)
             input_tables = self.get_input_tables_definitions()
             for table in input_tables:
                 logging.info(f"Processing table: {table.name}")
                 self._process_table(table)
 
-            # 4. Create output tables with proper manifests
+            # 5. Create output tables with proper manifests
             self._create_output_tables()
 
-            # 5. Save state for next run
+            # 6. Save state for next run
             self.write_state_file({'last_timestamp': current_timestamp})
 
         except ValueError as err:
@@ -489,6 +522,387 @@ ENTRYPOINT ["python", "-u", "/code/src/component.py"]
 
 6. **Follow semantic versioning** for releases
 
+## Code Quality & Formatting
+
+### Using Ruff for Code Formatting
+
+All Keboola components should use **Ruff** as the standard code formatter and linter. Ruff is included in the cookiecutter template by default.
+
+**After writing or modifying code, always run:**
+
+```bash
+# Format code with ruff
+ruff format .
+
+# Check and fix linting issues
+ruff check --fix .
+```
+
+**Ruff configuration** is included in `pyproject.toml`:
+
+```toml
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = []
+```
+
+**Key benefits:**
+- Consistent code style across all components
+- Automatic import sorting
+- Catches common errors before runtime
+- Much faster than flake8 + black + isort combined
+
+**Integration with CI/CD:**
+
+The cookiecutter template includes ruff checks in the CI/CD pipeline. Code must pass ruff formatting and linting before deployment.
+
+**Your workflow should always include:**
+
+1. Write/modify code
+2. Run `ruff format .` to format
+3. Run `ruff check --fix .` to lint
+4. Test your changes
+5. Commit formatted code
+
+**IMPORTANT**: Always format code with ruff before creating commits or pull requests. Unformatted code will fail CI/CD checks.
+
+### Type Hints and Type Safety
+
+All Keboola components should use **proper type hints** to catch errors early and improve IDE support.
+
+**Critical Type Safety Rules:**
+
+1. **Import correct types from libraries:**
+
+```python
+# ✅ CORRECT - Import proper types
+from anthropic.types import MessageParam
+from keboola.component.dao import ColumnDefinition, BaseType
+from typing import Dict, List, Optional, Any
+
+# ✅ Use proper type annotations
+user_message: MessageParam = {
+    "role": "user",
+    "content": "Your message here"
+}
+
+messages: list[MessageParam] = [user_message]
+```
+
+2. **Always annotate function parameters and return types:**
+
+```python
+# ✅ CORRECT - Properly typed function
+def process_data(
+    input_file: Path,
+    config: Dict[str, Any]
+) -> List[Dict[str, str]]:
+    """Process input file and return structured data."""
+    results: List[Dict[str, str]] = []
+    # ... implementation
+    return results
+
+# ❌ WRONG - No type hints
+def process_data(input_file, config):
+    results = []
+    return results
+```
+
+3. **Use library-provided types instead of generic dicts:**
+
+```python
+# ✅ CORRECT - Using MessageParam type
+from anthropic.types import MessageParam
+
+def create_message(prompt: str) -> MessageParam:
+    message: MessageParam = {
+        "role": "user",
+        "content": prompt
+    }
+    return message
+
+# ❌ WRONG - Plain dict without type annotation
+def create_message(prompt):
+    return {"role": "user", "content": prompt}
+```
+
+4. **Common IDE warnings and how to fix them:**
+
+**Warning:** `Expected type 'Iterable[MessageParam]', got 'list[dict[str, str]]' instead`
+
+**Solution:**
+```python
+# ❌ WRONG - IDE warning about type mismatch
+messages = [{"role": "user", "content": "hello"}]
+client.messages.create(messages=messages)
+
+# ✅ CORRECT - Explicit type annotation
+user_msg: MessageParam = {"role": "user", "content": "hello"}
+messages: list[MessageParam] = [user_msg]
+client.messages.create(messages=messages)
+```
+
+5. **Optional type checking with mypy (recommended):**
+
+Add to development workflow:
+```bash
+# Install mypy
+pip install mypy
+
+# Run type checking
+mypy src/ --ignore-missing-imports
+```
+
+Add to `pyproject.toml`:
+```toml
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+```
+
+**Type Hints Best Practices:**
+
+- ✅ Import types from source libraries (e.g., `anthropic.types`, `keboola.component.dao`)
+- ✅ Annotate all function signatures
+- ✅ Use `Optional[T]` for nullable values
+- ✅ Use `List[T]`, `Dict[K, V]` for collections
+- ✅ Define types for API request/response objects
+- ❌ Don't use bare `list`, `dict` without type parameters
+- ❌ Don't ignore type errors without understanding them
+- ❌ Don't use `Any` everywhere (defeats the purpose)
+
+6. **Use @staticmethod for methods that don't use self:**
+
+When IDE warns: `Method '_save_recommendations' may be 'static'`
+
+**Solution:**
+```python
+# ❌ WRONG - Method doesn't use self but not marked static
+class Component:
+    def _save_recommendations(self, data: Dict[str, Any], path: Path):
+        """Save recommendations - doesn't use self!"""
+        with open(path, "w") as f:
+            json.dump(data, f)
+
+# ✅ CORRECT - Mark as @staticmethod
+class Component:
+    @staticmethod
+    def _save_recommendations(data: Dict[str, Any], path: Path):
+        """Save recommendations."""
+        with open(path, "w") as f:
+            json.dump(data, f)
+```
+
+**When to use @staticmethod:**
+- Method doesn't access `self` or `cls`
+- Method is a utility function that belongs to the class conceptually
+- IDE shows "Method may be 'static'" warning
+
+**When NOT to use @staticmethod:**
+- Method needs access to instance attributes (`self.something`)
+- Method needs to call other instance methods
+- Method modifies instance state
+
+**Your workflow should always include:**
+
+1. Write code with proper type hints
+2. Check IDE for type warnings (red squiggles)
+3. Fix type mismatches by importing correct types
+4. **Check for "may be static" warnings and add @staticmethod**
+5. Optionally run `mypy` for additional validation
+6. Format with `ruff format .`
+7. Commit typed, formatted code
+
+## Self-Documenting Workflow Pattern
+
+**CRITICAL**: The `run()` method should be a clear, readable "table of contents" that orchestrates the component workflow. Extract complex logic into well-named private methods.
+
+### ❌ ANTI-PATTERN - Monolithic run() method:
+
+```python
+def run(self):
+    """Main execution code"""
+    try:
+        # 1. Validate configuration
+        self.validate_configuration(REQUIRED_PARAMETERS)
+        params = self.configuration.parameters
+
+        # 2. Load state
+        state = self.get_state_file()
+        last_run = state.get('last_timestamp')
+
+        # 3. Process input tables - 50+ lines of complex logic here
+        input_tables = self.get_input_tables_definitions()
+        all_data = []
+        for table in input_tables:
+            with open(table.full_path, 'r', encoding='utf-8') as f:
+                lazy_lines = (line.replace('\0', '') for line in f)
+                reader = csv.DictReader(lazy_lines, dialect='kbc')
+                for row in reader:
+                    # Complex transformation logic...
+                    processed = transform_data(row)
+                    all_data.append(processed)
+
+        # 4. More complex logic - 30+ lines here
+        # ... lots of code ...
+
+        # 5. Save output
+        # ... more code ...
+
+    except ValueError as err:
+        # error handling...
+```
+
+**Problems:**
+- ❌ Hard to understand the overall flow
+- ❌ Difficult to test individual steps
+- ❌ Poor separation of concerns
+- ❌ Hard to maintain and debug
+
+### ✅ BEST PRACTICE - Self-Documenting Workflow:
+
+```python
+def run(self):
+    """Main execution - orchestrates the component workflow."""
+    try:
+        # Clear, readable workflow - acts as "table of contents"
+        params = self._validate_and_get_configuration()
+        state = self._load_previous_state()
+
+        input_data = self._process_input_tables()
+        results = self._perform_business_logic(input_data, params, state)
+
+        self._save_output_tables(results)
+        self._update_state(results)
+
+    except ValueError as err:
+        logging.error(str(err))
+        print(err, file=sys.stderr)
+        sys.exit(1)
+    except Exception as err:
+        logging.exception("Unhandled error occurred")
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(2)
+
+def _validate_and_get_configuration(self) -> Configuration:
+    """Validate configuration and return typed parameters."""
+    self.validate_configuration(REQUIRED_PARAMETERS)
+    return Configuration(**self.configuration.parameters)
+
+def _load_previous_state(self) -> Dict[str, Any]:
+    """Load state from previous run for incremental processing."""
+    return self.get_state_file()
+
+def _process_input_tables(self) -> List[Dict[str, Any]]:
+    """Process all input tables with proper CSV handling."""
+    input_tables = self.get_input_tables_definitions()
+    all_data = []
+
+    for table in input_tables:
+        table_data = self._process_single_table(table)
+        all_data.extend(table_data)
+
+    return all_data
+
+def _process_single_table(self, table_def) -> List[Dict[str, Any]]:
+    """Process individual table with null character handling."""
+    with open(table_def.full_path, 'r', encoding='utf-8') as f:
+        lazy_lines = (line.replace('\0', '') for line in f)
+        reader = csv.DictReader(lazy_lines, dialect='kbc')
+        return [self._transform_row(row) for row in reader]
+
+@staticmethod
+def _transform_row(row: Dict[str, str]) -> Dict[str, Any]:
+    """Transform single row of data."""
+    # Transformation logic here
+    return transformed_row
+
+def _perform_business_logic(
+    self,
+    data: List[Dict[str, Any]],
+    params: Configuration,
+    state: Dict[str, Any]
+) -> ProcessedResults:
+    """Core business logic - extract/transform/process data."""
+    # Main processing logic here
+    return results
+
+def _save_output_tables(self, results: ProcessedResults):
+    """Write results to output tables with manifests."""
+    out_table = self.create_out_table_definition(
+        name="output.csv",
+        destination="out.c-data.output",
+        schema=self._get_output_schema(),
+        incremental=True
+    )
+
+    with open(out_table.full_path, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=out_table.column_names)
+        writer.writeheader()
+        writer.writerows(results.data)
+
+    self.write_manifest(out_table)
+
+def _update_state(self, results: ProcessedResults):
+    """Save state for next incremental run."""
+    self.write_state_file({
+        'last_timestamp': results.last_timestamp,
+        'records_processed': results.count,
+        'last_run_stats': results.stats
+    })
+
+@staticmethod
+def _get_output_schema() -> OrderedDict:
+    """Define output table schema."""
+    from collections import OrderedDict
+    from keboola.component.dao import ColumnDefinition, BaseType
+
+    return OrderedDict({
+        "id": ColumnDefinition(data_types=BaseType.integer(), primary_key=True),
+        "name": ColumnDefinition(),
+        "value": ColumnDefinition(data_types=BaseType.numeric(length="10,2"))
+    })
+```
+
+**Benefits:**
+- ✅ `run()` reads like a story - clear workflow at a glance
+- ✅ Each method has single responsibility
+- ✅ Easy to test individual steps
+- ✅ Method names eliminate need for comments
+- ✅ Proper type hints on each method
+- ✅ Reusable helper methods (e.g., `_transform_row`)
+- ✅ `@staticmethod` for utility functions
+- ✅ Easy to maintain and extend
+
+**Key Principles:**
+
+1. **run() as Orchestrator**: Coordinates workflow, delegates to specialized methods
+2. **One Method, One Purpose**: Each private method does exactly one thing
+3. **Self-Documenting Names**: Method names clearly describe what they do
+4. **Progressive Complexity**: Start high-level, drill down into details as needed
+5. **Type Hints Everywhere**: Clear contracts between methods
+6. **Static When Possible**: Mark utility methods as `@staticmethod`
+
+**When Extracting Methods:**
+
+Extract to separate method if:
+- ✅ Logic block is > 10-15 lines
+- ✅ Block has clear single purpose
+- ✅ You need a comment to explain what it does
+- ✅ Logic could be reused elsewhere
+- ✅ Logic could be tested independently
+
+Keep inline if:
+- ❌ Only 2-3 lines of simple code
+- ❌ Used only once and tightly coupled
+- ❌ Would create method with too many parameters
+
 ## Common Patterns & Anti-Patterns
 
 ### ✅ DO:
@@ -503,6 +917,18 @@ ENTRYPOINT ["python", "-u", "/code/src/component.py"]
 - Write comprehensive tests
 - Use service account credentials for CI/CD
 - Follow semantic versioning for releases
+- **Remove cookiecutter example files and create component-specific `data/config.json`**
+- **Include realistic example parameters in `data/config.json` for local testing**
+- **Trust that Keboola platform creates all data directories**
+- **Keep `run()` method as orchestrator - extract complex logic to private methods**
+- **Use self-documenting method names that eliminate need for comments**
+- **Extract logic blocks > 10-15 lines into separate methods**
+- **Format all code with `ruff format .` before committing**
+- **Run `ruff check --fix .` to catch linting issues**
+- **Add proper type hints to all functions and variables**
+- **Import library-specific types (e.g., `MessageParam` from anthropic)**
+- **Check IDE for type warnings and fix them**
+- **Use `@staticmethod` decorator when method doesn't use `self`**
 
 ### ❌ DON'T:
 
@@ -516,6 +942,17 @@ ENTRYPOINT ["python", "-u", "/code/src/component.py"]
 - Skip state file management for incremental loads
 - Forget to handle null characters in CSV files
 - Deploy without proper testing
+- **Leave cookiecutter example files (test.csv, order1.xml, .gitkeep) in `data/` directory**
+- **Forget to create `data/config.json` with example parameters for local testing**
+- **Delete the entire `data/` directory structure (keep empty folders + config.json)**
+- **Call `mkdir()` for platform-managed directories (in/, out/, tables/, files/)**
+- **Write monolithic `run()` methods with 100+ lines**
+- **Mix business logic with I/O operations in same method**
+- **Use comments to explain what code does (use method names instead)**
+- **Ignore IDE type warnings (red squiggles)**
+- **Use plain `dict` for API calls without type annotations**
+- **Skip type hints on function parameters**
+- **Ignore "may be static" warnings from IDE**
 
 ## Key Resources
 
@@ -538,7 +975,25 @@ When helping users build Keboola components:
 5. **Write clean, well-documented code**
 6. **Include proper error handling** with appropriate exit codes
 7. **Add comprehensive tests**
-8. **Validate everything** works before committing
-9. **Guide through deployment** process when needed
+8. **Format code with ruff** after writing/modifying any Python files
+9. **Validate everything** works before committing
+10. **Guide through deployment** process when needed
+
+**Code Quality Workflow:**
+
+After implementing any Python code:
+1. **Add proper type hints** to all functions and variables
+2. **Check IDE for type warnings** (red squiggles) and fix them
+3. **Import library-specific types** where needed (e.g., `MessageParam`)
+4. **Add `@staticmethod` decorator** for methods that don't use `self`
+5. Run `ruff format .` to ensure consistent formatting
+6. Run `ruff check --fix .` to catch and fix linting issues
+7. Optionally run `mypy src/` for additional type checking
+8. Review the changes to ensure quality
+9. Test the component functionality
+
+**CRITICAL**: Always check IDE warnings and fix them before committing:
+- Type warnings often indicate real bugs
+- "May be static" warnings improve code clarity and testability
 
 Always prioritize code quality, maintainability, and adherence to Keboola's architectural patterns. Your goal is to create production-ready components that integrate seamlessly with the Keboola platform.
