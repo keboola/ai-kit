@@ -10,41 +10,91 @@
 def run(self):
     """Main execution code"""
     try:
-        # 1. Validate configuration
-        self.validate_configuration(REQUIRED_PARAMETERS)
+        # Everything mixed together in 200+ lines
+        self.validate_configuration(['api_key', 'endpoint'])
         params = self.configuration.parameters
 
-        # 2. Load state
+        # Authentication logic inline
+        import requests
+        session = requests.Session()
+        auth_response = session.post(
+            f"{params['endpoint']}/auth",
+            json={'api_key': params['api_key']}
+        )
+        if auth_response.status_code != 200:
+            raise ValueError("Auth failed")
+        token = auth_response.json()['token']
+        session.headers.update({'Authorization': f'Bearer {token}'})
+
+        # Load state inline
         state = self.get_state_file()
-        last_run = state.get('last_timestamp')
+        last_id = state.get('last_id', 0)
 
-        # 3. Process input tables - 50+ lines of complex logic here
-        input_tables = self.get_input_tables_definitions()
-        all_data = []
-        for table in input_tables:
-            with open(table.full_path, 'r', encoding='utf-8') as f:
-                lazy_lines = (line.replace('\0', '') for line in f)
-                reader = csv.DictReader(lazy_lines, dialect='kbc')
-                for row in reader:
-                    # Complex transformation logic...
-                    processed = transform_data(row)
-                    all_data.append(processed)
+        # Fetch data with pagination - all inline
+        all_records = []
+        page = 1
+        while True:
+            response = session.get(
+                f"{params['endpoint']}/data",
+                params={'page': page, 'since_id': last_id}
+            )
+            if response.status_code != 200:
+                logging.error(f"Failed page {page}")
+                break
+            data = response.json()
+            if not data['records']:
+                break
 
-        # 4. More complex logic - 30+ lines here
-        # ... lots of code ...
+            # Transform data inline
+            for record in data['records']:
+                transformed = {
+                    'id': record['id'],
+                    'name': record['name'].upper(),
+                    'value': float(record['value']) * 1.2,
+                    'date': datetime.strptime(record['date'], '%Y-%m-%d').isoformat(),
+                    'category': record.get('category', 'unknown'),
+                }
+                all_records.append(transformed)
 
-        # 5. Save output
-        # ... more code ...
+            page += 1
+            if page > 100:  # Safety limit
+                break
 
-    except ValueError as err:
-        # error handling...
+        # Save output inline
+        import csv
+        out_path = f"{self.data_folder_path}/out/tables/output.csv"
+        with open(out_path, 'w', newline='') as f:
+            if all_records:
+                writer = csv.DictWriter(f, fieldnames=all_records[0].keys())
+                writer.writeheader()
+                writer.writerows(all_records)
+
+        # Write manifest inline
+        manifest = {
+            'destination': 'out.c-main.data',
+            'incremental': True,
+        }
+        import json
+        with open(f"{out_path}.manifest", 'w') as f:
+            json.dump(manifest, f)
+
+        # Update state inline
+        if all_records:
+            max_id = max(r['id'] for r in all_records)
+            self.write_state_file({'last_id': max_id})
+
+    except Exception as err:
+        logging.error(str(err))
+        sys.exit(2)
 ```
 
 **Problems:**
-- ❌ Hard to understand the overall flow
-- ❌ Difficult to test individual steps
-- ❌ Poor separation of concerns
-- ❌ Hard to maintain and debug
+- ❌ 80+ lines of mixed concerns in one method
+- ❌ Impossible to understand the workflow at a glance
+- ❌ Cannot test authentication, pagination, or transformation separately
+- ❌ Hard to debug which step failed
+- ❌ Difficult to modify one part without affecting others
+- ❌ No clear indication of what the component does
 
 ### ✅ BEST PRACTICE - Self-Documenting Workflow
 
