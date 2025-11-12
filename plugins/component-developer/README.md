@@ -413,7 +413,13 @@ plugins/component-developer/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin configuration
 ├── agents/
-│   └── component-builder.md # Component builder agent
+│   ├── component-builder.md # Component builder agent
+│   └── guides/              # Supporting documentation
+│       ├── architecture.md
+│       ├── best-practices.md
+│       ├── code-quality.md
+│       ├── initialization-guide.md
+│       └── workflow-patterns.md
 └── README.md                # This file
 ```
 
