@@ -22,7 +22,7 @@ When creating a new component:
 4. **Implement**: Follow architectural patterns and best practices
 5. **Test and Deploy**: Comprehensive testing before deployment
 
-**📖 For detailed initialization steps**, see [docs/initialization-guide.md](../docs/initialization-guide.md)
+**📖 For detailed initialization steps**, see [guides/initialization-guide.md](../guides/initialization-guide.md)
 
 ### 2. Component Architecture
 
@@ -36,7 +36,7 @@ Follow Keboola's architectural patterns:
 - Implement state management for incremental processing
 - Define explicit schemas for output tables
 
-**📖 For complete architectural patterns**, see [docs/architecture.md](../docs/architecture.md)
+**📖 For complete architectural patterns**, see [guides/architecture.md](../guides/architecture.md)
 
 ### 3. Code Quality & Formatting
 
@@ -47,7 +47,7 @@ All components must follow code quality standards:
 - **@staticmethod**: Mark utility methods that don't use `self`
 - **IDE Warnings**: Fix all type warnings and linting issues
 
-**📖 For complete code quality guidelines**, see [docs/code-quality.md](../docs/code-quality.md)
+**📖 For complete code quality guidelines**, see [guides/code-quality.md](../guides/code-quality.md)
 
 ### 4. Self-Documenting Workflow Pattern
 
@@ -74,7 +74,7 @@ def run(self):
         sys.exit(2)
 ```
 
-**📖 For complete workflow patterns and examples**, see [docs/workflow-patterns.md](../docs/workflow-patterns.md)
+**📖 For complete workflow patterns and examples**, see [guides/workflow-patterns.md](../guides/workflow-patterns.md)
 
 ### 5. Best Practices Reference
 
@@ -92,22 +92,22 @@ Quick DO/DON'T reference:
 - Ignore IDE type warnings or "may be static" warnings
 - Call `mkdir()` for platform-managed directories
 
-**📖 For complete best practices and patterns**, see [docs/best-practices.md](../docs/best-practices.md)
+**📖 For complete best practices and patterns**, see [guides/best-practices.md](../guides/best-practices.md)
 
 ## Workflow Guidelines
 
 ### For New Components
 
 1. **Initialize with cookiecutter**
-   - See [docs/initialization-guide.md](../docs/initialization-guide.md)
+   - See [guides/initialization-guide.md](../guides/initialization-guide.md)
 
 2. **Implement following patterns**
-   - Architecture: [docs/architecture.md](../docs/architecture.md)
-   - Code Quality: [docs/code-quality.md](../docs/code-quality.md)
-   - Workflow Patterns: [docs/workflow-patterns.md](../docs/workflow-patterns.md)
+   - Architecture: [guides/architecture.md](../guides/architecture.md)
+   - Code Quality: [guides/code-quality.md](../guides/code-quality.md)
+   - Workflow Patterns: [guides/workflow-patterns.md](../guides/workflow-patterns.md)
 
 3. **Verify against best practices**
-   - Check [docs/best-practices.md](../docs/best-practices.md)
+   - Check [guides/best-practices.md](../guides/best-practices.md)
 
 4. **Test and deploy**
    - Run tests, format with ruff, verify in Developer Portal
@@ -132,11 +132,11 @@ When you need additional information, reference:
 - **Cookiecutter Template**: https://github.com/keboola/cookiecutter-python-component
 
 **Internal Documentation:**
-- [Initialization Guide](../docs/initialization-guide.md) - Setting up new components
-- [Architecture Guide](../docs/architecture.md) - Component structure and patterns
-- [Code Quality](../docs/code-quality.md) - Ruff, type hints, @staticmethod
-- [Workflow Patterns](../docs/workflow-patterns.md) - Self-documenting code
-- [Best Practices](../docs/best-practices.md) - DO/DON'T reference
+- [Initialization Guide](../guides/initialization-guide.md) - Setting up new components
+- [Architecture Guide](../guides/architecture.md) - Component structure and patterns
+- [Code Quality](../guides/code-quality.md) - Ruff, type hints, @staticmethod
+- [Workflow Patterns](../guides/workflow-patterns.md) - Self-documenting code
+- [Best Practices](../guides/best-practices.md) - DO/DON'T reference
 
 ## Your Approach
 
@@ -145,7 +145,7 @@ When helping users build Keboola components:
 1. **Understand the requirement** thoroughly before writing code
 2. **Use TodoWrite** to track implementation steps
 3. **Ask questions** when requirements are unclear using AskUserQuestion
-4. **Follow documentation** - reference the docs/ guides for patterns
+4. **Follow documentation** - reference the guides/ guides for patterns
 5. **Write clean, well-documented code**
 6. **Include proper error handling** with appropriate exit codes
 7. **Add comprehensive tests**
@@ -179,11 +179,11 @@ After implementing any Python code:
 
 ### When to Reference Documentation
 
-- **Starting new component?** → [docs/initialization-guide.md](../docs/initialization-guide.md)
-- **Need architectural patterns?** → [docs/architecture.md](../docs/architecture.md)
-- **Formatting and type safety?** → [docs/code-quality.md](../docs/code-quality.md)
-- **Code organization unclear?** → [docs/workflow-patterns.md](../docs/workflow-patterns.md)
-- **Quick DO/DON'T check?** → [docs/best-practices.md](../docs/best-practices.md)
+- **Starting new component?** → [guides/initialization-guide.md](../guides/initialization-guide.md)
+- **Need architectural patterns?** → [guides/architecture.md](../guides/architecture.md)
+- **Formatting and type safety?** → [guides/code-quality.md](../guides/code-quality.md)
+- **Code organization unclear?** → [guides/workflow-patterns.md](../guides/workflow-patterns.md)
+- **Quick DO/DON'T check?** → [guides/best-practices.md](../guides/best-practices.md)
 
 **Use the Task tool** to read documentation files when you need detailed guidance on specific topics. The documentation contains comprehensive examples and explanations.
 
