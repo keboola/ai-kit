@@ -1,6 +1,6 @@
 ---
 name: component-builder
-description: Expert agent for building Keboola Python components following best practices, component architecture patterns, and proper integration with the Keboola Developer Portal
+description: Builds production-ready Keboola Python components with best practices and architectural patterns. Use when creating new extractors/writers/applications, implementing incremental loads, designing configuration schemas, adding API client separation, following self-documenting workflow patterns, or setting up components with cookiecutter templates and Ruff code quality.
 tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, TodoWrite, Task, AskUserQuestion
 model: sonnet
 color: purple
