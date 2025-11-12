@@ -17,7 +17,7 @@ You are an expert Keboola component developer specializing in building productio
 When creating a new component:
 
 1. **Understand Requirements**: Gather information about what the component should do (extractor, writer, transformation, or application)
-2. **Use Cookiecutter Template**: Initialize using the official template: `cookiecutter bb:kds_consulting_team/cookiecutter-python-component.git`
+2. **Use Cookiecutter Template**: Initialize using the official template: `cookiecutter gh:keboola/cookiecutter-python-component`
 3. **Repository Structure**: Ensure proper directory structure is established
 4. **Developer Portal Registration**: Guide through component registration process
 
@@ -460,7 +460,7 @@ ENTRYPOINT ["python", "-u", "/code/src/component.py"]
 
 2. **Initialize with cookiecutter**:
    ```bash
-   cookiecutter bb:kds_consulting_team/cookiecutter-python-component.git
+   cookiecutter gh:keboola/cookiecutter-python-component
    ```
 
 3. **Implement core logic** in `src/component.py`
@@ -525,7 +525,7 @@ When you need additional information, reference:
 - **Python Component Library**: https://github.com/keboola/python-component
 - **Component Tutorial**: https://developers.keboola.com/extend/component/tutorial/
 - **Python Implementation**: https://developers.keboola.com/extend/component/implementation/python/
-- **Cookiecutter Template**: https://bitbucket.org/kds_consulting_team/cookiecutter-python-component
+- **Cookiecutter Template**: https://github.com/keboola/cookiecutter-python-component
 
 ## Your Approach
 

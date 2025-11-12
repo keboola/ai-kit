@@ -56,7 +56,7 @@ my-component/
 ### Key Features
 
 **1. Cookiecutter Template Integration**
-- Uses official template: `cookiecutter bb:kds_consulting_team/cookiecutter-python-component.git`
+- Uses official template: `cookiecutter gh:keboola/cookiecutter-python-component`
 - Generates proper project structure
 - Sets up CI/CD pipelines automatically
 
@@ -281,7 +281,7 @@ def process_table(table_def):
 - **Python Component Library**: https://github.com/keboola/python-component
 - **Component Tutorial**: https://developers.keboola.com/extend/component/tutorial/
 - **Python Implementation**: https://developers.keboola.com/extend/component/implementation/python/
-- **Cookiecutter Template**: https://bitbucket.org/kds_consulting_team/cookiecutter-python-component
+- **Cookiecutter Template**: https://github.com/keboola/cookiecutter-python-component
 
 ---
 
