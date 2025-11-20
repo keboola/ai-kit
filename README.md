@@ -69,6 +69,23 @@ A specialized toolkit for building production-ready Keboola Python components fo
 
 **[→ View Component Developer Plugin Documentation](./plugins/component-developer/README.md)**
 
+### Data App Developer Plugin
+
+**Location**: [`./plugins/dataapp-developer`](./plugins/dataapp-developer)
+
+A specialized toolkit for building production-ready Streamlit data apps for Keboola deployment with a systematic validate → build → verify workflow.
+
+**Features:**
+- 🎯 **1 Skill**: Data app development with validate → build → verify workflow
+- 🔍 **Data Validation**: Automatic schema checking using Keboola MCP
+- 🎨 **Visual Verification**: Browser testing with Playwright MCP
+- 🏗️ **SQL-First Architecture**: Best practices for scalable data apps
+- 📚 **Comprehensive Docs**: Quickstart, workflows, templates, and checklists
+- 🛡️ **Bug Prevention**: Catches common issues before they become problems
+- 🔌 **2 MCP Servers**: Keboola (remote HTTP) and Playwright (browser automation)
+
+**[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
+
 ## Development
 
 ### Validation
