@@ -2,6 +2,152 @@
 
 A comprehensive guide for building Streamlit data apps that seamlessly transition from local development to Keboola production deployment.
 
+## 📁 Project Structure
+
+### Recommended Layout
+
+When starting a new Keboola data app project, use this structure:
+
+```
+my-keboola-dataapp/
+├── streamlit_app.py              # Main entry point
+├── pyproject.toml                # Project metadata & dependencies
+├── requirements.txt              # Pip dependencies (generated)
+├── uv.lock                       # Lock file (if using uv)
+├── .gitignore                    # Exclude secrets, cache, etc.
+├── README.md                     # Project documentation
+│
+├── .streamlit/
+│   ├── config.toml              # Streamlit configuration
+│   └── secrets.toml             # Local credentials (NEVER commit)
+│
+├── utils/
+│   ├── __init__.py
+│   ├── data_loader.py           # Data access layer
+│   ├── common.py                # Shared utilities
+│   └── visualization.py         # Reusable chart functions
+│
+├── page_modules/
+│   ├── __init__.py
+│   ├── overview.py              # Homepage/overview
+│   ├── analysis_one.py          # Feature page 1
+│   └── analysis_two.py          # Feature page 2
+│
+├── tests/                        # Test suite
+│   ├── __init__.py
+│   ├── test_data_loader.py
+│   └── test_page_modules.py
+│
+└── docs/
+    ├── QUICKSTART.md            # Getting started guide
+    ├── DEPLOYMENT.md            # Deployment instructions
+    └── DEVELOPMENT.md           # Development guide
+```
+
+### File Naming Conventions
+
+- **Snake_case for Python files**: `data_loader.py`, `analysis_page.py`
+- **Descriptive names**: `create_revenue_chart()`, not `make_plot()`
+- **Module prefixes**: `page_overview.py`, `page_analysis.py`
+
+### .gitignore Template
+
+```gitignore
+# Secrets
+.streamlit/secrets.toml
+*.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Streamlit
+.streamlit/cache/
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+## ⚙️ Configuration Management
+
+### Local Development Setup
+
+Create `.streamlit/secrets.toml`:
+
+```toml
+# Keboola Connection
+KBC_URL = "https://connection.{region}.keboola.com"
+KBC_TOKEN = "your-storage-api-token"
+KBC_WORKSPACE_ID = 12345
+KBC_DATABASE_NAME = "KBC_REGION_PROJECTID"
+
+# Optional: Application-specific settings
+CACHE_TTL = 300
+DEFAULT_DATE_RANGE = 90
+```
+
+Access in code:
+
+```python
+import streamlit as st
+
+# Keboola credentials
+kbc_url = st.secrets["KBC_URL"]
+kbc_token = st.secrets["KBC_TOKEN"]
+workspace_id = st.secrets.get("KBC_WORKSPACE_ID")
+
+# Application settings
+cache_ttl = st.secrets.get("CACHE_TTL", 300)  # Default: 5 min
+```
+
+### Production (Keboola) Setup
+
+Keboola automatically injects environment variables:
+
+```python
+import os
+import streamlit as st
+
+def get_config(key: str, default=None):
+    """
+    Get configuration from secrets (local) or environment (production).
+
+    Args:
+        key: Configuration key
+        default: Default value if not found
+
+    Returns:
+        Configuration value
+    """
+    # Try secrets first (local development)
+    if key in st.secrets:
+        return st.secrets[key]
+
+    # Fall back to environment variables (production)
+    return os.environ.get(key, default)
+
+# Usage
+kbc_url = get_config("KBC_URL")
+kbc_token = get_config("KBC_TOKEN")
+workspace_id = get_config("KBC_WORKSPACE_ID")
+```
+
 ## 🎯 Core Principles
 
 ### 1. SQL-First Architecture
