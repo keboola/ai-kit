@@ -18,17 +18,20 @@ UI options control how the component configuration is rendered in the Keboola UI
 
 | Option | Description |
 |--------|-------------|
+| `genericUI` | Enable generic UI (base flag) |
 | `genericDockerUI` | Enable generic Docker UI |
 | `genericDockerUI-authorization` | Enable authorization section |
 | `genericDockerUI-processors` | Enable processors section |
-| `genericDockerUI-runtime` | Enable runtime settings |
+| `genericDockerUI-resetState` | Enable reset state button |
 | `genericDockerUI-tableInput` | Enable table input mapping |
 | `genericDockerUI-tableOutput` | Enable table output mapping |
 | `genericDockerUI-fileInput` | Enable file input mapping |
 | `genericDockerUI-fileOutput` | Enable file output mapping |
 | `genericDockerUI-rows` | Enable row-based configuration |
+| `genericDockerUI-simpleTableInput` | Enable simple table input for writers (requires `genericDockerUI-rows`) |
 | `genericTemplatesUI` | Enable templates UI |
-| `genericVariablesUI` | Enable variables UI |
+| `genericPackagesUI` | Enable packages UI |
+| `genericCodeBlocksUI` | Enable code blocks UI |
 | `excludeRun` | Exclude from run button |
 | `excludeFromNewList` | Hide from new component list |
 | `tableInputMapping` | Legacy table input mapping |
@@ -69,25 +72,29 @@ Flags control component behavior and visibility.
 | `3rdParty` | Third-party component (not developed by Keboola) |
 | `appInfo.alpha` | Alpha version component |
 | `appInfo.beta` | Beta version component |
+| `appInfo.experimental` | Experimental version component |
 | `appInfo.fee` | Component requires additional fee |
 | `appInfo.licenseUrl` | URL to license information |
 | `appInfo.dataIn` | Component reads data |
 | `appInfo.dataOut` | Component writes data |
 | `deprecated` | Component is deprecated |
 | `excludeFromNewList` | Hide from new component list |
+| `excludeRun` | Exclude from run button |
+| `genericUI` | Enable generic UI |
 | `genericCodeBlocksUI` | Enable code blocks UI |
 | `genericDockerUI` | Enable generic Docker UI |
 | `genericDockerUI-authorization` | Enable authorization section |
 | `genericDockerUI-fileInput` | Enable file input mapping |
 | `genericDockerUI-fileOutput` | Enable file output mapping |
 | `genericDockerUI-processors` | Enable processors section |
-| `genericDockerUI-runtime` | Enable runtime settings |
+| `genericDockerUI-resetState` | Enable reset state button |
+| `genericDockerUI-rows` | Enable row-based configuration |
+| `genericDockerUI-simpleTableInput` | Enable simple table input for writers |
 | `genericDockerUI-tableInput` | Enable table input mapping |
 | `genericDockerUI-tableOutput` | Enable table output mapping |
+| `genericPackagesUI` | Enable packages UI |
 | `genericTemplatesUI` | Enable templates UI |
-| `genericVariablesUI` | Enable variables UI |
 | `hasUI` | Component has custom UI |
-| `excludeRun` | Exclude from run button |
 | `dbtCloud` | DBT Cloud integration |
 | `hubspotTemplates` | Hubspot templates support |
 
