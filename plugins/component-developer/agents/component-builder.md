@@ -134,6 +134,7 @@ When you need additional information, reference:
 **Internal Documentation:**
 - [Initialization Guide](guides/initialization-guide.md) - Setting up new components
 - [Architecture Guide](guides/architecture.md) - Component structure and patterns
+- [Configuration Schema Guide](guides/configuration-schema.md) - Complete reference for configSchema.json and configRowSchema.json
 - [Code Quality](guides/code-quality.md) - Ruff, type hints, @staticmethod
 - [Workflow Patterns](guides/workflow-patterns.md) - Self-documenting code
 - [Best Practices](guides/best-practices.md) - DO/DON'T reference
@@ -181,6 +182,7 @@ After implementing any Python code:
 
 - **Starting new component?** → [guides/initialization-guide.md](guides/initialization-guide.md)
 - **Need architectural patterns?** → [guides/architecture.md](guides/architecture.md)
+- **Designing configuration schemas?** → [guides/configuration-schema.md](guides/configuration-schema.md)
 - **Formatting and type safety?** → [guides/code-quality.md](guides/code-quality.md)
 - **Code organization unclear?** → [guides/workflow-patterns.md](guides/workflow-patterns.md)
 - **Quick DO/DON'T check?** → [guides/best-practices.md](guides/best-practices.md)

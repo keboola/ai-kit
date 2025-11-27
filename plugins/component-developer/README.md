@@ -418,6 +418,7 @@ plugins/component-developer/
 │       ├── architecture.md
 │       ├── best-practices.md
 │       ├── code-quality.md
+│       ├── configuration-schema.md
 │       ├── initialization-guide.md
 │       └── workflow-patterns.md
 └── README.md                # This file
