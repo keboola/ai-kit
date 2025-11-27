@@ -418,7 +418,11 @@ plugins/component-developer/
 │       ├── architecture.md
 │       ├── best-practices.md
 │       ├── code-quality.md
-│       ├── configuration-schema.md
+│       ├── configuration-schema-overview.md
+│       ├── configuration-schema-ui-elements.md
+│       ├── configuration-schema-sync-actions.md
+│       ├── configuration-schema-advanced.md
+│       ├── configuration-schema-examples.md
 │       ├── initialization-guide.md
 │       └── workflow-patterns.md
 └── README.md                # This file
