@@ -73,16 +73,24 @@ Create read-only fields that display values but cannot be edited:
 
 ## Creatable Dropdowns
 
-Allow users to create new options in a dropdown. There are two equivalent options:
+Allow users to create custom options in a dropdown that aren't in the predefined enum list.
 
-**Option 1: Using `tags`**
+### For Multi-Select (Arrays)
+
+Both `tags` and `creatable` options work for multi-select fields:
+
+**Option 1: Using `tags`** (multi-select only)
 ```json
 {
-  "category": {
-    "type": "string",
-    "title": "Category",
+  "categories": {
+    "type": "array",
+    "title": "Categories",
     "format": "select",
-    "enum": ["sales", "marketing", "support"],
+    "uniqueItems": true,
+    "items": {
+      "type": "string",
+      "enum": ["sales", "marketing", "support"]
+    },
     "options": {
       "tags": true
     }
@@ -90,7 +98,29 @@ Allow users to create new options in a dropdown. There are two equivalent option
 }
 ```
 
-**Option 2: Using `creatable`**
+**Option 2: Using `creatable`** (works for both single and multi-select)
+```json
+{
+  "categories": {
+    "type": "array",
+    "title": "Categories",
+    "format": "select",
+    "uniqueItems": true,
+    "items": {
+      "type": "string",
+      "enum": ["sales", "marketing", "support"]
+    },
+    "options": {
+      "creatable": true
+    }
+  }
+}
+```
+
+### For Single-Select (Strings)
+
+**Only `creatable` works** for single-select fields. The `tags` option does NOT work for strings:
+
 ```json
 {
   "category": {
@@ -105,9 +135,45 @@ Allow users to create new options in a dropdown. There are two equivalent option
 }
 ```
 
-Both options enable the same functionality - users can type custom values not in the enum list.
+### Compatibility Summary
+
+| Option | Single-Select (string) | Multi-Select (array) |
+|--------|----------------------|---------------------|
+| `tags: true` | ❌ Does not work | ✅ Works |
+| `creatable: true` | ✅ Works | ✅ Works |
+
+**Recommendation:** Use `creatable: true` for consistency, as it works for both field types.
+
+**UI Implementation Reference:** The behavior is defined in:
+- Multi-select: `react-multi-select-plugin.js` line 64: `creatable={!!this.options.tags || !!this.options.creatable}`
+- Single-select: `react-select-plugin.js` line 167: `creatable={!!this.options.creatable}`
 
 ## SSH Key Pair Block
+
+**Note:** You can use the `ssh-editor` format for a built-in SSH form:
+```json
+{
+  "ssh": {
+    "type": "object",
+    "format": "ssh-editor"
+  }
+}
+```
+
+For keys only (without full tunnel configuration):
+```json
+{
+  "ssh": {
+    "type": "object",
+    "format": "ssh-editor",
+    "options": {
+      "only_keys": true
+    }
+  }
+}
+```
+
+Or use the manual structure below for more control:
 
 Standard block for SSH key pair authentication:
 

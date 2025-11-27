@@ -146,6 +146,12 @@ Formats control how fields are rendered in the UI.
 | `test-connection` | Test connection button | `"format": "test-connection"` |
 | `sync-action` | Generic sync action button | `"format": "sync-action"` |
 
+### Object Formats
+
+| Format | Description | Example |
+|--------|-------------|---------|
+| `ssh-editor` | SSH tunnel/key pair form | `"format": "ssh-editor"` |
+
 ### Special Formats
 
 | Format | Description | Example |
@@ -246,6 +252,33 @@ Formats control how fields are rendered in the UI.
 }
 ```
 
+**SSH Editor:**
+```json
+{
+  "ssh": {
+    "type": "object",
+    "title": "SSH Configuration",
+    "format": "ssh-editor",
+    "propertyOrder": 8
+  }
+}
+```
+
+**SSH Editor (Keys Only):**
+```json
+{
+  "ssh": {
+    "type": "object",
+    "title": "SSH Keys",
+    "format": "ssh-editor",
+    "options": {
+      "only_keys": true
+    },
+    "propertyOrder": 9
+  }
+}
+```
+
 ## Options Keys
 
 Options control field behavior and appearance.
@@ -279,6 +312,11 @@ Options control field behavior and appearance.
 | `editor.mode` | string | Editor language mode |
 | `editor.theme` | string | Editor theme |
 | `editor.lineNumbers` | boolean | Show line numbers |
+| `editor.readOnly` | boolean | Make editor read-only |
+| `editor.placeholder` | string | Placeholder text for empty editor |
+| `editor.autofocus` | boolean | Auto-focus editor on load |
+| `editor.lint` | boolean | Enable linting (for JSON mode) |
+| `only_keys` | boolean | SSH form: show only keys (not full tunnel) |
 
 ### Behavior Options
 
