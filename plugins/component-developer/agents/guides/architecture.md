@@ -130,37 +130,43 @@ Use `@staticmethod` for utility methods that:
 
 ```python
 class Component(ComponentBase):
+    def __init__(self):
+        super().__init__()
+        self.client: APIClient | None = None
+
     def run(self):
-        config = self._load_configuration()  # Uses self - instance method
-        client = self._initialize_client(config)  # Doesn't use self - static!
-        data = self._fetch_data(client, config)  # Doesn't use self - static!
-        self._save_results(data)  # Uses self.files_out_path - instance method
+        config = self._load_configuration()              # Uses self.configuration → instance
+        self.client = self._initialize_client(config.api)  # Static: depends only on ApiConfig
+        raw_response = self.client.fetch_data()          # Client handles endpoints internally
+        data = self._parse_response(raw_response)        # Static: pure transformation
+        self._save_results(data)                         # Uses self.files_out_path → instance
 
     def _load_configuration(self) -> Configuration:
         """Instance method - accesses self.configuration."""
         return Configuration(**self.configuration.parameters)
 
     @staticmethod
-    def _initialize_client(config: Configuration) -> APIClient:
+    def _initialize_client(api_config: ApiConfig) -> APIClient:
         """Static method - pure function, no self needed."""
-        return APIClient(api_key=config.api_key)
+        return APIClient(
+            api_key=api_config.api_key,
+            base_url=api_config.base_url,
+            timeout=api_config.timeout,
+        )
 
     @staticmethod
-    def _fetch_data(client: APIClient, config: Configuration) -> dict:
+    def _parse_response(response: dict) -> list[dict]:
         """Static method - operates only on arguments."""
-        return client.get_data(config.endpoint)
+        return response.get('data', [])
 
-    def _save_results(self, data: dict) -> None:
+    def _save_results(self, data: list[dict]) -> None:
         """Instance method - uses self.files_out_path."""
         output_path = self.files_out_path / "results.json"
         with open(output_path, 'w') as f:
             json.dump(data, f)
-
-    @staticmethod
-    def _validate_response(response: dict) -> bool:
-        """Static method - validation logic, no state needed."""
-        return 'data' in response and response['data'] is not None
 ```
+
+> **Note:** This is a simplified example focused on the `@staticmethod` rule. The API client is stored on the instance (`self.client`) and API configuration (keys, endpoints, timeouts) is encapsulated in an `ApiConfig` model. For complete patterns on structuring API clients and configuration models, see the **API Client Organization** section below.
 
 ### Quick Rule
 
