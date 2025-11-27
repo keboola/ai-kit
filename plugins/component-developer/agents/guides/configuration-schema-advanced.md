@@ -144,6 +144,47 @@ Both `tags` and `creatable` options work for multi-select fields:
 
 **Recommendation:** Use `creatable: true` for consistency, as it works for both field types.
 
+### Validating Custom Values with Pattern
+
+When creatable is enabled, you can use the `pattern` property to validate custom values against a regex:
+
+```json
+{
+  "column_name": {
+    "type": "string",
+    "title": "Column Name",
+    "format": "select",
+    "enum": ["id", "name", "email"],
+    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+    "options": {
+      "creatable": true
+    }
+  }
+}
+```
+
+This ensures that any custom value entered by the user matches the specified regex pattern. In this example, column names must start with a letter or underscore and contain only alphanumeric characters and underscores.
+
+**Multi-select with pattern validation:**
+```json
+{
+  "tags": {
+    "type": "array",
+    "title": "Tags",
+    "format": "select",
+    "uniqueItems": true,
+    "items": {
+      "type": "string",
+      "enum": ["important", "urgent", "review"]
+    },
+    "pattern": "^[a-z][a-z0-9-]*$",
+    "options": {
+      "tags": true
+    }
+  }
+}
+```
+
 ## SSH Key Pair Block
 
 **Note:** You can use the `ssh-editor` format for a built-in SSH form:
