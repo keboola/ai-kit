@@ -144,10 +144,6 @@ Both `tags` and `creatable` options work for multi-select fields:
 
 **Recommendation:** Use `creatable: true` for consistency, as it works for both field types.
 
-**UI Implementation Reference:** The behavior is defined in:
-- Multi-select: `react-multi-select-plugin.js` line 64: `creatable={!!this.options.tags || !!this.options.creatable}`
-- Single-select: `react-select-plugin.js` line 167: `creatable={!!this.options.creatable}`
-
 ## SSH Key Pair Block
 
 **Note:** You can use the `ssh-editor` format for a built-in SSH form:
