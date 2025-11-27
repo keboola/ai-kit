@@ -28,7 +28,7 @@ UI options control how the component configuration is rendered in the Keboola UI
 | `genericDockerUI-fileInput` | Enable file input mapping |
 | `genericDockerUI-fileOutput` | Enable file output mapping |
 | `genericDockerUI-rows` | Enable row-based configuration |
-| `genericDockerUI-simpleTableInput` | Enable simple table input (requires `genericDockerUI-rows`) |
+| `genericDockerUI-simpleTableInput` | Shows table selector when creating rows, auto-fills input mapping, provides table metadata via `_metadata_.table` (requires `genericDockerUI-rows`) |
 | `genericTemplatesUI` | Enable templates UI |
 | `genericPackagesUI` | Enable packages UI |
 | `genericCodeBlocksUI` | Enable code blocks UI |
@@ -38,6 +38,43 @@ UI options control how the component configuration is rendered in the Keboola UI
 | `tableOutputMapping` | Legacy table output mapping |
 | `fileInputMapping` | Legacy file input mapping |
 | `fileOutputMapping` | Legacy file output mapping |
+
+### Using genericDockerUI-simpleTableInput
+
+When enabled, this flag provides a simplified table input workflow for row-based components.
+
+**What it does:**
+- Displays a table selector in the "Add Row" dialog
+- Automatically creates input mapping with the selected table
+- Injects table metadata into the JSON schema context via `_metadata_.table`
+
+**Available metadata in schema:**
+- `_metadata_.table.id` - Full table ID (e.g., `in.c-bucket.tablename`)
+- `_metadata_.table.name` - Display name of the table
+- `_metadata_.table.columns` - Array of column names (respects column selection from mapping)
+- `_metadata_.table.primaryKey` - Array of primary key column names
+
+**Requirements:**
+- Must be used with `genericDockerUI-rows` because the table selector appears in the row creation modal
+
+**Example - Column selector using table metadata:**
+```json
+{
+  "column": {
+    "type": "string",
+    "title": "Select Column",
+    "format": "select",
+    "enum": [],
+    "options": {
+      "async": {
+        "action": "getColumns"
+      }
+    }
+  }
+}
+```
+
+The component can then use `_metadata_.table.columns` to populate the dropdown dynamically.
 
 ### Default UI Options by Component Type
 
@@ -89,7 +126,7 @@ Flags control component behavior and visibility.
 | `genericDockerUI-processors` | Enable processors section |
 | `genericDockerUI-resetState` | Enable reset state button |
 | `genericDockerUI-rows` | Enable row-based configuration |
-| `genericDockerUI-simpleTableInput` | Enable simple table input |
+| `genericDockerUI-simpleTableInput` | Shows table selector when creating rows, auto-fills input mapping, provides table metadata via `_metadata_.table` |
 | `genericDockerUI-tableInput` | Enable table input mapping |
 | `genericDockerUI-tableOutput` | Enable table output mapping |
 | `genericPackagesUI` | Enable packages UI |
