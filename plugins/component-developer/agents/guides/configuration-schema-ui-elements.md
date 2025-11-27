@@ -28,7 +28,7 @@ UI options control how the component configuration is rendered in the Keboola UI
 | `genericDockerUI-fileInput` | Enable file input mapping |
 | `genericDockerUI-fileOutput` | Enable file output mapping |
 | `genericDockerUI-rows` | Enable row-based configuration |
-| `genericDockerUI-simpleTableInput` | Enable simple table input for writers (requires `genericDockerUI-rows`) |
+| `genericDockerUI-simpleTableInput` | Enable simple table input (requires `genericDockerUI-rows`) |
 | `genericTemplatesUI` | Enable templates UI |
 | `genericPackagesUI` | Enable packages UI |
 | `genericCodeBlocksUI` | Enable code blocks UI |
@@ -89,7 +89,7 @@ Flags control component behavior and visibility.
 | `genericDockerUI-processors` | Enable processors section |
 | `genericDockerUI-resetState` | Enable reset state button |
 | `genericDockerUI-rows` | Enable row-based configuration |
-| `genericDockerUI-simpleTableInput` | Enable simple table input for writers |
+| `genericDockerUI-simpleTableInput` | Enable simple table input |
 | `genericDockerUI-tableInput` | Enable table input mapping |
 | `genericDockerUI-tableOutput` | Enable table output mapping |
 | `genericPackagesUI` | Enable packages UI |
