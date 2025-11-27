@@ -73,8 +73,9 @@ Create read-only fields that display values but cannot be edited:
 
 ## Creatable Dropdowns
 
-Allow users to create new options in a dropdown:
+Allow users to create new options in a dropdown. There are two equivalent options:
 
+**Option 1: Using `tags`**
 ```json
 {
   "category": {
@@ -88,6 +89,23 @@ Allow users to create new options in a dropdown:
   }
 }
 ```
+
+**Option 2: Using `creatable`**
+```json
+{
+  "category": {
+    "type": "string",
+    "title": "Category",
+    "format": "select",
+    "enum": ["sales", "marketing", "support"],
+    "options": {
+      "creatable": true
+    }
+  }
+}
+```
+
+Both options enable the same functionality - users can type custom values not in the enum list.
 
 ## SSH Key Pair Block
 
