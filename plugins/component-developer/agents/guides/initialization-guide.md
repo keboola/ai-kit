@@ -92,7 +92,9 @@ my-component/
 
 ### 5. Developer Portal Registration
 
-Guide through the registration process (see [Architecture Guide](architecture.md#developer-portal-registration) for details).
+Register the component in the Developer Portal using curl commands. See [Developer Portal Guide](developer-portal.md) for the complete API workflow.
+
+**IMPORTANT**: Always use curl commands for registration, never use a web browser.
 
 ## Important Notes
 
@@ -105,3 +107,4 @@ After initialization:
 2. Implement your component following [Code Quality Guidelines](code-quality.md)
 3. Use [Workflow Patterns](workflow-patterns.md) for clean code organization
 4. Check [Best Practices](best-practices.md) DO/DON'T lists
+5. Use [Debugging Guide](debugging.md) when troubleshooting issues
