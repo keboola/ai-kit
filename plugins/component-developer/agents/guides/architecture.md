@@ -132,11 +132,13 @@ Use `@staticmethod` for utility methods that:
 class Component(ComponentBase):
     def __init__(self):
         super().__init__()
-        self.client: APIClient | None = None
+        # Load configuration and initialize client in constructor
+        # so sync_actions and other methods can use them
+        self.config = self._load_configuration()
+        self.client = self._initialize_client(self.config.api)
 
     def run(self):
-        config = self._load_configuration()              # Uses self.configuration → instance
-        self.client = self._initialize_client(config.api)  # Static: depends only on ApiConfig
+        # Configuration and client already available via self
         raw_response = self.client.fetch_data()          # Client handles endpoints internally
         data = self._parse_response(raw_response)        # Static: pure transformation
         self._save_results(data)                         # Uses self.files_out_path → instance
@@ -165,6 +167,8 @@ class Component(ComponentBase):
         with open(output_path, 'w') as f:
             json.dump(data, f)
 ```
+
+> **IMPORTANT:** Configuration loading and client initialization MUST happen in `__init__()`, not in `run()`. This ensures that sync_actions and other methods (defined by the `action` parameter in config.json) have access to `self.config` and `self.client`.
 
 > **Note:** This is a simplified example focused on the `@staticmethod` rule. The API client is stored on the instance (`self.client`) and API configuration (keys, endpoints, timeouts) is encapsulated in an `ApiConfig` model. For complete patterns on structuring API clients and configuration models, see the **API Client Organization** section below.
 
