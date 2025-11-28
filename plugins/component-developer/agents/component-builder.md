@@ -134,6 +134,11 @@ When you need additional information, reference:
 **Internal Documentation:**
 - [Initialization Guide](guides/initialization-guide.md) - Setting up new components
 - [Architecture Guide](guides/architecture.md) - Component structure and patterns
+- [Configuration Schema Overview](guides/configuration-schema-overview.md) - Complete reference for configSchema.json and configRowSchema.json
+- [Configuration UI Elements](guides/configuration-schema-ui-elements.md) - Field formats, options, and editor modes
+- [Configuration Sync Actions](guides/configuration-schema-sync-actions.md) - Dynamic dropdowns and validation
+- [Advanced Configuration Patterns](guides/configuration-schema-advanced.md) - Confluence best practices
+- [Configuration Examples](guides/configuration-schema-examples.md) - Real production examples
 - [Code Quality](guides/code-quality.md) - Ruff, type hints, @staticmethod
 - [Workflow Patterns](guides/workflow-patterns.md) - Self-documenting code
 - [Best Practices](guides/best-practices.md) - DO/DON'T reference
@@ -181,6 +186,11 @@ After implementing any Python code:
 
 - **Starting new component?** → [guides/initialization-guide.md](guides/initialization-guide.md)
 - **Need architectural patterns?** → [guides/architecture.md](guides/architecture.md)
+- **Designing configuration schemas?** → [guides/configuration-schema-overview.md](guides/configuration-schema-overview.md)
+- **Need UI field formats?** → [guides/configuration-schema-ui-elements.md](guides/configuration-schema-ui-elements.md)
+- **Adding dynamic dropdowns?** → [guides/configuration-schema-sync-actions.md](guides/configuration-schema-sync-actions.md)
+- **Advanced schema patterns?** → [guides/configuration-schema-advanced.md](guides/configuration-schema-advanced.md)
+- **Schema examples?** → [guides/configuration-schema-examples.md](guides/configuration-schema-examples.md)
 - **Formatting and type safety?** → [guides/code-quality.md](guides/code-quality.md)
 - **Code organization unclear?** → [guides/workflow-patterns.md](guides/workflow-patterns.md)
 - **Quick DO/DON'T check?** → [guides/best-practices.md](guides/best-practices.md)
