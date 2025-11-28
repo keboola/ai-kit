@@ -398,11 +398,15 @@ def process_table(table_def):
 
 ## 🔗 Resources
 
+### Official Documentation
 - **Keboola Developer Docs**: https://developers.keboola.com/
 - **Python Component Library**: https://github.com/keboola/python-component
 - **Component Tutorial**: https://developers.keboola.com/extend/component/tutorial/
 - **Python Implementation**: https://developers.keboola.com/extend/component/implementation/python/
 - **Cookiecutter Template**: https://github.com/keboola/cookiecutter-python-component
+
+### Plugin Guides
+- **[Running and Testing Components](agents/guides/running-and-testing.md)** - Complete guide for local development, testing strategies, Docker execution, and debugging techniques
 
 ---
 
@@ -424,6 +428,7 @@ plugins/component-developer/
 │       ├── configuration-schema-advanced.md
 │       ├── configuration-schema-examples.md
 │       ├── initialization-guide.md
+│       ├── running-and-testing.md
 │       └── workflow-patterns.md
 └── README.md                # This file
 ```
