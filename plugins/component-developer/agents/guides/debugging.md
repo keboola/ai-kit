@@ -172,7 +172,7 @@ The `@component` attribute in log messages also contains the component ID and ca
 |-------------|-------------|
 | `kbc-us-east-1` | AWS US East (connection.keboola.com) |
 | `com-keboola-azure-north-europe` | Azure North Europe |
-| `cloud-keboola-groupon` | GCP dedicated stack |
+| `cloud-<customer>-<region>` | GCP dedicated stack (single tenant) |
 
 ### Log Search Queries
 
