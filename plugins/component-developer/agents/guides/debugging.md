@@ -345,13 +345,17 @@ For rapid iteration, test components locally before deployment.
 
 ### Basic Local Run
 
-```bash
-# Set data directory
-export KBC_DATADIR=./data
+Always sync dependencies before running the component locally:
 
-# Run component
-python src/component.py
+```bash
+# Sync dependencies first
+uv sync
+
+# Run component with data directory (one-liner)
+KBC_DATADIR=data uv run src/component.py
 ```
+
+This approach ensures dependencies are up-to-date and uses the project's virtual environment correctly. The one-liner format with inline environment variable is preferred as it works regardless of shell session persistence.
 
 ### With Docker
 
