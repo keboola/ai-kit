@@ -148,39 +148,196 @@ Follow this systematic approach:
 
 ## Datadog Debugging
 
-<!-- TODO: This section will be expanded with specific Datadog configuration -->
+Datadog provides centralized logging for all Keboola components across all environments. Use it to search logs across component runs, filter by component ID, job ID, or project, and analyze error patterns and trends.
 
-Datadog provides centralized logging for Keboola components. Use it to:
-- Search logs across all component runs
-- Filter by component ID, job ID, or project
-- Analyze error patterns and trends
+### Keboola Log Tags
 
-### Log Search Basics
+Keboola logs use these primary tags for filtering:
 
-Filter logs using tags:
-- `@component:<component-id>` - Filter by component (e.g., `@component:keboola.python-transformation-v2`)
-- Additional tags for job ID, project ID, and environment may be available
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `componentid` | Component identifier | `componentid:keboola.python-transformation-v2` |
+| `configid` | Configuration ID | `configid:65904349` |
+| `projectid` | Keboola project ID | `projectid:14370` |
+| `pod_name` | Job pod name (contains job ID) | `pod_name:job-150303519` |
+| `env` | Keboola stack/environment | `env:com-keboola-azure-north-europe` |
+| `service` | Service name | `service:job-queue-runner` |
+| `status` | Log level | `status:error`, `status:info` |
 
-### Common Queries
+The `@component` attribute in log messages also contains the component ID and can be used for filtering.
 
-Example queries for debugging:
-- All errors for a component: `@component:keboola.ex-my-api status:error`
-- Logs for specific job: `@job_id:<job-id>`
-- Recent failures: `@component:keboola.ex-my-api status:error` with time range "last 1 hour"
+### Common Environments (env tag)
+
+| Environment | Description |
+|-------------|-------------|
+| `kbc-us-east-1` | AWS US East (connection.keboola.com) |
+| `com-keboola-azure-north-europe` | Azure North Europe |
+| `cloud-keboola-groupon` | GCP dedicated stack |
+
+### Log Search Queries
+
+Filter logs using Datadog query syntax. Tags use the format `tag:value`, while attributes use `@attribute:value`.
+
+**Find all logs for a component:**
+```
+componentid:keboola.python-transformation-v2
+```
+
+**Find error logs for a component:**
+```
+componentid:keboola.ex-db-mssql status:error
+```
+
+**Find logs for a specific job (by pod name):**
+```
+pod_name:job-150303519
+```
+
+**Find logs for a specific project:**
+```
+projectid:14370
+```
+
+**Combine multiple filters:**
+```
+componentid:keboola.python-transformation-v2 projectid:6625 status:error
+```
+
+**Filter by environment:**
+```
+componentid:keboola.ex-db-mssql env:kbc-us-east-1
+```
+
+**Use wildcards for component families:**
+```
+componentid:keboola.ex-*
+```
 
 ### Datadog API Access
 
-For programmatic access, Datadog requires:
-- API Key (identifies organization)
-- Application Key (identifies user/application with specific permissions)
+For programmatic access, Datadog requires two authentication headers:
 
-Both keys are passed as HTTP headers:
-- `DD-API-KEY: <api-key>`
-- `DD-APPLICATION-KEY: <application-key>`
+| Header | Purpose |
+|--------|---------|
+| `DD-API-KEY` | Identifies the organization |
+| `DD-APPLICATION-KEY` | Identifies the user/application with specific permissions |
 
-API endpoint varies by region:
-- US1: `https://api.datadoghq.com`
-- EU: `https://api.datadoghq.eu`
+**API Endpoints by Region:**
+
+| Region | API Endpoint | Web UI |
+|--------|--------------|--------|
+| EU | `https://api.datadoghq.eu` | `https://app.datadoghq.eu` |
+| US1 | `https://api.datadoghq.com` | `https://app.datadoghq.com` |
+
+Keboola uses the EU region (`api.datadoghq.eu`).
+
+### Curl Examples
+
+**Search logs for a component (last hour):**
+```bash
+curl -s -X POST "https://api.datadoghq.eu/api/v2/logs/events/search" \
+  -H "Content-Type: application/json" \
+  -H "DD-API-KEY: ${DD_API_KEY}" \
+  -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" \
+  -d '{
+    "filter": {
+      "query": "componentid:keboola.python-transformation-v2",
+      "from": "now-1h",
+      "to": "now"
+    },
+    "page": {
+      "limit": 10
+    }
+  }'
+```
+
+**Search error logs for a specific project:**
+```bash
+curl -s -X POST "https://api.datadoghq.eu/api/v2/logs/events/search" \
+  -H "Content-Type: application/json" \
+  -H "DD-API-KEY: ${DD_API_KEY}" \
+  -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" \
+  -d '{
+    "filter": {
+      "query": "projectid:14370 status:error",
+      "from": "now-24h",
+      "to": "now"
+    },
+    "page": {
+      "limit": 50
+    }
+  }'
+```
+
+**Search logs for a specific job:**
+```bash
+curl -s -X POST "https://api.datadoghq.eu/api/v2/logs/events/search" \
+  -H "Content-Type: application/json" \
+  -H "DD-API-KEY: ${DD_API_KEY}" \
+  -H "DD-APPLICATION-KEY: ${DD_APP_KEY}" \
+  -d '{
+    "filter": {
+      "query": "pod_name:job-150303519",
+      "from": "now-24h",
+      "to": "now"
+    },
+    "page": {
+      "limit": 100
+    }
+  }'
+```
+
+### API Response Structure
+
+The Logs API returns a JSON response with this structure:
+
+```json
+{
+  "data": [
+    {
+      "id": "log-id",
+      "type": "log",
+      "attributes": {
+        "service": "job-queue-runner",
+        "host": "hostname",
+        "message": "Log message content",
+        "status": "info",
+        "timestamp": "2025-01-15T10:43:09.353Z",
+        "tags": ["componentid:keboola.python-transformation-v2", "projectid:6625", ...],
+        "attributes": {
+          "component": "keboola.python-transformation-v2",
+          "runId": "1280579774",
+          "level_name": "INFO"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "page": { "after": "cursor-for-pagination" }
+  }
+}
+```
+
+### Debugging Workflow with Datadog
+
+1. **Get the job ID** from Keboola UI or MCP server (`list_jobs` or `get_job`)
+
+2. **Search logs by job** using the pod_name tag:
+   ```
+   pod_name:job-<job-id>
+   ```
+
+3. **Filter for errors** if needed:
+   ```
+   pod_name:job-<job-id> status:error
+   ```
+
+4. **Analyze the timeline** - logs are timestamped, so you can trace the execution flow
+
+5. **Check for patterns** across multiple jobs:
+   ```
+   componentid:<component-id> status:error
+   ```
 
 ## Local Testing
 
