@@ -82,6 +82,33 @@ Systematically applies fixes based on code-mess-detector reports. Works through 
 
 ---
 
+### Martin Struzsky Reviewer
+**Command**: `@martin-reviewer`
+**Color**: 🟣 Purple
+
+Opinionated Python/Keboola component code reviewer modeled on Martin Struzsky's reviewing style. Focuses on architecture, configuration/client patterns, documentation consistency, and Pythonic best practices.
+
+**Core Focus Areas:**
+- Architecture and separation of concerns (component vs client vs config)
+- Configuration and client initialization in `__init__`, not `run()`
+- Documentation and example consistency across guides
+- Modern tooling (`uv sync`, `keboola/cookiecutter-python-component`)
+- Pythonic style with ruff/black formatting
+
+**Key Principles:**
+- Clients and configuration stored as instance attributes (`self.client`)
+- `run()` method as clean orchestrator (< 30 lines)
+- Configuration encapsulated in typed config objects
+- No contradictions between documentation and code examples
+
+**Use cases:**
+- Review Keboola Python components before PRs
+- Ensure adherence to component-developer guides
+- Check architecture patterns and initialization
+- Verify documentation consistency
+
+---
+
 ## ⚡ Slash Commands
 
 ### Create PR
@@ -267,7 +294,8 @@ plugins/developer/
 │   ├── code-reviewer.md
 │   ├── code-security.md
 │   ├── code-mess-detector.md
-│   └── code-mess-fixer.md
+│   ├── code-mess-fixer.md
+│   └── martin-reviewer.md   # Martin Struzsky style reviewer
 ├── commands/
 │   └── create-pr.md         # Slash command for PR creation
 └── README.md                # This file
@@ -306,6 +334,7 @@ The Linear MCP is pre-configured in `plugin.json`:
 - **code-security**: Before deployments, security audits, dependency updates
 - **code-mess-detector**: After prototyping, before code review
 - **code-mess-fixer**: After running detector, for automated cleanup
+- **martin-reviewer**: Keboola Python components, architecture reviews, documentation consistency checks
 
 ---
 
