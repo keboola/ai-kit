@@ -86,6 +86,35 @@ Thorough Soustruh-style review of Keboola Python component code, focusing on arc
 
 ---
 
+### Soustruh Fix
+**Command**: `/soustruh-fix [--per-todo | --per-severity] [paths]`
+
+Apply fixes from a Soustruh review incrementally with proper commits. Designed to work after `/soustruh-review`.
+
+**Modes:**
+- **Per-severity (default)**: One commit per category (blocking, important, nits)
+- **Per-TODO (`--per-todo`)**: One commit per individual fix (Soustruh's preferred style)
+
+**Features:**
+- Re-runs review logic for fresh line numbers
+- Processes fixes in order: blocking first, then important, then nits
+- Only touches TODO-related code (no opportunistic cleanups)
+- Never auto-pushes (lets you inspect commits first)
+
+**Usage:**
+```bash
+# Apply fixes grouped by severity (default)
+/soustruh-fix
+
+# Apply fixes one commit per TODO
+/soustruh-fix --per-todo
+
+# Apply fixes to specific paths
+/soustruh-fix --per-todo src/
+```
+
+---
+
 ## 📖 Core Capabilities
 
 ### Component Architecture
@@ -483,7 +512,8 @@ plugins/component-developer/
 │       ├── initialization-guide.md
 │       └── workflow-patterns.md
 ├── commands/
-│   └── soustruh-review.md   # Soustruh-style review command
+│   ├── soustruh-review.md   # Soustruh-style review command
+│   └── soustruh-fix.md      # Apply fixes incrementally with commits
 └── README.md                # This file
 ```
 
