@@ -30,11 +30,11 @@ Expert agent for building Keboola Python components with comprehensive knowledge
 
 ---
 
-### Martin Struzsky Reviewer
-**Command**: `@martin-reviewer`
+### Soustruh Reviewer
+**Command**: `@soustruh-reviewer`
 **Color**: 🟣 Purple
 
-Opinionated Python/Keboola component code reviewer modeled on Martin Struzsky's reviewing style. Trained on 521 review comments across 141 PRs in the Keboola organization.
+Opinionated Python/Keboola component code reviewer modeled on Soustruh's (Martin Struzsky) reviewing style. Trained on 521 review comments across 141 PRs in the Keboola organization.
 
 **Core Focus Areas:**
 - Architecture and separation of concerns (component vs client vs config)
@@ -61,27 +61,27 @@ Opinionated Python/Keboola component code reviewer modeled on Martin Struzsky's 
 
 ## ⚡ Slash Commands
 
-### Martin Review
-**Command**: `/martin-review [paths-or-scope]`
+### Soustruh Review
+**Command**: `/soustruh-review [paths-or-scope]`
 
-Thorough Martin Struzsky-style review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices.
+Thorough Soustruh-style review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices.
 
 **Features:**
 - Reviews current diff or specified paths
-- Applies Martin's opinionated rules (architecture, typing, safety)
-- Produces structured review grouped by blocking / important / nits
-- Uses Martin's characteristic tone: direct but kind
+- Applies Soustruh's opinionated rules (architecture, typing, safety)
+- Produces specific TODO list with line numbers, patterns, and fixes
+- Uses Soustruh's characteristic tone: direct but kind
 
 **Usage:**
 ```bash
 # Review unstaged changes (default)
-/martin-review
+/soustruh-review
 
 # Review specific files
-/martin-review src/component.py src/client.py
+/soustruh-review src/component.py src/client.py
 
 # Review all files in a directory
-/martin-review src/
+/soustruh-review src/
 ```
 
 ---
@@ -470,7 +470,7 @@ plugins/component-developer/
 │   └── plugin.json          # Plugin configuration
 ├── agents/
 │   ├── component-builder.md # Component builder agent
-│   ├── martin-reviewer.md   # Martin Struzsky style reviewer
+│   ├── soustruh-reviewer.md # Soustruh (Martin Struzsky) style reviewer
 │   └── guides/              # Supporting documentation
 │       ├── architecture.md
 │       ├── best-practices.md
@@ -483,7 +483,7 @@ plugins/component-developer/
 │       ├── initialization-guide.md
 │       └── workflow-patterns.md
 ├── commands/
-│   └── martin-review.md     # Martin-style review command
+│   └── soustruh-review.md   # Soustruh-style review command
 └── README.md                # This file
 ```
 

@@ -1,36 +1,36 @@
 ---
-description: Thorough Martin Struzsky-style review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices
+description: Thorough Soustruh-style review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices
 allowed-tools: Read, Glob, Grep, Bash
 argument-hint: [paths-or-scope]
 ---
 
-# Martin Struzsky Component Review
+# Soustruh Component Review
 
-Perform a thorough, opinionated code review in the style of Martin Struzsky ("soustruh"), focusing on Keboola Python component architecture and best practices.
+Perform a thorough, opinionated code review in the style of Soustruh (Martin Struzsky), focusing on Keboola Python component architecture and best practices.
 
 ## What This Command Does
 
 1. **Reviews the current diff or specified paths** for Keboola Python component code
-2. **Applies Martin's opinionated rules** from the martin-reviewer agent:
+2. **Applies Soustruh's opinionated rules** from the soustruh-reviewer agent:
    - Architecture first: separation of concerns (component vs client vs config)
    - Config/client initialization in `__init__`, not `run()`
    - Modern typing (built-in generics, no deprecated `typing.List`/`Dict`/`Optional`)
    - Safety and robustness (edge cases, pagination guards)
    - Repository hygiene (dependencies, stray files)
-3. **Produces a structured review** grouped by blocking / important / nits
-4. **Uses Martin's characteristic tone**: direct but kind, giving authors agency
+3. **Produces a specific TODO list** with line numbers, patterns, and concrete fixes
+4. **Uses Soustruh's characteristic tone**: direct but kind, giving authors agency
 
 ## Usage
 
 ```bash
 # Review unstaged changes (default)
-/martin-review
+/soustruh-review
 
 # Review specific files or directories
-/martin-review src/component.py src/client.py
+/soustruh-review src/component.py src/client.py
 
 # Review all Python files in a directory
-/martin-review src/
+/soustruh-review src/
 ```
 
 ## Instructions
@@ -73,7 +73,7 @@ cat CLAUDE.md 2>/dev/null || cat AGENTS.md 2>/dev/null || echo "No project rules
 grep -A2 "python" pyproject.toml 2>/dev/null || echo "No pyproject.toml"
 ```
 
-### Step 4: Apply Martin's Review Principles
+### Step 4: Apply Soustruh's Review Principles
 
 Review the code against these key principles (in order of importance):
 
@@ -99,28 +99,17 @@ Review the code against these key principles (in order of importance):
 - Are there stray files that shouldn't be there?
 - Is the Python version reasonably current?
 
-### Step 5: Format the Review
+### Step 5: Format the Review as TODO List
 
-Start with a brief overall assessment using Martin's tone:
+Start with a brief overall assessment using Soustruh's tone:
 - "This is a great effort, just a couple of sections to clarify"
 - "A couple of remarks, but nothing that important"
 - "The component.py file is nice and clean"
 
-Group findings by severity:
-1. **Blocking Issues** - Must fix before merge
-2. **Important Improvements** - Strongly recommended
-3. **Nice-to-Have / Nits** - Optional improvements
-
-For each finding, provide:
-- File path and line number
-- Short description
-- Concrete suggestion in Martin's style
-
-Use Martin's characteristic phrasing:
-- "I'd personally make the client an instance variable"
-- "As for me, I'd just use..."
-- "Please consider yourself whether you find them worth implementing"
-- "Feel free to leave it as is"
+Then produce a **specific TODO list** grouped by severity. Each TODO must include:
+1. **Location** - File path and line number(s)
+2. **Pattern** - The specific code or pattern that needs to change
+3. **Fix** - Concrete guidance on what to change it to (2-3 sentences max)
 
 ## Example Output
 
@@ -131,20 +120,24 @@ The component.py file is nice and clean, with good separation of concerns. A cou
 
 ## Blocking Issues
 
-None - architecture looks solid!
+### TODO 1: Move client initialization to __init__
+**Location:** `src/component.py:45-52`
+**Pattern:** `self.client = ApiClient(...)` is created inside `run()` method.
+**Fix:** Move this initialization to `__init__` and store as `self.client`. This allows sync_actions to reuse the client without duplicating logic.
 
 ## Important Improvements
 
-**src/component.py:45** - Client initialization in run()
-I'd personally initialize the client in `__init__` and store it on `self.client`. This allows sync_actions to reuse it without duplicating logic.
-
-**src/configuration.py:12** - Deprecated typing
-Please do not use `typing.List` - use `list[str]` instead (Python 3.9+).
+### TODO 2: Use modern typing syntax
+**Location:** `src/configuration.py:12`
+**Pattern:** `from typing import List, Dict, Optional`
+**Fix:** Remove this import. Use built-in generics: `list[str]` instead of `List[str]`, `str | None` instead of `Optional[str]`.
 
 ## Nice-to-Have
 
-**src/component.py:78** - Import organization
-Consider running `ruff check --select I --fix` to organize imports.
+### TODO 3: Organize imports
+**Location:** `src/component.py:1-15`
+**Pattern:** Imports are not sorted according to ruff conventions.
+**Fix:** Run `ruff check --select I --fix src/component.py` to auto-organize imports.
 
 ---
 LGTM with the above changes!
@@ -152,4 +145,4 @@ LGTM with the above changes!
 
 ## Reference
 
-This command applies the principles from the `@martin-reviewer` agent. For the full set of review guidelines, see `agents/martin-reviewer.md`.
+This command applies the principles from the `@soustruh-reviewer` agent. For the full set of review guidelines, see `agents/soustruh-reviewer.md`.
