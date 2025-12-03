@@ -1,6 +1,6 @@
 {
   "name": "component-developer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Specialized toolkit for building Keboola Python components with best practices and patterns",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
