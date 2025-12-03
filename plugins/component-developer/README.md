@@ -30,6 +30,62 @@ Expert agent for building Keboola Python components with comprehensive knowledge
 
 ---
 
+### Martin Struzsky Reviewer
+**Command**: `@martin-reviewer`
+**Color**: 🟣 Purple
+
+Opinionated Python/Keboola component code reviewer modeled on Martin Struzsky's reviewing style. Trained on 521 review comments across 141 PRs in the Keboola organization.
+
+**Core Focus Areas:**
+- Architecture and separation of concerns (component vs client vs config)
+- Configuration and client initialization in `__init__`, not `run()`
+- Modern typing (built-in generics, no deprecated `typing.List`/`Dict`/`Optional`)
+- Config as model patterns (Pydantic BaseModel / dataclass)
+- Safety and robustness (edge cases, pagination guards)
+- Repository hygiene and dependency management
+- Documentation and example consistency
+
+**Key Principles:**
+- Clients and configuration stored as instance attributes (`self.client`)
+- `run()` method as clean orchestrator (< 30 lines)
+- Configuration encapsulated in typed config objects
+- No contradictions between documentation and code examples
+
+**Use cases:**
+- Review Keboola Python components before PRs
+- Ensure adherence to component-developer guides
+- Check architecture patterns and initialization
+- Verify documentation consistency
+
+---
+
+## ⚡ Slash Commands
+
+### Martin Review
+**Command**: `/martin-review [paths-or-scope]`
+
+Thorough Martin Struzsky-style review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices.
+
+**Features:**
+- Reviews current diff or specified paths
+- Applies Martin's opinionated rules (architecture, typing, safety)
+- Produces structured review grouped by blocking / important / nits
+- Uses Martin's characteristic tone: direct but kind
+
+**Usage:**
+```bash
+# Review unstaged changes (default)
+/martin-review
+
+# Review specific files
+/martin-review src/component.py src/client.py
+
+# Review all files in a directory
+/martin-review src/
+```
+
+---
+
 ## 📖 Core Capabilities
 
 ### Component Architecture
@@ -414,6 +470,7 @@ plugins/component-developer/
 │   └── plugin.json          # Plugin configuration
 ├── agents/
 │   ├── component-builder.md # Component builder agent
+│   ├── martin-reviewer.md   # Martin Struzsky style reviewer
 │   └── guides/              # Supporting documentation
 │       ├── architecture.md
 │       ├── best-practices.md
@@ -425,6 +482,8 @@ plugins/component-developer/
 │       ├── configuration-schema-examples.md
 │       ├── initialization-guide.md
 │       └── workflow-patterns.md
+├── commands/
+│   └── martin-review.md     # Martin-style review command
 └── README.md                # This file
 ```
 

@@ -172,7 +172,54 @@ Martin nudges people to think about edge cases and invariants.
 - Respect what the remote API gives us: "I'd just respect what the remote API gives us in the `.paging.next` field, the API knows what it is doing"
 - Don't silently change URL parsing or response handling without clear justification
 
-### 9. Repository Hygiene and Dependencies
+### 9. Reference Architecture (from Martin's Authored Code)
+
+Based on analysis of code Martin has authored (e.g., `keboola/python-http-client`), here's the typical shape of a well-structured class:
+
+```python
+from __future__ import annotations  # For Python 3.8/3.9 compatibility
+
+class ApiClient:
+    """Client for interacting with the API."""
+
+    def __init__(
+        self,
+        base_url: str,
+        api_token: str,
+        max_retries: int = 3,
+        timeout: float | None = None,
+        default_headers: dict[str, str] | None = None,
+    ):
+        """Initialize client with all configuration in constructor."""
+        self.base_url = base_url if base_url.endswith("/") else base_url + "/"
+        self._api_token = api_token
+        self.max_retries = max_retries
+        self.timeout = timeout
+        self._default_headers = default_headers or {}
+
+    def _build_url(self, endpoint: str | None = None) -> str:
+        """Private helper for URL construction."""
+        # Implementation details...
+
+    def _request(self, method: str, endpoint: str, **kwargs) -> Response:
+        """Private method handling actual HTTP calls with retries."""
+        # Implementation details...
+
+    def get(self, endpoint: str, **kwargs) -> dict:
+        """Public method - clean interface for consumers."""
+        response = self._request("GET", endpoint, **kwargs)
+        return response.json()
+```
+
+**Key patterns from Martin's code:**
+- `from __future__ import annotations` at the top for backward compatibility
+- All configuration stored as instance attributes in `__init__`
+- Modern typing syntax (`str | None`, `dict[str, str]`)
+- Private methods prefixed with `_` for internal logic
+- Public methods are thin wrappers with clean interfaces
+- Sensible defaults with `or {}` pattern for optional dicts
+
+### 10. Repository Hygiene and Dependencies
 
 **Stray Files:**
 - Flag extra config/lock files whose purpose isn't obvious (e.g., extra `pyproject.toml` or `uv.lock` in root)
@@ -319,8 +366,8 @@ When reviewing Keboola Python components, verify:
 
 ## Related Documentation
 
-- [Architecture Guide](../../../component-developer/agents/guides/architecture.md)
-- [Best Practices](../../../component-developer/agents/guides/best-practices.md)
-- [Code Quality](../../../component-developer/agents/guides/code-quality.md)
-- [Workflow Patterns](../../../component-developer/agents/guides/workflow-patterns.md)
-- [Debugging Guide](../../../component-developer/agents/guides/debugging.md)
+- [Architecture Guide](guides/architecture.md)
+- [Best Practices](guides/best-practices.md)
+- [Code Quality](guides/code-quality.md)
+- [Workflow Patterns](guides/workflow-patterns.md)
+- [Debugging Guide](guides/debugging.md)
