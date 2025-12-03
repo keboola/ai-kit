@@ -509,7 +509,10 @@ plugins/component-developer/
 │       ├── configuration-schema-sync-actions.md
 │       ├── configuration-schema-advanced.md
 │       ├── configuration-schema-examples.md
+│       ├── debugging.md
+│       ├── developer-portal.md
 │       ├── initialization-guide.md
+│       ├── testing.md
 │       └── workflow-patterns.md
 ├── commands/
 │   ├── soustruh-review.md   # Soustruh-style review command
@@ -530,6 +533,6 @@ To improve this plugin:
 
 ---
 
-**Version**: 1.0.0
+**Version**: 1.2.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
