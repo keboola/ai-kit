@@ -159,6 +159,48 @@ After all fixes are applied, provide a summary:
 - Push when ready: `git push`
 ```
 
+## Architectural Invariants (CRITICAL)
+
+When applying fixes, you MUST preserve existing good architectural patterns. The fix command should ENHANCE architecture, never regress it.
+
+### Never Remove or Downgrade These Patterns:
+
+1. **Config-as-model abstractions**
+   - If there's a dataclass or Pydantic model (e.g., `AirtableConfig`, `ClientConfig`) that groups configuration, **DO NOT delete it**
+   - Do not revert code back to scattered `self.configuration.parameters[...]` access
+   - Prefer to INCREASE usage of the config model, not reduce it
+
+2. **Client/config initialization in `__init__`**
+   - If clients (API clients, DB connections) are already initialized in `__init__` and stored on `self`, **DO NOT move that initialization back into `run()`**
+   - Do not recreate clients ad-hoc inside methods or sync actions
+
+3. **Sync action client reuse**
+   - If sync actions already use initialized clients (like `self.api`, `self.api_table`), do not revert them to recreating clients from raw parameters
+
+4. **Docstrings and architectural comments**
+   - Do not remove existing docstrings unless they are plainly incorrect
+   - Preserve comments that explain architectural decisions (e.g., why sync actions access `configuration.parameters` directly)
+   - Removing docstrings is almost NEVER the correct fix
+
+5. **Modern typing once present**
+   - If code already uses `list[T]`, `dict[K, V]`, `T | None`, do not revert to `List[T]`, `Dict[K, V]`, `Optional[T]`
+
+### Before Applying Any Fix:
+
+1. **Scan for existing patterns** - Identify if the code already uses config-as-model and `__init__`-initialized clients
+2. **Treat good patterns as invariants** - These are the target architecture to preserve
+3. **Adapt TODOs to existing architecture** - If a TODO suggests "centralize config access" and you already have a config dataclass, that means "use the dataclass MORE," not "revert to dicts"
+
+### After Each Batch of Fixes:
+
+Perform a sanity check:
+- Do I still have a single config model? (If one existed before)
+- Are clients still initialized once in `__init__`? (If they were before)
+- Did I remove any docstrings? (If so, restore them)
+- Did I reintroduce `self.configuration.parameters[...]` access where a config object was used? (If so, revert)
+
+If a proposed fix solves a TODO but reintroduces an anti-pattern, **prefer a different implementation** or skip it with a note: "This TODO conflicts with existing good architecture, leaving as-is."
+
 ## Safety Rules
 
 1. **Never auto-push** - Let the user inspect commits first
@@ -166,6 +208,7 @@ After all fixes are applied, provide a summary:
 3. **Preserve functionality** - If a fix might change behavior, ask first
 4. **Bail out on conflicts** - If fixes conflict with each other, stop and ask
 5. **Re-validate after changes** - Don't blindly apply stale line numbers
+6. **Never regress architecture** - Preserve config models, initialized clients, and docstrings
 
 ## Handling Dependencies
 
