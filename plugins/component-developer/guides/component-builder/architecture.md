@@ -116,6 +116,67 @@ if __name__ == '__main__':
         sys.exit(2)
 ```
 
+## Static Methods in Components
+
+**IMPORTANT:** Always use `@staticmethod` decorator for methods that don't access `self`.
+
+### When to Use @staticmethod
+
+Use `@staticmethod` for utility methods that:
+- Don't access instance attributes (self.something)
+- Don't call other instance methods
+- Are pure functions that could work standalone
+- Transform, validate, or parse data
+
+```python
+class Component(ComponentBase):
+    def __init__(self):
+        super().__init__()
+        # Load configuration and initialize client in constructor
+        # so sync_actions and other methods can use them
+        self.config = self._load_configuration()
+        self.client = self._initialize_client(self.config.api)
+
+    def run(self):
+        # Configuration and client already available via self
+        raw_response = self.client.fetch_data()          # Client handles endpoints internally
+        data = self._parse_response(raw_response)        # Static: pure transformation
+        self._save_results(data)                         # Uses self.files_out_path → instance
+
+    def _load_configuration(self) -> Configuration:
+        """Instance method - accesses self.configuration."""
+        return Configuration(**self.configuration.parameters)
+
+    @staticmethod
+    def _initialize_client(api_config: ApiConfig) -> APIClient:
+        """Static method - pure function, no self needed."""
+        return APIClient(
+            api_key=api_config.api_key,
+            base_url=api_config.base_url,
+            timeout=api_config.timeout,
+        )
+
+    @staticmethod
+    def _parse_response(response: dict) -> list[dict]:
+        """Static method - operates only on arguments."""
+        return response.get('data', [])
+
+    def _save_results(self, data: list[dict]) -> None:
+        """Instance method - uses self.files_out_path."""
+        output_path = self.files_out_path / "results.json"
+        with open(output_path, 'w') as f:
+            json.dump(data, f)
+```
+
+> **IMPORTANT:** Configuration loading and client initialization MUST happen in `__init__()`, not in `run()`. This ensures that sync_actions and other methods (defined by the `action` parameter in config.json) have access to `self.config` and `self.client`.
+
+> **Note:** This is a simplified example focused on the `@staticmethod` rule. The API client is stored on the instance (`self.client`) and API configuration (keys, endpoints, timeouts) is encapsulated in an `ApiConfig` model. For complete patterns on structuring API clients and configuration models, see the **API Client Organization** section below.
+
+### Quick Rule
+
+- **Uses `self.anything`?** → Instance method (no decorator)
+- **Only uses arguments?** → `@staticmethod` decorator
+
 ## API Client Organization
 
 For components that integrate with external APIs or services, **separate API client logic into dedicated client files** when:
@@ -302,23 +363,20 @@ from playwright_client import PlaywrightClient
 class Component(ComponentBase):
     def __init__(self):
         super().__init__()
-        self.ai_client: AnthropicClient | None = None
-        self.browser_client: PlaywrightClient | None = None
+        # Load configuration and initialize clients in constructor
+        # so sync_actions and other methods can use them
+        self.params = self._validate_configuration()
+        self.ai_client = AnthropicClient(self.params.anthropic_api_key)
+        self.browser_client = PlaywrightClient(headless=True)
+        self.browser_client.start()
 
     def run(self):
         try:
-            params = self._validate_configuration()
-
-            # Initialize clients
-            self.ai_client = AnthropicClient(params.anthropic_api_key)
-            self.browser_client = PlaywrightClient(headless=True)
-            self.browser_client.start()
-
-            # Use clients
-            self.browser_client.navigate(params.target_url, params.timeout * 1000)
+            # Configuration and clients already available via self
+            self.browser_client.navigate(self.params.target_url, self.params.timeout * 1000)
             title, content = self.browser_client.get_content()
 
-            data = self.ai_client.extract_data_from_html(title, content, params.prompt)
+            data = self.ai_client.extract_data_from_html(title, content, self.params.prompt)
             # ... process data
 
         finally:
