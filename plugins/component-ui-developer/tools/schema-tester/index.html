@@ -588,13 +588,65 @@
             });
         });
 
+        // Preprocess schema to handle Keboola-specific features
+        function preprocessSchema(schema) {
+            const processed = JSON.parse(JSON.stringify(schema)); // Deep clone
+
+            if (processed.properties) {
+                Object.keys(processed.properties).forEach(key => {
+                    const prop = processed.properties[key];
+
+                    // Handle button type (not standard JSON Schema)
+                    if (prop.type === 'button') {
+                        const action = prop.options?.async?.action || 'unknown';
+                        const label = prop.options?.async?.label || prop.title || 'Button';
+
+                        // Convert button to a readonly text field that shows button info
+                        processed.properties[key] = {
+                            type: 'string',
+                            title: `🔘 ${prop.title || label}`,
+                            description: `Sync Action: "${label}" → Action: ${action}\n\n(Note: Buttons trigger sync actions and cannot be executed in this tester)`,
+                            default: `[Button] ${label}`,
+                            readOnly: true,
+                            options: {
+                                inputAttributes: {
+                                    style: 'background-color: #e7f7f4; border: 2px solid #1BC98E; font-weight: 600; color: #00695C; cursor: not-allowed;'
+                                }
+                            },
+                            propertyOrder: prop.propertyOrder
+                        };
+                    }
+
+                    // Ensure multiselect arrays work properly
+                    if (prop.type === 'array' && prop.format === 'select') {
+                        // JSONEditor needs these options for multiselect
+                        if (!prop.options) prop.options = {};
+                        prop.uniqueItems = true;
+
+                        // If it has async loading, add note to description
+                        if (prop.options.async) {
+                            const originalDesc = prop.description || '';
+                            const action = prop.options.async.action;
+                            prop.description = originalDesc + `\n\n💡 Dynamic loading: ${action}`;
+                        }
+                    }
+                });
+            }
+
+            return processed;
+        }
+
         // Initialize editors with schemas
         function initializeEditors(componentSchema, rowSchema) {
+            // Preprocess schemas to handle Keboola-specific features
+            const processedComponentSchema = preprocessSchema(componentSchema);
+            const processedRowSchema = preprocessSchema(rowSchema);
+
             // Initialize Component Editor
             if (componentEditor) componentEditor.destroy();
             const componentElement = document.getElementById('component-editor');
             componentEditor = new JSONEditor(componentElement, {
-                schema: componentSchema,
+                schema: processedComponentSchema,
                 theme: 'bootstrap5',
                 iconlib: 'bootstrap',
                 disable_collapse: false,
@@ -620,7 +672,7 @@
             if (rowEditor) rowEditor.destroy();
             const rowElement = document.getElementById('row-editor');
             rowEditor = new JSONEditor(rowElement, {
-                schema: rowSchema,
+                schema: processedRowSchema,
                 theme: 'bootstrap5',
                 iconlib: 'bootstrap',
                 disable_collapse: false,
