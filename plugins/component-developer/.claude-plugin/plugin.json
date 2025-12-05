@@ -14,6 +14,10 @@
     {
       "name": "ui-developer",
       "description": "Expert in Keboola configuration schemas, conditional fields (options.dependencies), UI elements, sync actions, and schema testing. Can launch schema-tester and run Playwright tests. Specialized for configSchema.json and configRowSchema.json development."
+    },
+    {
+      "name": "soustruh-reviewer",
+      "description": "Code reviewer agent modeled on Martin Struzsky's review style. Focuses on architecture, separation of concerns, modern typing, config-as-model patterns, and Keboola best practices. Provides actionable feedback with location, pattern, and fix guidance."
     }
   ],
   "guides": [
@@ -91,6 +95,11 @@
       "name": "telemetry-debugging",
       "path": "guides/debugger/telemetry-debugging.md",
       "description": "Querying Keboola telemetry data for support ticket investigation"
+    },
+    {
+      "name": "testing",
+      "path": "guides/tester/testing.md",
+      "description": "Comprehensive testing strategies, unit tests, integration tests, and test patterns"
     }
   ],
   "tools": [
