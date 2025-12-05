@@ -363,23 +363,20 @@ from playwright_client import PlaywrightClient
 class Component(ComponentBase):
     def __init__(self):
         super().__init__()
-        self.ai_client: AnthropicClient | None = None
-        self.browser_client: PlaywrightClient | None = None
+        # Load configuration and initialize clients in constructor
+        # so sync_actions and other methods can use them
+        self.params = self._validate_configuration()
+        self.ai_client = AnthropicClient(self.params.anthropic_api_key)
+        self.browser_client = PlaywrightClient(headless=True)
+        self.browser_client.start()
 
     def run(self):
         try:
-            params = self._validate_configuration()
-
-            # Initialize clients
-            self.ai_client = AnthropicClient(params.anthropic_api_key)
-            self.browser_client = PlaywrightClient(headless=True)
-            self.browser_client.start()
-
-            # Use clients
-            self.browser_client.navigate(params.target_url, params.timeout * 1000)
+            # Configuration and clients already available via self
+            self.browser_client.navigate(self.params.target_url, self.params.timeout * 1000)
             title, content = self.browser_client.get_content()
 
-            data = self.ai_client.extract_data_from_html(title, content, params.prompt)
+            data = self.ai_client.extract_data_from_html(title, content, self.params.prompt)
             # ... process data
 
         finally:
