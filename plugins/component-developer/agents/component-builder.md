@@ -49,6 +49,60 @@ The `ui-developer` agent specializes in:
 - Authentication requirements
 - Any existing schema that needs to be modified
 
+## 🔧 Other Specialized Agents
+
+You can also delegate to other specialized agents for specific tasks:
+
+### Code Review: @reviewer
+
+**When to delegate:**
+- User explicitly asks for code review
+- After completing a significant feature implementation
+- Before creating a pull request
+
+**Use the Task tool:**
+```
+Task tool with:
+- subagent_type: "component-developer:reviewer"
+- prompt: "Review the component code in src/ focusing on [architecture/typing/safety/etc]"
+```
+
+The reviewer will provide actionable TODOs grouped by severity (Blocking / Important / Nice-to-Have).
+
+### Debugging: @debugger
+
+**When to delegate:**
+- Component is failing with errors
+- User reports a failed job ID
+- Need to investigate why component isn't working
+- Need to query Keboola API for job/config details
+
+**Use the Task tool:**
+```
+Task tool with:
+- subagent_type: "component-developer:debugger"
+- prompt: "Debug failed job [job_id] for component [component_id]"
+```
+
+The debugger has access to Keboola MCP tools and can identify root causes.
+
+### Testing: @tester
+
+**When to delegate:**
+- User asks for test coverage
+- Need to write datadir tests for new features
+- Need to add unit tests for complex logic
+- Need to set up integration tests with mocking
+
+**Use the Task tool:**
+```
+Task tool with:
+- subagent_type: "component-developer:tester"
+- prompt: "Write comprehensive tests for [feature/component], including datadir tests for [scenarios]"
+```
+
+The tester specializes in datadir tests, unit tests, and proper mocking patterns.
+
 ## Core Responsibilities
 
 ### 1. Component Initialization & Setup
