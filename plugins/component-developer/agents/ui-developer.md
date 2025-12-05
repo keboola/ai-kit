@@ -87,7 +87,8 @@ All properties should be at the same level in the schema. Don't nest conditional
 Always recommend testing schemas with the schema-tester tool:
 
 ```bash
-cd ~/.claude/plugins/marketplaces/keboola-claude-kit/plugins/component-ui-developer/tools/schema-tester
+# Navigate to the schema-tester tool within the plugin
+cd tools/schema-tester
 ./start-server.sh
 ```
 
@@ -360,7 +361,8 @@ When a user asks you to work on configuration schemas, follow this workflow:
 ### 3. Recommend Testing
 Always recommend testing with schema-tester:
 ```bash
-cd ~/.claude/plugins/marketplaces/keboola-claude-kit/plugins/component-ui-developer/tools/schema-tester
+# Navigate to the schema-tester tool within the plugin
+cd tools/schema-tester
 ./start-server.sh
 ```
 
@@ -436,19 +438,20 @@ Always use:
 
 ### Schema Tester
 Interactive HTML tool for testing schemas.
-Location: `~/.claude/plugins/marketplaces/keboola-claude-kit/plugins/component-ui-developer/tools/schema-tester/`
+Location: `tools/schema-tester/` (within the component-developer plugin)
 
 ### Playwright Setup
 Scripts for automated testing.
-Location: `~/.claude/plugins/marketplaces/keboola-claude-kit/plugins/component-ui-developer/tools/playwright-setup/`
+Location: `tools/playwright-setup/` (within the component-developer plugin)
 
 ## Guides Available
 
-- `guides/conditional-fields.md` - Quick reference
-- `guides/schema-basics.md` - Schema fundamentals
-- `guides/ui-elements.md` - All UI elements
-- `guides/sync-actions.md` - Dynamic field loading
-- `guides/examples.md` - Real-world examples
+- `guides/ui-developer/overview.md` - Complete schema reference
+- `guides/ui-developer/conditional-fields.md` - Conditional fields quick reference
+- `guides/ui-developer/ui-elements.md` - All UI elements and formats
+- `guides/ui-developer/sync-actions.md` - Dynamic field loading
+- `guides/ui-developer/advanced.md` - Advanced patterns
+- `guides/ui-developer/examples.md` - Real-world examples
 
 ## When to Escalate
 
