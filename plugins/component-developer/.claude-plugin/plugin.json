@@ -1,9 +1,111 @@
 {
   "name": "component-developer",
-  "version": "1.0.0",
-  "description": "Specialized toolkit for building Keboola Python components with best practices and patterns",
+  "version": "2.0.0",
+  "description": "Comprehensive toolkit for building Keboola Python components with best practices, patterns, and UI schema development. Includes specialized agents for component development and UI/schema design.",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"
-  }
+  },
+  "agents": [
+    {
+      "name": "component-builder",
+      "description": "Expert agent for building production-ready Keboola Python components. Handles component architecture, API clients, data processing, Keboola API integration, deployment, and CI/CD. Automatically delegates UI/schema work to ui-developer agent."
+    },
+    {
+      "name": "ui-developer",
+      "description": "Expert in Keboola configuration schemas, conditional fields (options.dependencies), UI elements, sync actions, and schema testing. Can launch schema-tester and run Playwright tests. Specialized for configSchema.json and configRowSchema.json development."
+    }
+  ],
+  "guides": [
+    {
+      "name": "initialization",
+      "path": "guides/getting-started/initialization.md",
+      "description": "Step-by-step guide for setting up new components with cookiecutter"
+    },
+    {
+      "name": "architecture",
+      "path": "guides/component-builder/architecture.md",
+      "description": "Component architecture patterns and structure"
+    },
+    {
+      "name": "best-practices",
+      "path": "guides/component-builder/best-practices.md",
+      "description": "DO/DON'T reference for component development"
+    },
+    {
+      "name": "code-quality",
+      "path": "guides/component-builder/code-quality.md",
+      "description": "Ruff formatting, type hints, and code quality standards"
+    },
+    {
+      "name": "workflow-patterns",
+      "path": "guides/component-builder/workflow-patterns.md",
+      "description": "Self-documenting code and workflow organization"
+    },
+    {
+      "name": "developer-portal",
+      "path": "guides/component-builder/developer-portal.md",
+      "description": "Developer Portal integration and deployment"
+    },
+    {
+      "name": "schema-overview",
+      "path": "guides/ui-developer/overview.md",
+      "description": "Complete reference for configSchema.json and configRowSchema.json"
+    },
+    {
+      "name": "ui-elements",
+      "path": "guides/ui-developer/ui-elements.md",
+      "description": "All available UI elements, field formats, and editor modes"
+    },
+    {
+      "name": "conditional-fields",
+      "path": "guides/ui-developer/conditional-fields.md",
+      "description": "Conditional fields using options.dependencies"
+    },
+    {
+      "name": "sync-actions",
+      "path": "guides/ui-developer/sync-actions.md",
+      "description": "Sync actions for dynamic dropdowns and validation"
+    },
+    {
+      "name": "schema-advanced",
+      "path": "guides/ui-developer/advanced.md",
+      "description": "Advanced configuration schema patterns and best practices"
+    },
+    {
+      "name": "schema-examples",
+      "path": "guides/ui-developer/examples.md",
+      "description": "Real-world production schema examples"
+    },
+    {
+      "name": "debugging",
+      "path": "guides/debugger/debugging.md",
+      "description": "Debugging techniques and troubleshooting for components"
+    }
+  ],
+  "tools": [
+    {
+      "name": "schema-tester",
+      "path": "tools/schema-tester",
+      "description": "Interactive HTML tool for testing Keboola configuration schemas with 100% UI parity"
+    },
+    {
+      "name": "playwright-setup",
+      "path": "tools/playwright-setup",
+      "description": "Scripts and documentation for setting up Playwright MCP for automated schema testing"
+    }
+  ],
+  "keywords": [
+    "keboola",
+    "component",
+    "python",
+    "extractor",
+    "writer",
+    "application",
+    "ui",
+    "schema",
+    "configuration",
+    "conditional-fields",
+    "testing"
+  ]
 }
