@@ -18,6 +18,14 @@
     {
       "name": "reviewer",
       "description": "Expert Python/Keboola component code reviewer focusing on architecture, configuration/client patterns, documentation consistency, and Pythonic best practices. Provides actionable feedback with clear location, pattern identification, and fix guidance."
+    },
+    {
+      "name": "debugger",
+      "description": "Expert agent for debugging Keboola Python components using Keboola MCP tools, Datadog logs, and local testing. Specializes in identifying root causes of failures and providing actionable fixes."
+    },
+    {
+      "name": "tester",
+      "description": "Expert agent for writing and maintaining tests for Keboola Python components. Specializes in datadir tests, unit tests, and integration tests with proper mocking and assertions."
     }
   ],
   "guides": [
@@ -100,6 +108,21 @@
       "name": "testing",
       "path": "guides/tester/testing.md",
       "description": "Comprehensive testing strategies, unit tests, integration tests, and test patterns"
+    },
+    {
+      "name": "review-principles",
+      "path": "guides/reviewer/review-principles.md",
+      "description": "Detailed principles for reviewing components: architecture, typing, safety, and more"
+    },
+    {
+      "name": "review-checklist",
+      "path": "guides/reviewer/review-checklist.md",
+      "description": "Quick reference checklist for systematic component code review"
+    },
+    {
+      "name": "review-style-guide",
+      "path": "guides/reviewer/review-style-guide.md",
+      "description": "Tone, phrasing, and output format guidelines for code reviews"
     }
   ],
   "tools": [
