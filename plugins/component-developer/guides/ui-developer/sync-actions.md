@@ -541,6 +541,210 @@ Based on analysis of 888+ production components, here are the most common sync a
 }
 ```
 
+## Backend Implementation (Python)
+
+### ✅ CORRECT: Using @sync_action Decorator
+
+Sync actions in Python components **MUST** be implemented using the `@sync_action` decorator from `keboola.component.base`.
+
+#### Required Import
+
+```python
+from keboola.component.base import ComponentBase, sync_action
+from keboola.component.exceptions import UserException
+```
+
+#### Basic Implementation
+
+```python
+class Component(ComponentBase):
+    def run(self) -> None:
+        """Main execution - runs when action='run' or no action specified."""
+        # Your main component logic
+        pass
+
+    @sync_action("testConnection")
+    def test_connection(self) -> dict:
+        """
+        Test connection - executed when action='testConnection'.
+
+        Returns:
+            dict: Response in format {"status": "success", "message": "..."}
+        """
+        try:
+            # Get parameters directly (no need for full configuration validation)
+            uri = self.configuration.parameters.get("authentication", {}).get("#uri")
+            if not uri:
+                raise UserException("URI is required")
+
+            # Test connection logic here
+            # ... your connection test code ...
+
+            return {"status": "success", "message": "Connection successful"}
+        except Exception as e:
+            raise UserException(f"Connection failed: {e}") from e
+
+    @sync_action("listDatabases")
+    def list_databases(self) -> dict:
+        """
+        List databases for dropdown - executed when action='listDatabases'.
+
+        Returns:
+            dict: Response in format {"status": "success", "data": [{"value": "...", "label": "..."}]}
+        """
+        try:
+            uri = self.configuration.parameters.get("authentication", {}).get("#uri")
+            if not uri:
+                raise UserException("URI is required")
+
+            # Get list of databases
+            databases = ["db1", "db2", "db3"]  # Your logic here
+
+            # Format for Keboola UI dropdown
+            dropdown_data = [{"value": db, "label": db} for db in databases]
+
+            return {"status": "success", "data": dropdown_data}
+        except Exception as e:
+            raise UserException(f"Failed to list databases: {e}") from e
+
+    @sync_action("listTables")
+    def list_tables(self) -> dict:
+        """
+        List tables for dropdown - executed when action='listTables'.
+        Receives current form values including selected database.
+
+        Returns:
+            dict: Response in format {"status": "success", "data": [{"value": "...", "label": "..."}]}
+        """
+        try:
+            uri = self.configuration.parameters.get("authentication", {}).get("#uri")
+            database = self.configuration.parameters.get("destination", {}).get("database")
+
+            if not uri or not database:
+                raise UserException("URI and database are required")
+
+            # Get list of tables in the selected database
+            tables = ["table1", "table2", "table3"]  # Your logic here
+
+            # Format for Keboola UI dropdown
+            dropdown_data = [{"value": tbl, "label": tbl} for tbl in tables]
+
+            return {"status": "success", "data": dropdown_data}
+        except Exception as e:
+            raise UserException(f"Failed to list tables: {e}") from e
+```
+
+#### How the Decorator Works
+
+The `@sync_action` decorator automatically:
+1. **Routes the action** - Maps `action` parameter in config.json to the decorated method
+2. **Handles output** - Writes JSON response to stdout
+3. **Catches exceptions** - Converts exceptions to error responses
+4. **Exits cleanly** - Exits after sync action completes
+5. **Mutes logging** - Sets log level to FATAL during sync actions
+6. **Serializes JSON** - Converts return dict to JSON automatically
+
+#### Complete Example
+
+```python
+import csv
+import logging
+
+from keboola.component.base import ComponentBase, sync_action
+from keboola.component.exceptions import UserException
+
+from your_client import YourClient
+
+
+class Component(ComponentBase):
+    def __init__(self):
+        self._configuration = None
+        self.client = None
+        super().__init__()
+
+    def run(self) -> None:
+        """Main execution - runs when action='run' or no action specified."""
+        self._init_configuration()
+        self._init_client()
+        self.process_data()
+
+    @sync_action("testConnection")
+    def test_connection(self) -> dict:
+        """Test connection to the service."""
+        uri = self.configuration.parameters.get("authentication", {}).get("#uri")
+        if not uri:
+            raise UserException("URI is required")
+
+        client = YourClient(uri)
+        client.test_connection()
+
+        return {"status": "success", "message": "Connection successful"}
+
+    @sync_action("listDatabases")
+    def list_databases(self) -> dict:
+        """List available databases."""
+        uri = self.configuration.parameters.get("authentication", {}).get("#uri")
+        if not uri:
+            raise UserException("URI is required")
+
+        client = YourClient(uri)
+        databases = client.list_databases()
+
+        dropdown_data = [{"value": db, "label": db} for db in databases]
+        return {"status": "success", "data": dropdown_data}
+
+    @sync_action("listCollections")
+    def list_collections(self) -> dict:
+        """List collections in selected database (dependent dropdown)."""
+        uri = self.configuration.parameters.get("authentication", {}).get("#uri")
+        database = self.configuration.parameters.get("destination", {}).get("database")
+
+        if not uri:
+            raise UserException("URI is required")
+        if not database:
+            raise UserException("Database is required to list collections")
+
+        client = YourClient(uri, database)
+        collections = client.list_collections()
+
+        dropdown_data = [{"value": col, "label": col} for col in collections]
+        return {"status": "success", "data": dropdown_data}
+
+    def _init_configuration(self):
+        # Your configuration initialization
+        pass
+
+    def _init_client(self):
+        # Your client initialization
+        pass
+
+    def process_data(self):
+        # Your main logic
+        pass
+
+
+if __name__ == "__main__":
+    try:
+        comp = Component()
+        # execute_action() automatically routes to the correct method
+        comp.execute_action()
+    except UserException as exc:
+        logging.exception(exc)
+        exit(1)
+    except Exception as exc:
+        logging.exception(exc)
+        exit(2)
+```
+
+### Key Points
+
+1. **Use `@sync_action` decorator** - Standard way to implement sync actions in Keboola components
+2. **Access parameters via `self.configuration.parameters`** - Configuration validation not required for sync actions
+3. **Return dict with response** - Decorator handles JSON serialization automatically
+4. **Raise `UserException` for errors** - Decorator converts exceptions to proper error responses
+5. **Method names are flexible** - Decorator uses the action name from `@sync_action("actionName")`
+6. **Dependent dropdowns receive form values** - Current form state is automatically passed to the action
+
 ## Related Documentation
 
 - [Overview](configuration-schema-overview.md) - Introduction and basics

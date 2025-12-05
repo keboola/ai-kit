@@ -48,6 +48,11 @@
       "description": "Developer Portal integration and deployment"
     },
     {
+      "name": "running-and-testing",
+      "path": "guides/component-builder/running-and-testing.md",
+      "description": "Complete guide for running and testing components locally and in production"
+    },
+    {
       "name": "schema-overview",
       "path": "guides/ui-developer/overview.md",
       "description": "Complete reference for configSchema.json and configRowSchema.json"
@@ -81,6 +86,11 @@
       "name": "debugging",
       "path": "guides/debugger/debugging.md",
       "description": "Debugging techniques and troubleshooting for components"
+    },
+    {
+      "name": "telemetry-debugging",
+      "path": "guides/debugger/telemetry-debugging.md",
+      "description": "Querying Keboola telemetry data for support ticket investigation"
     }
   ],
   "tools": [

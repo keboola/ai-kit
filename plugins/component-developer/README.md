@@ -446,7 +446,8 @@ plugins/component-developer/
 │   │   ├── workflow-patterns.md       # Self-documenting code
 │   │   ├── code-quality.md            # Ruff, type hints, standards
 │   │   ├── best-practices.md          # DO/DON'T reference
-│   │   └── developer-portal.md        # Portal integration & deployment
+│   │   ├── developer-portal.md        # Portal integration & deployment
+│   │   └── running-and-testing.md     # Running and testing components
 │   ├── ui-developer/                  # UI/schema development guides
 │   │   ├── overview.md                # Complete schema reference
 │   │   ├── ui-elements.md             # UI field formats & options
@@ -455,7 +456,8 @@ plugins/component-developer/
 │   │   ├── advanced.md                # Advanced schema patterns
 │   │   └── examples.md                # Production examples
 │   ├── debugger/                      # Debugging guides
-│   │   └── debugging.md               # Troubleshooting techniques
+│   │   ├── debugging.md               # Troubleshooting techniques
+│   │   └── telemetry-debugging.md     # Keboola telemetry queries
 │   ├── tester/                        # (Future: testing guides)
 │   └── reviewer/                      # (Future: review guides)
 ├── tools/
