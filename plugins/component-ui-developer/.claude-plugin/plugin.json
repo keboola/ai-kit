@@ -1,0 +1,52 @@
+{
+  "name": "component-ui-developer",
+  "version": "1.0.0",
+  "description": "Expert agent for developing Keboola Component configuration schemas and UI. Specializes in conditional fields, UI elements, sync actions, and schema testing.",
+  "author": "Keboola",
+  "agents": [
+    {
+      "name": "ui-developer",
+      "description": "Expert in Keboola configuration schemas, conditional fields (options.dependencies), UI elements, and schema testing. Can launch schema-tester and run Playwright tests."
+    }
+  ],
+  "tools": [
+    {
+      "name": "schema-tester",
+      "path": "tools/schema-tester",
+      "description": "Interactive HTML tool for testing Keboola configuration schemas with 100% UI parity"
+    },
+    {
+      "name": "playwright-setup",
+      "path": "tools/playwright-setup",
+      "description": "Scripts and documentation for setting up Playwright MCP for automated schema testing"
+    }
+  ],
+  "guides": [
+    {
+      "name": "conditional-fields",
+      "path": "guides/conditional-fields.md",
+      "description": "Quick reference for conditional fields using options.dependencies"
+    },
+    {
+      "name": "schema-basics",
+      "path": "guides/schema-basics.md",
+      "description": "Basics of Keboola configuration schemas"
+    },
+    {
+      "name": "ui-elements",
+      "path": "guides/ui-elements.md",
+      "description": "All available UI elements and their configuration"
+    },
+    {
+      "name": "sync-actions",
+      "path": "guides/sync-actions.md",
+      "description": "Sync actions for dynamic field loading"
+    },
+    {
+      "name": "examples",
+      "path": "guides/examples.md",
+      "description": "Real-world schema examples"
+    }
+  ],
+  "keywords": ["keboola", "ui", "schema", "configuration", "conditional-fields", "testing"]
+}
