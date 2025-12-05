@@ -16,8 +16,8 @@
       "description": "Expert in Keboola configuration schemas, conditional fields (options.dependencies), UI elements, sync actions, and schema testing. Can launch schema-tester and run Playwright tests. Specialized for configSchema.json and configRowSchema.json development."
     },
     {
-      "name": "soustruh-reviewer",
-      "description": "Code reviewer agent modeled on Martin Struzsky's review style. Focuses on architecture, separation of concerns, modern typing, config-as-model patterns, and Keboola best practices. Provides actionable feedback with location, pattern, and fix guidance."
+      "name": "reviewer",
+      "description": "Expert Python/Keboola component code reviewer focusing on architecture, configuration/client patterns, documentation consistency, and Pythonic best practices. Provides actionable feedback with clear location, pattern identification, and fix guidance."
     }
   ],
   "guides": [

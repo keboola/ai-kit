@@ -1,36 +1,36 @@
 ---
-description: Thorough Soustruh-style review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices
+description: Thorough code review of Keboola Python component code, focusing on architecture, config/client patterns, and Pythonic best practices
 allowed-tools: Read, Glob, Grep, Bash
 argument-hint: [paths-or-scope]
 ---
 
-# Soustruh Component Review
+# Component Code Review
 
-Perform a thorough, opinionated code review in the style of Soustruh (Martin Struzsky), focusing on Keboola Python component architecture and best practices.
+Perform a thorough, opinionated code review focusing on Keboola Python component architecture and best practices.
 
 ## What This Command Does
 
 1. **Reviews the current diff or specified paths** for Keboola Python component code
-2. **Applies Soustruh's opinionated rules** from the soustruh-reviewer agent:
+2. **Applies opinionated review rules** from the reviewer agent:
    - Architecture first: separation of concerns (component vs client vs config)
    - Config/client initialization in `__init__`, not `run()`
    - Modern typing (built-in generics, no deprecated `typing.List`/`Dict`/`Optional`)
    - Safety and robustness (edge cases, pagination guards)
    - Repository hygiene (dependencies, stray files)
 3. **Produces a specific TODO list** with line numbers, patterns, and concrete fixes
-4. **Uses Soustruh's characteristic tone**: direct but kind, giving authors agency
+4. **Uses a characteristic tone**: direct but kind, giving authors agency
 
 ## Usage
 
 ```bash
 # Review unstaged changes (default)
-/soustruh-review
+/review
 
 # Review specific files or directories
-/soustruh-review src/component.py src/client.py
+/review src/component.py src/client.py
 
 # Review all Python files in a directory
-/soustruh-review src/
+/review src/
 ```
 
 ## Instructions
@@ -73,7 +73,7 @@ cat CLAUDE.md 2>/dev/null || cat AGENTS.md 2>/dev/null || echo "No project rules
 grep -A2 "python" pyproject.toml 2>/dev/null || echo "No pyproject.toml"
 ```
 
-### Step 4: Apply Soustruh's Review Principles
+### Step 4: Apply Review Principles
 
 Review the code against these key principles (in order of importance):
 
@@ -101,7 +101,7 @@ Review the code against these key principles (in order of importance):
 
 ### Step 5: Format the Review as TODO List
 
-Start with a brief overall assessment using Soustruh's tone:
+Start with a brief overall assessment:
 - "This is a great effort, just a couple of sections to clarify"
 - "A couple of remarks, but nothing that important"
 - "The component.py file is nice and clean"
@@ -145,4 +145,4 @@ LGTM with the above changes!
 
 ## Reference
 
-This command applies the principles from the `@soustruh-reviewer` agent. For the full set of review guidelines, see `agents/soustruh-reviewer.md`.
+This command applies the principles from the `@reviewer` agent. For the full set of review guidelines, see `agents/reviewer.md`.
