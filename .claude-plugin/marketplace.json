@@ -2,7 +2,9 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
   "version": "1.3.0",
-  "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices",
+  "metadata": {
+    "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
+  },
   "owner": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"
