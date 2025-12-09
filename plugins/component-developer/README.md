@@ -1,6 +1,6 @@
 # Component Developer Plugin
 
-A specialized toolkit for building production-ready Keboola Python components following best practices, architectural patterns, and proper integration with the Keboola Developer Portal.
+A comprehensive toolkit for building production-ready Keboola Python components with best practices, architectural patterns, and UI schema development. This plugin includes specialized agents for both component development and configuration schema design.
 
 ## 🤖 Available Agents
 
@@ -22,11 +22,34 @@ Expert agent for building Keboola Python components with comprehensive knowledge
 - Create new components from scratch
 - Implement extractors, writers, and applications
 - Add features to existing components
-- Design configuration schemas with proper UI elements
 - Implement incremental data processing
 - Set up CI/CD pipelines
 - Debug component issues
 - Follow Keboola best practices
+
+**Note:** component-builder automatically delegates UI/schema work to the ui-developer agent.
+
+### UI Developer
+**Command**: `@ui-developer`
+**Color**: 🔵 Blue
+
+Expert agent specializing in Keboola configuration schemas and UI development:
+- Configuration schema design (`configSchema.json`, `configRowSchema.json`)
+- Conditional fields using `options.dependencies`
+- UI elements and form controls
+- Sync actions for dynamic field loading
+- Schema testing with interactive tools
+- Playwright automated testing
+
+**Use cases:**
+- Design configuration schemas with conditional fields
+- Create dynamic forms with proper UI elements
+- Test schemas with schema-tester tool
+- Implement sync actions for dynamic dropdowns
+- Set up Playwright tests for UI validation
+- Fix schema-related issues
+
+**Note:** Usually called automatically by component-builder, but can be used directly for UI-only work.
 
 ---
 
@@ -411,21 +434,36 @@ def process_table(table_def):
 ```
 plugins/component-developer/
 ├── .claude-plugin/
-│   └── plugin.json          # Plugin configuration
+│   └── plugin.json                    # Plugin configuration with agents, guides, and tools
 ├── agents/
-│   ├── component-builder.md # Component builder agent
-│   └── guides/              # Supporting documentation
-│       ├── architecture.md
-│       ├── best-practices.md
-│       ├── code-quality.md
-│       ├── configuration-schema-overview.md
-│       ├── configuration-schema-ui-elements.md
-│       ├── configuration-schema-sync-actions.md
-│       ├── configuration-schema-advanced.md
-│       ├── configuration-schema-examples.md
-│       ├── initialization-guide.md
-│       └── workflow-patterns.md
-└── README.md                # This file
+│   ├── component-builder.md           # Main component development agent
+│   └── ui-developer.md                # UI/schema specialist agent
+├── guides/
+│   ├── getting-started/               # Getting started guides
+│   │   └── initialization.md          # Setup for new components
+│   ├── component-builder/             # Python development guides
+│   │   ├── architecture.md            # Component architecture patterns
+│   │   ├── workflow-patterns.md       # Self-documenting code
+│   │   ├── code-quality.md            # Ruff, type hints, standards
+│   │   ├── best-practices.md          # DO/DON'T reference
+│   │   ├── developer-portal.md        # Portal integration & deployment
+│   │   └── running-and-testing.md     # Running and testing components
+│   ├── ui-developer/                  # UI/schema development guides
+│   │   ├── overview.md                # Complete schema reference
+│   │   ├── ui-elements.md             # UI field formats & options
+│   │   ├── conditional-fields.md      # Conditional field patterns
+│   │   ├── sync-actions.md            # Dynamic dropdowns & validation
+│   │   ├── advanced.md                # Advanced schema patterns
+│   │   └── examples.md                # Production examples
+│   ├── debugger/                      # Debugging guides
+│   │   ├── debugging.md               # Troubleshooting techniques
+│   │   └── telemetry-debugging.md     # Keboola telemetry queries
+│   ├── tester/                        # (Future: testing guides)
+│   └── reviewer/                      # (Future: review guides)
+├── tools/
+│   ├── schema-tester/                 # Interactive schema testing tool
+│   └── playwright-setup/              # Playwright MCP setup scripts
+└── README.md                          # This file
 ```
 
 ---
@@ -434,13 +472,33 @@ plugins/component-developer/
 
 To improve this plugin:
 
-1. Update the agent file in `agents/component-builder.md`
-2. Update this README with new features
-3. Test the agent thoroughly
-4. Submit a pull request
+1. Update agent files in `agents/` directory
+   - `component-builder.md` for Python development features
+   - `ui-developer.md` for UI/schema features
+2. Add or update guides in `guides/` directory
+3. Update `plugin.json` with any new agents, guides, or tools
+4. Update this README with new features
+5. Test the agents thoroughly
+6. Submit a pull request
 
 ---
 
-**Version**: 1.0.0
+**Version**: 2.0.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
+
+## 📝 Changelog
+
+### 2.0.0 (2025-12-05)
+- **BREAKING**: Merged component-ui-developer plugin into component-developer
+- Added `ui-developer` agent for configuration schema development
+- **NEW**: Organized guides by agent responsibility (getting-started/, component-builder/, ui-developer/, debugger/, tester/, reviewer/)
+- Moved guides from `agents/guides/` to structured `guides/` folders
+- Merged duplicate schema guides (17 guides → 13 comprehensive guides)
+- Added tools: schema-tester and playwright-setup
+- component-builder now automatically delegates UI work to ui-developer using Task tool
+- Comprehensive plugin.json with full agent, guide, and tool definitions
+- Prepared structure for future tester and reviewer agents
+
+### 1.0.0
+- Initial release with component-builder agent

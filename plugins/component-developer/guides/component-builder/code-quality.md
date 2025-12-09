@@ -62,12 +62,12 @@ All Keboola components should use **proper type hints** to catch errors early an
 #### 1. Import Correct Types from Libraries
 
 ```python
-# ✅ CORRECT - Import proper types
+# ✅ CORRECT - Import proper types (Python 3.9+)
 from anthropic.types import MessageParam
 from keboola.component.dao import ColumnDefinition, BaseType
-from typing import Dict, List, Optional, Any
+from typing import Any  # Only import what's not available as built-in
 
-# ✅ Use proper type annotations
+# ✅ Use proper type annotations with built-in generics
 user_message: MessageParam = {
     "role": "user",
     "content": "Your message here"
@@ -79,13 +79,13 @@ messages: list[MessageParam] = [user_message]
 #### 2. Always Annotate Function Parameters and Return Types
 
 ```python
-# ✅ CORRECT - Properly typed function
+# ✅ CORRECT - Properly typed function (Python 3.9+ built-in generics)
 def process_data(
     input_file: Path,
-    config: Dict[str, Any]
-) -> List[Dict[str, str]]:
+    config: dict[str, Any]
+) -> list[dict[str, str]]:
     """Process input file and return structured data."""
-    results: List[Dict[str, str]] = []
+    results: list[dict[str, str]] = []
     # ... implementation
     return results
 
@@ -155,14 +155,14 @@ warn_unused_configs = true
 ignore_missing_imports = true
 ```
 
-### Type Hints Best Practices
+### Type Hints Best Practices (Python 3.9+)
 
 - ✅ Import types from source libraries (e.g., `anthropic.types`, `keboola.component.dao`)
 - ✅ Annotate all function signatures
-- ✅ Use `Optional[T]` for nullable values
-- ✅ Use `List[T]`, `Dict[K, V]` for collections
+- ✅ Use `T | None` for nullable values (not `Optional[T]`)
+- ✅ Use built-in generics: `list[T]`, `dict[K, V]` (not `List[T]`, `Dict[K, V]`)
 - ✅ Define types for API request/response objects
-- ❌ Don't use bare `list`, `dict` without type parameters
+- ❌ Don't use deprecated `typing.List`, `typing.Dict`, `typing.Optional`
 - ❌ Don't ignore type errors without understanding them
 - ❌ Don't use `Any` everywhere (defeats the purpose)
 
@@ -175,7 +175,7 @@ When IDE warns: `Method '_save_recommendations' may be 'static'`
 ```python
 # ❌ WRONG - Method doesn't use self but not marked static
 class Component:
-    def _save_recommendations(self, data: Dict[str, Any], path: Path):
+    def _save_recommendations(self, data: dict[str, Any], path: Path):
         """Save recommendations - doesn't use self!"""
         with open(path, "w") as f:
             json.dump(data, f)
@@ -183,7 +183,7 @@ class Component:
 # ✅ CORRECT - Mark as @staticmethod
 class Component:
     @staticmethod
-    def _save_recommendations(data: Dict[str, Any], path: Path):
+    def _save_recommendations(data: dict[str, Any], path: Path):
         """Save recommendations."""
         with open(path, "w") as f:
             json.dump(data, f)
