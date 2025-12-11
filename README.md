@@ -86,6 +86,27 @@ A specialized toolkit for building production-ready Streamlit data apps for Kebo
 
 **[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
 
+## MCP Server Setup
+
+Some commands and plugins require MCP (Model Context Protocol) servers to be configured. If MCP tools are not available when running a command, use the `/mcp` command to authenticate and configure them.
+
+### Atlassian (Confluence & Jira)
+
+Required for commands like `/create-postmortem` that interact with Confluence.
+
+```bash
+claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
+```
+
+After adding the MCP server, run `/mcp` to authenticate with your Atlassian account.
+
+### Troubleshooting
+
+If you encounter "MCP tools not available" errors:
+1. Run `/mcp` to see available MCP servers and their status
+2. Authenticate with the required MCP server
+3. Re-run your command
+
 ## Development
 
 ### Validation
