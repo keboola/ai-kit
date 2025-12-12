@@ -123,12 +123,13 @@ To extract these tokens:
 **Step 2: Add Slack MCP Server**
 
 ```bash
-claude mcp add --transport stdio slack -- npx -y @anthropic/slack-mcp-server
+claude mcp add --transport stdio slack-mcp-server \
+  --env SLACK_MCP_XOXC_TOKEN=<SLACK_MCP_XOXC_TOKEN> \
+  --env SLACK_MCP_XOXD_TOKEN=<SLACK_MCP_XOXD_TOKEN> \
+  -- npx -y slack-mcp-server
 ```
 
-When prompted, provide your tokens:
-- `SLACK_XOXC_TOKEN`: Your XOXC token
-- `SLACK_XOXD_TOKEN`: Your XOXD token
+Replace `<SLACK_MCP_XOXC_TOKEN>` and `<SLACK_MCP_XOXD_TOKEN>` with your actual tokens from Step 1.
 
 **Step 3: Verify Setup**
 
