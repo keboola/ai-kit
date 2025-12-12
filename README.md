@@ -100,6 +100,40 @@ claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
 
 After adding the MCP server, run `/mcp` to authenticate with your Atlassian account.
 
+### Slack
+
+Required for commands like `/create-postmortem` that read incident information from Slack channels.
+
+**Step 1: Get Slack Tokens from Browser**
+
+You need two tokens from your Slack workspace:
+- **XOXC token**: User token for API access
+- **XOXD token**: Cookie token for authentication
+
+To extract these tokens:
+
+1. Open your Slack workspace in a web browser (not the desktop app)
+2. Open Developer Tools (F12 or Right-click → Inspect)
+3. Go to the **Application** tab (Chrome) or **Storage** tab (Firefox)
+4. In the left sidebar, expand **Cookies** and select your Slack workspace URL
+5. Find the cookie named `d` - its value is your **XOXD token** (starts with `xoxd-`)
+6. Go to the **Console** tab and run: `localStorage.getItem('localConfig_v2')` 
+7. In the output, find the `teams` object and look for `token` - this is your **XOXC token** (starts with `xoxc-`)
+
+**Step 2: Add Slack MCP Server**
+
+```bash
+claude mcp add --transport stdio slack -- npx -y @anthropic/slack-mcp-server
+```
+
+When prompted, provide your tokens:
+- `SLACK_XOXC_TOKEN`: Your XOXC token
+- `SLACK_XOXD_TOKEN`: Your XOXD token
+
+**Step 3: Verify Setup**
+
+Run `/mcp` to verify the Slack MCP server is working and you can access your workspace channels.
+
 ### Troubleshooting
 
 If you encounter "MCP tools not available" errors:
