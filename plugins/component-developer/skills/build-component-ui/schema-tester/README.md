@@ -1,265 +1,308 @@
-# Keboola Schema Tester
+# Component Schema Tester
 
-Interactive HTML tool for testing Keboola configuration schemas with 100% UI parity to the Keboola platform.
-
-## Features
-
-✅ **100% Identical UI** - Uses the same library (@json-editor/json-editor) as Keboola
-✅ **Conditional Fields** - Test `options.dependencies` show/hide behavior
-✅ **Real-time JSON Output** - See generated configuration instantly
-✅ **Tab Interface** - Test Component Config, Row Config, and Combined Config
-✅ **Hot Reload** - Update schemas and reload without page refresh
-✅ **Copy to Clipboard** - One-click copy of generated JSON
+A unified, flexible testing tool for Keboola component schemas with auto-discovery and manual path selection.
 
 ## Quick Start
 
-### 1. Start the Server
-
+### Option 1: Auto-discovery (from component directory)
 ```bash
-cd ~/.claude/plugins/marketplaces/keboola-claude-kit/plugins/component-ui-developer/tools/schema-tester
-./start-server.sh
+cd /path/to/your/component
+python component_schema_tester.py
 ```
 
-### 2. Open in Browser
+### Option 2: Specify component path
+```bash
+# From anywhere - provide component root path
+python component_schema_tester.py /path/to/component
 
-Navigate to: http://localhost:8000/
+# Or provide component_config path directly
+python component_schema_tester.py /path/to/component/component_config
 
-### 3. Point to Your Schemas
+# Specify custom port
+python component_schema_tester.py /path/to/component --port 8080
+```
 
-The tester automatically looks for schemas in your project's `component_config/` directory:
-- `component_config/configSchema.json` - Component Configuration
-- `component_config/configRowSchema.json` - Row Configuration
+### Option 3: Manual path selection in UI
+```bash
+# Start with any component, then change paths in the UI
+python component_schema_tester.py /path/to/component1
 
-## Usage
+# In browser: Use 📁 button to select different component_config folder
+# Click "🔄 Reload Schemas" to apply
+```
 
-### Testing Component Config
+Then open: **http://localhost:8000**
 
-1. Click the "Component Config" tab
-2. Fill in fields
-3. Change dropdown values to test conditional fields
-4. Check JSON output updates in real-time
+That's it! Schemas load automatically.
 
-### Testing Row Config
+## Features
 
-1. Click the "Row Config" tab
-2. Test entity-specific settings
-3. Verify conditional fields (e.g., incremental sync fields)
+### Auto-Discovery
+- Automatically finds `component_config/` folder
+- Loads `configSchema.json` and `configRowSchema.json`
+- Pre-fills forms from `data/config.json` if it exists
+- No configuration needed!
 
-### Testing Combined Config
+### Integrated Sync Actions
+- All sync actions are handled automatically
+- Calls your component methods directly
+- No need to specify endpoints
+- Supports all action types:
+  - `testConnection`
+  - `loadEntities`
+  - `loadFields`
+  - `loadPossiblePrimaryKeys`
+  - `loadIncrementalFields`
+  - `loadNavigationProperties`
+  - `previewData`
+  - `validateFilter`
 
-1. Click the "Combined Config" tab
-2. See the complete `config.json` structure
-3. Click "Copy to Clipboard" to use in tests
+### Smart Features
+- **Watch Fields**: Automatically reloads dropdowns when dependencies change
+- **Auto-load**: Dropdowns with `autoload: true` load on page start
+- **Pre-filled Config**: Loads existing `data/config.json` values
+- **Live Validation**: Real-time schema validation
+- **Conditional Fields**: Full support for `options.dependencies`
+- **Combined Output**: See complete `config.json` ready for Keboola
 
-## Hot Reload
+## How It Works
 
-When you modify your schemas:
+### 1. Auto-Discovery Process
 
-1. Save the schema file
-2. Click "🔄 Reload Schemas" button
-3. Changes appear instantly
+```
+component_schema_tester.py
+    ↓
+Searches upward for component_config/
+    ↓
+Finds project root
+    ↓
+Loads schemas: configSchema.json + configRowSchema.json
+    ↓
+Loads config (if exists): data/config.json
+    ↓
+Starts Flask server on port 8000
+```
 
-No need to restart the server or refresh the page!
+### 2. API Endpoints
 
-## Testing Conditional Fields
+The tool provides these endpoints:
 
-The schema tester is perfect for testing conditional fields:
+- `GET /` - Serves the schema tester UI
+- `GET /api/schemas` - Returns both schemas
+- `GET /api/config` - Returns existing config.json parameters
+- `POST /sync-action` - Handles all sync actions
 
-### Example: Auth Type
+### 3. Sync Action Flow
+
+```
+UI (dropdown) → POST /sync-action
+    ↓
+Write config to data/config.json
+    ↓
+Import Component from src/component.py
+    ↓
+Call action method (e.g., comp.load_entities())
+    ↓
+Return result to UI
+    ↓
+Update dropdown options
+```
+
+## Usage Examples
+
+### Testing Conditional Fields
+
+1. Edit your schema to add conditional fields:
+   ```json
+   {
+     "properties": {
+       "sync_type": {
+         "type": "string",
+         "enum": ["full", "incremental"]
+       },
+       "incremental_field": {
+         "type": "string",
+         "options": {
+           "dependencies": {
+             "sync_type": "incremental"
+           }
+         }
+       }
+     }
+   }
+   ```
+
+2. Click "Reload Schemas"
+3. Change `sync_type` to "incremental"
+4. Watch `incremental_field` appear!
+
+### Testing Async Dropdowns
+
+1. Your schema has async dropdown:
+   ```json
+   {
+     "entity_set": {
+       "type": "string",
+       "format": "select",
+       "options": {
+         "async": {
+           "label": "Load Entity Sets",
+           "action": "loadEntities",
+           "autoload": true
+         }
+       }
+     }
+   }
+   ```
+
+2. The tester will:
+   - Auto-load on page start (if `autoload: true`)
+   - Add "Load Entity Sets" button
+   - Call your `Component.load_entities()` method
+   - Populate dropdown with results
+
+### Testing with Existing Config
+
+If you have `data/config.json`:
 
 ```json
 {
-  "properties": {
-    "auth_type": {
-      "type": "string",
-      "enum": ["basic", "apiKey"]
-    },
-    "username": {
-      "type": "string",
-      "options": {
-        "dependencies": {
-          "auth_type": "basic"
-        }
-      }
-    }
+  "parameters": {
+    "base_url": "https://api.example.com",
+    "api_key": "test123",
+    "entity_set": "Products"
   }
 }
 ```
 
-**Test:**
-1. Set auth_type to "basic" → username field appears
-2. Set auth_type to "apiKey" → username field disappears
+The tester will:
+1. Load the config on page start
+2. Split parameters between component and row schemas
+3. Pre-fill all form fields
+4. Ready for testing!
 
-### Example: Sync Type
+## Development Workflow
 
-```json
-{
-  "properties": {
-    "sync_type": {
-      "type": "string",
-      "enum": ["full", "incremental"]
-    },
-    "incremental_field": {
-      "type": "string",
-      "options": {
-        "dependencies": {
-          "sync_type": "incremental"
-        }
-      }
-    }
-  }
-}
+### 1. Edit Schemas
+```bash
+vim component_config/configSchema.json
+vim component_config/configRowSchema.json
 ```
 
-**Test:**
-1. Set sync_type to "full" → incremental_field hidden
-2. Set sync_type to "incremental" → incremental_field appears
+### 2. Reload in Browser
+Click "🔄 Reload Schemas" button
+
+### 3. Test Changes
+- Change values
+- Test conditional fields
+- Test async dropdowns
+- Validate forms
+
+### 4. Copy Final Config
+Go to "Resulting configuration" tab and click "📋 Copy to Clipboard"
+
+## Requirements
+
+The tool requires these Python packages (already in your `pyproject.toml`):
+
+```toml
+[tool.poetry.group.dev.dependencies]
+flask = "^3.0.0"
+flask-cors = "^4.0.0"
+```
 
 ## Troubleshooting
 
-### Port 8000 Already in Use
+### "Could not find component_config/ folder"
+
+**Solution**: Run the script from within your component project:
 
 ```bash
-# Find process using port 8000
-lsof -i :8000
-
-# Kill it
-kill -9 <PID>
-
-# Or use different port
-python3 -m http.server 8001
+cd /path/to/your/component
+python component_schema_tester.py
 ```
 
-### Schemas Not Loading
+### "Could not import Component"
 
-Make sure your project has the correct structure:
+**Solution**: Ensure `src/component.py` exists and has a `Component` class.
 
-```
-your-component/
-├── component_config/
-│   ├── configSchema.json
-│   └── configRowSchema.json
-└── ...
-```
+### "Unknown action: myAction"
 
-The tester looks for schemas at `../component_config/` relative to the tester location.
+**Solution**: Add the action to the `action_map` in `component_schema_tester.py`:
 
-### Fields Not Appearing/Disappearing
-
-If conditional fields don't work:
-
-1. ✅ Check you're using `options.dependencies` (not root `dependencies`)
-2. ✅ Check all properties are in flat structure (no `oneOf` nesting)
-3. ✅ Check dependency values match exactly (e.g., "incremental" not "Incremental")
-4. ✅ For booleans, use `true`/`false` (not strings `"true"`/`"false"`)
-
-## Automated Testing
-
-For automated E2E testing, use Playwright MCP. See `../playwright-setup/README.md`.
-
-## Technical Details
-
-### Libraries Used
-
-- **@json-editor/json-editor** - Same as Keboola platform
-- **Bootstrap 5** - UI framework
-- **Vanilla JavaScript** - No build step needed
-
-### How It Works
-
-1. Loads schemas via fetch from `../component_config/`
-2. Initializes two JSON Editor instances (component and row)
-3. Listens for changes and updates JSON output
-4. Handles conditional field visibility via `options.dependencies`
-
-### Configuration
-
-The tester uses these JSON Editor options:
-
-```javascript
-{
-  schema: schema,
-  theme: 'bootstrap5',
-  iconlib: 'bootstrap',
-  no_additional_properties: false,
-  required_by_default: false,
-  keep_oneof_values: false,
-  use_default_values: true,
-  show_errors: 'always'
+```python
+action_map = {
+    'myAction': comp.my_action,
+    # ... other actions
 }
 ```
 
-## Integration with Development Workflow
+## Advantages Over Old Setup
 
-### Recommended Workflow
-
-1. **Design** - Draft schema structure
-2. **Implement** - Write `configSchema.json`
-3. **Test** - Use schema-tester to verify UI
-4. **Iterate** - Fix issues, reload, test again
-5. **Automate** - Write Playwright tests for critical paths
-6. **Deploy** - Push to component repository
-
-### Example Session
-
-```bash
-# Terminal 1: Start tester
-cd ~/.claude/plugins/.../schema-tester
-./start-server.sh
-
-# Terminal 2: Edit schemas
-cd ~/your-component
-vim component_config/configSchema.json
-
-# Browser: Test → Reload → Verify → Repeat
+### Before (Multiple Files)
+```
+tools/schema-tester/
+├── server.py           # Flask server
+├── schema-tester.html  # UI
+├── start-server.sh     # Startup script
+└── README.md           # Documentation
 ```
 
-## Best Practices
+Required:
+- Manual path configuration
+- Separate HTML file
+- Shell script to run
+- Manual config.json setup
 
-1. **Test Early** - Start testing as soon as you have basic schema structure
-2. **Test All Paths** - Try all combinations of conditional fields
-3. **Test Edge Cases** - Empty values, required fields, validation
-4. **Use with Playwright** - Automate repetitive tests
-5. **Keep Running** - Leave server running during development for instant feedback
+### After (Single File)
+```
+component_schema_tester.py  # Everything!
+```
 
-## Comparison with Keboola Platform
+Features:
+- Auto-discovers everything
+- Embedded HTML (no external files)
+- Pre-fills from config.json
+- Direct component integration
+- Zero configuration
 
-| Feature | Keboola Platform | Schema Tester | Match |
-|---------|------------------|---------------|-------|
-| Library | @json-editor/json-editor | @json-editor/json-editor | ✅ 100% |
-| Conditional Fields | options.dependencies | options.dependencies | ✅ 100% |
-| UI Theme | Bootstrap 5 | Bootstrap 5 | ✅ 100% |
-| Field Types | All | All | ✅ 100% |
-| Validation | Real-time | Real-time | ✅ 100% |
+## File Structure
 
-The tester provides **100% UI parity** with the Keboola platform!
+```python
+component_schema_tester.py
+├── Auto-discovery functions
+│   ├── find_project_root()
+│   ├── find_component_config()
+│   └── find_config_json()
+├── Flask app setup
+│   └── CORS enabled
+├── API endpoints
+│   ├── GET /
+│   ├── GET /api/schemas
+│   ├── GET /api/config
+│   └── POST /sync-action
+├── Embedded HTML
+│   └── Complete schema-tester UI
+└── Main entry point
+    └── Auto-discover and start
+```
 
-## FAQ
+## Tips
 
-**Q: Can I test sync actions?**
-A: Not directly. Sync actions require backend API calls. Test these in actual Keboola platform or mock them in Playwright tests.
+1. **Always reload after schema changes**: Click the reload button to see updates
+2. **Check browser console**: Useful for debugging sync actions
+3. **Use "Validate Form"**: Catches schema validation errors
+4. **Test all tabs**: Component, Row, and Combined configs
+5. **Copy final config**: Use the clipboard button in "Resulting configuration" tab
 
-**Q: Can I test multiple configurations?**
-A: Yes! Modify your schemas, click "Reload Schemas", and test different configurations.
+## Support
 
-**Q: Does it work with complex nested schemas?**
-A: Yes, it supports all JSON Editor features including nested objects and arrays.
+For issues or questions:
+1. Check browser console for errors
+2. Check terminal output for Flask logs
+3. Verify your schemas are valid JSON
+4. Ensure `src/component.py` has required methods
 
-**Q: Can I use it for non-Keboola projects?**
-A: Yes! It's a generic @json-editor testing tool. Just point it to any valid JSON Schema.
+## License
 
-## Resources
-
-- [Keboola Configuration Schema Docs](https://developers.keboola.com/extend/component/ui-options/configuration-schema/)
-- [@json-editor/json-editor GitHub](https://github.com/json-editor/json-editor)
-- [JSON Schema Specification](https://json-schema.org/)
-
-## Version History
-
-### 1.0.0 (2025-12-05)
-- Initial release
-- 100% UI parity with Keboola
-- Conditional fields support (`options.dependencies`)
-- Hot reload functionality
-- Tab interface
-- Real-time JSON output
+Part of the Keboola Component Factory toolkit.
