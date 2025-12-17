@@ -89,42 +89,6 @@ Systematically applies fixes based on code-mess-detector reports. Works through 
 
 Analyzes your changes and creates a pull request with AI-generated title and description.
 
----
-
-### Create Postmortem
-**Command**: `/create-postmortem <slack-channel-name>`
-
-Creates an incident postmortem document in Confluence based on a template, gathering information from a Slack channel. Acts as an Incident Response Commander to compile comprehensive postmortem documentation.
-
-**Features:**
-- Gathers incident information from Slack channel (timeline, responders, links)
-- Reads postmortem template from Confluence (pageID: 3568304146)
-- Creates or finds year directory for organizing postmortems
-- Generates structured postmortem with action items
-- Formats all timestamps in UTC
-- Lists all incident responders
-
-**Usage:**
-```bash
-# Create postmortem from incident channel
-/create-postmortem incident-2024-12-api-outage
-```
-
-**Prerequisites:**
-- Atlassian MCP configured and authenticated (for Confluence)
-- Slack MCP configured and authenticated (for reading channel messages)
-- Access to the postmortem template in Confluence
-- Write access to the Postmortems space in Confluence
-
-**Generated Content:**
-- Executive summary
-- Timeline of events (UTC)
-- Links to Datadog, PagerDuty, etc.
-- Root cause analysis
-- What went well / What went wrong
-- Up to 3 suggested action items
-- List of all responders
-
 **Features:**
 - Analyzes commit history and diff since base branch
 - Generates comprehensive PR title and description
@@ -306,7 +270,6 @@ plugins/developer/
 │   └── code-mess-fixer.md
 ├── commands/
 │   ├── create-pr.md         # Slash command for PR creation
-│   ├── create-postmortem.md # Slash command for incident postmortem
 │   └── handle-conflicts.md  # Slash command for merge conflicts
 └── README.md                # This file
 ```

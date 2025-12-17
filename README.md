@@ -86,6 +86,21 @@ A specialized toolkit for building production-ready Streamlit data apps for Kebo
 
 **[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
 
+### Incident Commander Plugin
+
+**Location**: [`./plugins/incident-commander`](./plugins/incident-commander)
+
+A specialized toolkit for incident response, helping incident commanders create comprehensive post-mortem documents from Slack incident channels.
+
+**Features:**
+- **1 Command**: Post-mortem creation from Slack incident channels
+- **Confluence Integration**: Reads templates and creates structured documents
+- **Slack Integration**: Gathers incident information from channels and threads
+- **Structured Output**: Overview, Impact, Timeline, Action Items, and more
+- **Blameless Format**: Focuses on systems and processes, not individuals
+
+**[→ View Incident Commander Plugin Documentation](./plugins/incident-commander/README.md)**
+
 ## MCP Server Setup
 
 Some commands and plugins require MCP (Model Context Protocol) servers to be configured. If MCP tools are not available when running a command, use the `/mcp` command to authenticate and configure them.
