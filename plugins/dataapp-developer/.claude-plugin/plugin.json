@@ -8,7 +8,7 @@
   },
   "mcpServers": {
     "keboola": {
-      "transport": "http",
+      "type": "sse",
       "url": "https://mcp.us-east4.gcp.keboola.com/mcp"
     },
     "playwright": {
@@ -16,20 +16,7 @@
       "args": [
         "-y",
         "@executeautomation/playwright-mcp-server@latest"
-      ],
-      "description": "Playwright MCP server for browser automation and visual testing. Enables screenshot capture, UI interaction testing, and visual verification of Streamlit apps.",
-      "metadata": {
-        "setupInstructions": "No additional configuration needed. Server will install browser dependencies on first use. Use 'mcp__playwright__browser_install' if prompted to install browser.",
-        "tools": [
-          "mcp__playwright__browser_navigate",
-          "mcp__playwright__browser_click",
-          "mcp__playwright__browser_take_screenshot",
-          "mcp__playwright__browser_wait_for",
-          "mcp__playwright__browser_snapshot",
-          "mcp__playwright__browser_type",
-          "mcp__playwright__browser_evaluate"
-        ]
-      }
+      ]
     }
   }
 }
