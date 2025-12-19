@@ -115,7 +115,7 @@ When creating a new component:
 4. **Implement**: Follow architectural patterns and best practices
 5. **Test and Deploy**: Comprehensive testing before deployment
 
-**📖 For detailed initialization steps**, see [guides/getting-started/initialization.md](guides/getting-started/initialization.md)
+**📖 For detailed initialization steps**, see [../get-started/references/initialization.md](../get-started/references/initialization.md)
 
 ### 2. Component Architecture
 
@@ -129,7 +129,7 @@ Follow Keboola's architectural patterns:
 - Implement state management for incremental processing
 - Define explicit schemas for output tables
 
-**📖 For complete architectural patterns**, see [guides/component-builder/architecture.md](guides/component-builder/architecture.md)
+**📖 For complete architectural patterns**, see [references/architecture.md](references/architecture.md)
 
 ### 3. Code Quality & Formatting
 
@@ -140,7 +140,7 @@ All components must follow code quality standards:
 - **@staticmethod**: Mark utility methods that don't use `self`
 - **IDE Warnings**: Fix all type warnings and linting issues
 
-**📖 For complete code quality guidelines**, see [guides/component-builder/code-quality.md](guides/component-builder/code-quality.md)
+**📖 For complete code quality guidelines**, see [references/code-quality.md](references/code-quality.md)
 
 ### 4. Self-Documenting Workflow Pattern
 
@@ -167,7 +167,7 @@ def run(self):
         sys.exit(2)
 ```
 
-**📖 For complete workflow patterns and examples**, see [guides/component-builder/workflow-patterns.md](guides/component-builder/workflow-patterns.md)
+**📖 For complete workflow patterns and examples**, see [references/workflow-patterns.md](references/workflow-patterns.md)
 
 ### 5. Best Practices Reference
 
@@ -185,22 +185,22 @@ Quick DO/DON'T reference:
 - Ignore IDE type warnings or "may be static" warnings
 - Call `mkdir()` for platform-managed directories
 
-**📖 For complete best practices and patterns**, see [guides/component-builder/best-practices.md](guides/component-builder/best-practices.md)
+**📖 For complete best practices and patterns**, see [references/best-practices.md](references/best-practices.md)
 
 ## Workflow Guidelines
 
 ### For New Components
 
 1. **Initialize with cookiecutter**
-   - See [guides/getting-started/initialization.md](guides/getting-started/initialization.md)
+   - See [../get-started/references/initialization.md](../get-started/references/initialization.md)
 
 2. **Implement following patterns**
-   - Architecture: [guides/component-builder/architecture.md](guides/component-builder/architecture.md)
-   - Code Quality: [guides/component-builder/code-quality.md](guides/component-builder/code-quality.md)
-   - Workflow Patterns: [guides/component-builder/workflow-patterns.md](guides/component-builder/workflow-patterns.md)
+   - Architecture: [references/architecture.md](references/architecture.md)
+   - Code Quality: [references/code-quality.md](references/code-quality.md)
+   - Workflow Patterns: [references/workflow-patterns.md](references/workflow-patterns.md)
 
 3. **Verify against best practices**
-   - Check [guides/component-builder/best-practices.md](guides/component-builder/best-practices.md)
+   - Check [references/best-practices.md](references/best-practices.md)
 
 4. **Test and deploy**
    - Run tests, format with ruff, verify in Developer Portal
@@ -225,19 +225,19 @@ When you need additional information, reference:
 - **Cookiecutter Template**: https://github.com/keboola/cookiecutter-python-component
 
 **Internal Documentation:**
-- [Initialization Guide](guides/getting-started/initialization.md) - Setting up new components
-- [Architecture Guide](guides/component-builder/architecture.md) - Component structure and patterns
-- [Code Quality](guides/component-builder/code-quality.md) - Ruff, type hints, @staticmethod
-- [Workflow Patterns](guides/component-builder/workflow-patterns.md) - Self-documenting code
-- [Best Practices](guides/component-builder/best-practices.md) - DO/DON'T reference
-- [Developer Portal](guides/component-builder/developer-portal.md) - Registration and deployment
-- [Schema Overview](guides/ui-developer/overview.md) - Complete reference for configSchema.json and configRowSchema.json
-- [UI Elements](guides/ui-developer/ui-elements.md) - Field formats, options, and editor modes
-- [Conditional Fields](guides/ui-developer/conditional-fields.md) - Using options.dependencies
-- [Sync Actions](guides/ui-developer/sync-actions.md) - Dynamic dropdowns and validation
-- [Advanced Schema Patterns](guides/ui-developer/advanced.md) - Best practices and complex scenarios
-- [Schema Examples](guides/ui-developer/examples.md) - Real production examples
-- [Debugging](guides/debugger/debugging.md) - Troubleshooting techniques
+- [Initialization Guide](../get-started/references/initialization.md) - Setting up new components
+- [Architecture Guide](references/architecture.md) - Component structure and patterns
+- [Code Quality](references/code-quality.md) - Ruff, type hints, @staticmethod
+- [Workflow Patterns](references/workflow-patterns.md) - Self-documenting code
+- [Best Practices](references/best-practices.md) - DO/DON'T reference
+- [Developer Portal](references/developer-portal.md) - Registration and deployment
+- [Schema Overview](../build-component-ui/references/overview.md) - Complete reference for configSchema.json and configRowSchema.json
+- [UI Elements](../build-component-ui/references/ui-elements.md) - Field formats, options, and editor modes
+- [Conditional Fields](../build-component-ui/references/conditional-fields.md) - Using options.dependencies
+- [Sync Actions](../build-component-ui/references/sync-actions.md) - Dynamic dropdowns and validation
+- [Advanced Schema Patterns](../build-component-ui/references/advanced.md) - Best practices and complex scenarios
+- [Schema Examples](../build-component-ui/references/examples.md) - Real production examples
+- [Debugging](../debug-component/references/debugging.md) - Troubleshooting techniques
 
 ## Your Approach
 
@@ -281,19 +281,19 @@ After implementing any Python code:
 
 ### When to Reference Documentation
 
-- **Starting new component?** → [guides/getting-started/initialization.md](guides/getting-started/initialization.md)
-- **Need architectural patterns?** → [guides/component-builder/architecture.md](guides/component-builder/architecture.md)
-- **Formatting and type safety?** → [guides/component-builder/code-quality.md](guides/component-builder/code-quality.md)
-- **Code organization unclear?** → [guides/component-builder/workflow-patterns.md](guides/component-builder/workflow-patterns.md)
-- **Quick DO/DON'T check?** → [guides/component-builder/best-practices.md](guides/component-builder/best-practices.md)
-- **Deploying to Developer Portal?** → [guides/component-builder/developer-portal.md](guides/component-builder/developer-portal.md)
-- **Designing configuration schemas?** → [guides/ui-developer/overview.md](guides/ui-developer/overview.md)
-- **Need UI field formats?** → [guides/ui-developer/ui-elements.md](guides/ui-developer/ui-elements.md)
-- **Adding conditional fields?** → [guides/ui-developer/conditional-fields.md](guides/ui-developer/conditional-fields.md)
-- **Adding dynamic dropdowns?** → [guides/ui-developer/sync-actions.md](guides/ui-developer/sync-actions.md)
-- **Advanced schema patterns?** → [guides/ui-developer/advanced.md](guides/ui-developer/advanced.md)
-- **Schema examples?** → [guides/ui-developer/examples.md](guides/ui-developer/examples.md)
-- **Debugging issues?** → [guides/debugger/debugging.md](guides/debugger/debugging.md)
+- **Starting new component?** → [../get-started/references/initialization.md](../get-started/references/initialization.md)
+- **Need architectural patterns?** → [references/architecture.md](references/architecture.md)
+- **Formatting and type safety?** → [references/code-quality.md](references/code-quality.md)
+- **Code organization unclear?** → [references/workflow-patterns.md](references/workflow-patterns.md)
+- **Quick DO/DON'T check?** → [references/best-practices.md](references/best-practices.md)
+- **Deploying to Developer Portal?** → [references/developer-portal.md](references/developer-portal.md)
+- **Designing configuration schemas?** → [../build-component-ui/references/overview.md](../build-component-ui/references/overview.md)
+- **Need UI field formats?** → [../build-component-ui/references/ui-elements.md](../build-component-ui/references/ui-elements.md)
+- **Adding conditional fields?** → [../build-component-ui/references/conditional-fields.md](../build-component-ui/references/conditional-fields.md)
+- **Adding dynamic dropdowns?** → [../build-component-ui/references/sync-actions.md](../build-component-ui/references/sync-actions.md)
+- **Advanced schema patterns?** → [../build-component-ui/references/advanced.md](../build-component-ui/references/advanced.md)
+- **Schema examples?** → [../build-component-ui/references/examples.md](../build-component-ui/references/examples.md)
+- **Debugging issues?** → [../debug-component/references/debugging.md](../debug-component/references/debugging.md)
 
 **Use the Task tool** to read documentation files when you need detailed guidance on specific topics. The documentation contains comprehensive examples and explanations.
 

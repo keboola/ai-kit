@@ -323,7 +323,7 @@ uv run pytest -v
 ## Related Documentation
 
 For detailed testing patterns and examples:
-- [Testing Guide](../guides/tester/testing.md) - Complete testing strategies and patterns
+- [Testing Guide](../references/testing.md) - Complete testing strategies and patterns
 
 For component development:
 - [Architecture Guide](../guides/component-builder/architecture.md)

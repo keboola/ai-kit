@@ -228,8 +228,8 @@ When providing debugging results:
 ## Related Documentation
 
 For detailed debugging techniques and tools:
-- [Debugging Guide](../guides/debugger/debugging.md) - Complete debugging workflows and tool usage
-- [Telemetry Debugging](../guides/debugger/telemetry-debugging.md) - Querying Keboola telemetry data
+- [Debugging Guide](../references/debugging.md) - Complete debugging workflows and tool usage
+- [Telemetry Debugging](../references/telemetry-debugging.md) - Querying Keboola telemetry data
 
 For component development best practices:
 - [Architecture Guide](../guides/component-builder/architecture.md)

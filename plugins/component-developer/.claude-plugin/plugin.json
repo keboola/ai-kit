@@ -1,7 +1,7 @@
 {
   "name": "component-developer",
-  "version": "2.0.0",
-  "description": "Comprehensive toolkit for building Keboola Python components with best practices, patterns, and UI schema development. Includes specialized agents for component development and UI/schema design.",
+  "version": "3.0.0",
+  "description": "Comprehensive toolkit for building Keboola Python components with Agent Skills format. Includes specialized skills for component development, UI/schema design, testing, debugging, and code review.",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"

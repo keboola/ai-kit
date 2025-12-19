@@ -112,9 +112,9 @@ LGTM with the above changes!
 ## Related Documentation
 
 For detailed review principles, patterns, and checklists, see:
-- [Review Principles](../guides/reviewer/review-principles.md) - Detailed rules for architecture, typing, safety, etc.
-- [Review Checklist](../guides/reviewer/review-checklist.md) - Quick reference checklist for components
-- [Review Style Guide](../guides/reviewer/review-style-guide.md) - Tone, phrasing, and output format details
+- [Review Principles](../references/review-principles.md) - Detailed rules for architecture, typing, safety, etc.
+- [Review Checklist](../references/review-checklist.md) - Quick reference checklist for components
+- [Review Style Guide](../references/review-style-guide.md) - Tone, phrasing, and output format details
 
 For Keboola component standards:
 - [Architecture Guide](../guides/component-builder/architecture.md)
