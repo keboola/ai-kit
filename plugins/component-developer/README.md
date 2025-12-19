@@ -77,6 +77,52 @@ Guide for initializing new Keboola components using cookiecutter template.
 
 ---
 
+## ⚡ Available Commands
+
+Quick actions for common component development tasks:
+
+### `/init` - Initialize New Component
+Initialize a new Keboola component from cookiecutter template with automatic cleanup.
+```bash
+/init my-awesome-extractor
+```
+
+### `/run` - Run Component Locally
+Run component locally with test configuration and display results.
+```bash
+/run                    # Uses data/config.json
+/run data/config-test.json
+```
+
+### `/schema-test` - Test Configuration Schemas
+Launch interactive schema tester for testing and validating configSchema.json and configRowSchema.json.
+```bash
+/schema-test            # Opens http://localhost:8000
+/schema-test --port 8080
+```
+
+### `/review` - Code Review
+Perform thorough code review focusing on Keboola best practices and architecture.
+```bash
+/review                 # Review unstaged changes
+/review src/component.py
+```
+
+### `/fix` - Apply Review Fixes
+Apply fixes from code review incrementally with proper commits.
+```bash
+/fix                    # Per-severity mode (default)
+/fix --per-todo         # One commit per TODO
+```
+
+### `/migrate-repo` - Migrate Repository
+Migrate Keboola component repository from Bitbucket to GitHub with full history.
+```bash
+/migrate-repo git@bitbucket.org:workspace/repo.git
+```
+
+---
+
 ## 📖 Core Capabilities
 
 ### Component Architecture
