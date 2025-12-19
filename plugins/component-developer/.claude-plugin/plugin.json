@@ -18,5 +18,11 @@
     "configuration",
     "conditional-fields",
     "testing"
-  ]
+  ],
+  "mcpServers": {
+    "keboola": {
+      "type": "http",
+      "url": "https://mcp.us-east4.gcp.keboola.com/mcp"
+    }
+  }
 }
