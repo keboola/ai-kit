@@ -11,17 +11,17 @@
   },
   "plugins": [
     {
-      "name": "developer",
-      "description": "Developer toolkit with specialized agents for code review and security analysis",
-      "version": "1.1.2",
-      "source": "./plugins/developer",
-      "category": "development"
-    },
-    {
       "name": "component-developer",
       "description": "Specialized toolkit for building Keboola Python components with best practices and patterns",
       "version": "3.0.0",
       "source": "./plugins/component-developer",
+      "category": "development"
+    },
+    {
+      "name": "developer",
+      "description": "Developer toolkit with specialized agents for code review and security analysis",
+      "version": "1.1.2",
+      "source": "./plugins/developer",
       "category": "development"
     },
     {
