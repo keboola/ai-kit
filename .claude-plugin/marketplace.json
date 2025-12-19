@@ -15,7 +15,9 @@
       "description": "Specialized toolkit for building Keboola Python components with best practices and patterns",
       "version": "3.0.0",
       "source": "./plugins/component-developer",
-      "category": "development"
+      "category": "development",
+      "agents": ["./agents/build-component.md"],
+      "commands": "./commands/"
     },
     {
       "name": "developer",
