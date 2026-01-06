@@ -1,0 +1,118 @@
+# pyproject.toml Template for Keboola Python Packages
+#
+# Replace placeholders:
+# - YOUR.PACKAGE.NAME - Package name (e.g., keboola.component)
+# - YOUR_PACKAGE - Import name (e.g., keboola/component)
+# - MIN_PYTHON - Minimum Python version (e.g., 3.8, 3.10)
+# - DEPENDENCIES - List of runtime dependencies
+# - DEV_DEPENDENCIES - List of development dependencies
+#
+# Instructions:
+# 1. Extract dependencies from setup.py install_requires
+# 2. Extract dev dependencies from setup_requires, tests_require
+# 3. Add pdoc3 to dev dependencies if docs workflow exists
+# 4. Set requires-python to minimum supported (≥3.8)
+# 5. Remove License classifier (PEP 639 compliance)
+# 6. Keep license = "MIT" field
+
+[project]
+name = "YOUR.PACKAGE.NAME"
+version = "0.0.0"  # Replaced by git tags in GitHub Actions (uv version command)
+
+dependencies = [
+    # Extract from setup.py install_requires
+    # Example:
+    # "requests>=2.32.0",
+    # "pydantic>=2.0.0",
+]
+
+requires-python = ">=MIN_PYTHON"
+
+authors = [
+    { name = "Keboola KDS Team", email = "support@keboola.com" }
+]
+
+description = "BRIEF PACKAGE DESCRIPTION"
+readme = "README.md"
+
+# IMPORTANT: Use 'license = "MIT"' field, NOT license classifier
+# PEP 639 deprecated license classifiers in favor of this field
+license = "MIT"
+license-files = [ "LICENSE" ]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    # DO NOT include: "License :: OSI Approved :: MIT License"
+    # This will cause setuptools.errors.InvalidConfigError
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Education",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Development Status :: 5 - Production/Stable",
+]
+
+[project.urls]
+Documentation = "https://YOUR-DOCS-URL"
+Repository = "https://github.com/keboola/YOUR-REPO"
+# Add other relevant URLs
+
+[dependency-groups]
+dev = [
+    # Standard Keboola dev dependencies
+    "flake8>=5.0.4",
+    "pytest>=8.3.5",
+    "ruff>=0.13.2",
+    
+    # Add pdoc3 if package generates HTML docs with pdoc
+    # Check: Does .github/workflows/push_main.yml exist with pdoc?
+    # If yes, add:
+    # "pdoc3",
+    
+    # Add other dev dependencies from setup.py:
+    # - setup_requires
+    # - tests_require
+    # - extras_require['dev']
+]
+
+# TestPyPI configuration for testing releases
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+# Optional: Configure package discovery if needed
+# [tool.setuptools]
+# packages = {find = {where = ["src"]}}
+# 
+# Or explicitly list packages:
+# packages = ["YOUR_PACKAGE"]
+
+# Optional: Ruff configuration
+# [tool.ruff]
+# line-length = 120
+# target-version = "py38"
+# 
+# [tool.ruff.lint]
+# select = ["E", "F", "W", "I"]
+# ignore = ["E501"]  # Line too long (handled by formatter)
+
+# Optional: Pytest configuration
+# [tool.pytest.ini_options]
+# testpaths = ["tests"]
+# python_files = ["test_*.py"]
+# python_functions = ["test_*"]
+
+# Optional: Coverage configuration
+# [tool.coverage.run]
+# source = ["src"]
+# omit = ["tests/*"]

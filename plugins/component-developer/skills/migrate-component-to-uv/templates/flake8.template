@@ -1,0 +1,47 @@
+# .flake8 - Keboola Cookiecutter Template Standard
+#
+# This configuration matches the cookiecutter-python-component template
+# Use this exact configuration for consistency across Keboola Python packages
+#
+# Usage:
+# 1. Save this file as .flake8 in repository root
+# 2. Run: uv run flake8
+# 3. Fix all reported errors before proceeding with migration
+
+[flake8]
+# Directories to exclude from linting
+exclude = 
+    __pycache__,
+    .git,
+    .venv,
+    venv,
+    docs
+
+# Error codes to ignore
+# E203: Whitespace before ':' (conflicts with black formatter)
+# W503: Line break before binary operator (outdated PEP 8 rule)
+ignore = E203,W503
+
+# Maximum line length
+# Standard: 120 characters (balances readability and practicality)
+max-line-length = 120
+
+# Additional configuration options (uncomment if needed):
+
+# Show source code for each error
+# show-source = True
+
+# Show pep8 explanation for each error
+# show-pep8 = True
+
+# Count total errors
+# count = True
+
+# Print total number of errors
+# statistics = True
+
+# Set maximum complexity (cyclomatic complexity)
+# max-complexity = 10
+
+# Check for docstrings
+# docstring-convention = google
