@@ -12,7 +12,10 @@
   "plugins": [
     {
       "name": "component-developer",
-      "source": "./plugins/component-developer"
+      "description": "Comprehensive toolkit for building Keboola Python components with Agent Skills format",
+      "version": "3.0.0",
+      "source": "./plugins/component-developer",
+      "category": "development"
     },
     {
       "name": "developer",
