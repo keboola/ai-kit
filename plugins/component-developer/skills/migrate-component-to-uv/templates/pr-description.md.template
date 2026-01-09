@@ -1,0 +1,95 @@
+# Migrate to uv build system
+
+## Summary
+
+Migrate from `setup.py` + pip to `pyproject.toml` + `uv` build system, following the same pattern successfully used in [keboola/python-http-client](https://github.com/keboola/python-http-client) and [keboola/python-component](https://github.com/keboola/python-component).
+
+## Testing
+
+- ✅ All local checks pass (flake8, ruff blocking, pytest - XXX tests)
+- ✅ Test release **X.Y.0** successfully published to Test PyPI
+- ✅ Package installable and functional from Test PyPI: https://test.pypi.org/project/PACKAGE_NAME/X.Y.0/
+- ✅ Import test successful
+
+## Changes
+
+### Commit 1: flake8 config consistent with cookiecutter template 🍪
+
+- Renamed `flake8.cfg` → `.flake8` (standard naming)
+- Updated config to strict standards from cookiecutter template
+- Fixed ALL flake8 errors revealed by new strict config:
+  - `FILE1`: [LIST SPECIFIC FIXES - e.g., Fixed star imports (F403/F405), unused variables (F841)]
+  - `FILE2`: [LIST SPECIFIC FIXES - e.g., Fixed line length (E501), whitespace (E231)]
+  - [Add note if CRLF→LF normalization occurred]: **normalized CRLF→LF line endings**
+
+### Commit 2: migrate package configuration to pyproject.toml 📦
+
+- Created `pyproject.toml` with complete project metadata:
+  - Dependencies: [LIST MAIN DEPS]
+  - Dev dependencies: `flake8`, `pytest`, `ruff` [ADD OTHERS]
+  - Python support: MIN_VERSION-3.14
+  - TestPyPI index configuration
+- Removed legacy `License :: OSI Approved :: MIT License` classifier (PEP 639 compliance)
+- Deleted `setup.py` and `requirements.txt`
+- Updated `LICENSE` copyright to 2026
+
+### Commit 3: uv 💜
+
+- Updated all [3 or 4] GitHub workflows to use uv:
+  - `.github/workflows/push_dev.yml` - dev branch testing
+  - `.github/workflows/deploy.yml` - production PyPI (triggers on tag creation)
+  - `.github/workflows/deploy_to_test.yml` - Test PyPI (manual workflow_dispatch)
+  - [IF DOCS EXIST] `.github/workflows/push_main.yml` - docs generation
+- **Ruff checks are now blocking** (removed `continue-on-error`)
+- Changed install commands to use uv
+- Added version replacement from git tags using `uv version`
+- Updated secrets: `UV_PUBLISH_TOKEN`, `UV_PUBLISH_TOKEN_TEST_PYPI`
+- Generated `uv.lock` with locked dependencies
+
+## Version Strategy
+
+- **X.Y.x** (e.g., 1.7.0, 1.7.1) = Test PyPI releases (alpha testing phase) ✅ **TESTED**
+- **X.Y+1.0** (e.g., 1.8.0) = Production PyPI release (this PR's target)
+
+## Workflow Strategy
+
+- **Test PyPI**: Manual trigger via `workflow_dispatch` - allows testing any tag
+- **Production PyPI**: Automatic trigger on tag creation from main branch
+
+## Breaking Changes
+
+**None** - this is purely a build system migration. The published package remains functionally identical.
+
+## Migration Notes
+
+- Components using this library don't need any changes
+- Installation: `uv add PACKAGE_NAME`
+- Development: `uv add --dev PACKAGE_NAME`
+- All APIs remain unchanged
+
+## Benefits
+
+- ✅ Modern Python packaging standards (PEP 517/518/639)
+- ✅ Faster dependency resolution with uv
+- ✅ Deterministic builds with `uv.lock`
+- ✅ Blocking ruff checks for code quality
+- ✅ Consistent with other Keboola Python libraries
+- ✅ Simplified CI/CD with uv tooling
+
+[IF CRLF NORMALIZATION OCCURRED]
+## Note on Large Diff in FILE_NAME
+
+The file had CRLF (Windows) line endings which were normalized to LF (Unix) during flake8 fixes. Actual code changes are minimal (X lines: [LIST ACTUAL CHANGES]). This is expected cleanup.
+
+---
+
+**Instructions for customization:**
+
+1. Replace `PACKAGE_NAME` with actual package name
+2. Replace `X.Y.0` and `X.Y+1.0` with actual version numbers
+3. Update test count (`XXX tests`)
+4. List specific fixes in Commit 1 section
+5. List main dependencies in Commit 2 section
+6. Update workflow count (3 or 4) based on docs existence
+7. Add CRLF normalization note if applicable
+8. Add any package-specific notes or considerations

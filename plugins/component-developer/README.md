@@ -1,11 +1,11 @@
 # Component Developer Plugin
 
-A comprehensive toolkit for building production-ready Keboola Python components with best practices, architectural patterns, and UI schema development. This plugin includes specialized agents for both component development and configuration schema design.
+A comprehensive toolkit for building production-ready Keboola Python components with best practices, architectural patterns, and UI schema development. This plugin uses the Agent Skills format with specialized skills for component development, UI/schema design, testing, debugging, and code review.
 
-## 🤖 Available Agents
+## 🎯 Available Skills
 
-### Component Builder
-**Command**: `@component-builder`
+### Build Component
+**Command**: `@build-component` (alias: `@component-builder`)
 **Color**: 🟣 Purple
 
 Expert agent for building Keboola Python components with comprehensive knowledge of:
@@ -27,10 +27,10 @@ Expert agent for building Keboola Python components with comprehensive knowledge
 - Debug component issues
 - Follow Keboola best practices
 
-**Note:** component-builder automatically delegates UI/schema work to the ui-developer agent.
+**Note:** build-component automatically delegates UI/schema work to the build-component-ui skill.
 
-### UI Developer
-**Command**: `@ui-developer`
+### Build Component UI
+**Command**: `@build-component-ui` (alias: `@ui-developer`)
 **Color**: 🔵 Blue
 
 Expert agent specializing in Keboola configuration schemas and UI development:
@@ -49,7 +49,77 @@ Expert agent specializing in Keboola configuration schemas and UI development:
 - Set up Playwright tests for UI validation
 - Fix schema-related issues
 
-**Note:** Usually called automatically by component-builder, but can be used directly for UI-only work.
+**Note:** Usually called automatically by build-component, but can be used directly for UI-only work.
+
+### Debug Component
+**Command**: `@debug-component` (alias: `@debugger`)
+**Color**: 🟠 Orange
+
+Expert skill for debugging Keboola components using Keboola MCP tools and local testing.
+
+### Test Component
+**Command**: `@test-component` (alias: `@tester`)
+**Color**: 🟢 Green
+
+Expert skill for writing comprehensive tests including datadir tests and unit tests.
+
+### Review Component
+**Command**: `@review-component` (alias: `@reviewer`)
+**Color**: 🔴 Red
+
+Expert skill for code review with actionable feedback grouped by severity.
+
+### Get Started
+**Command**: `@get-started`
+**Color**: 🟢 Green
+
+Guide for initializing new Keboola components using cookiecutter template.
+
+---
+
+## ⚡ Available Commands
+
+Quick actions for common component development tasks:
+
+### `/init` - Initialize New Component
+Initialize a new Keboola component from cookiecutter template with automatic cleanup.
+```bash
+/init my-awesome-extractor
+```
+
+### `/run` - Run Component Locally
+Run component locally with test configuration and display results.
+```bash
+/run                    # Uses data/config.json
+/run data/config-test.json
+```
+
+### `/schema-test` - Test Configuration Schemas
+Launch interactive schema tester for testing and validating configSchema.json and configRowSchema.json.
+```bash
+/schema-test            # Opens http://localhost:8000
+/schema-test --port 8080
+```
+
+### `/review` - Code Review
+Perform thorough code review focusing on Keboola best practices and architecture.
+```bash
+/review                 # Review unstaged changes
+/review src/component.py
+```
+
+### `/fix` - Apply Review Fixes
+Apply fixes from code review incrementally with proper commits.
+```bash
+/fix                    # Per-severity mode (default)
+/fix --per-todo         # One commit per TODO
+```
+
+### `/migrate-repo` - Migrate Repository
+Migrate Keboola component repository from Bitbucket to GitHub with full history.
+```bash
+/migrate-repo git@bitbucket.org:workspace/repo.git
+```
 
 ---
 
@@ -429,40 +499,61 @@ def process_table(table_def):
 
 ---
 
-## 🛠️ Plugin Structure
+## 🛠️ Plugin Structure (Agent Skills Format)
 
 ```
 plugins/component-developer/
 ├── .claude-plugin/
-│   └── plugin.json                    # Plugin configuration with agents, guides, and tools
-├── agents/
-│   ├── component-builder.md           # Main component development agent
-│   └── ui-developer.md                # UI/schema specialist agent
-├── guides/
-│   ├── getting-started/               # Getting started guides
-│   │   └── initialization.md          # Setup for new components
-│   ├── component-builder/             # Python development guides
-│   │   ├── architecture.md            # Component architecture patterns
-│   │   ├── workflow-patterns.md       # Self-documenting code
-│   │   ├── code-quality.md            # Ruff, type hints, standards
-│   │   ├── best-practices.md          # DO/DON'T reference
-│   │   ├── developer-portal.md        # Portal integration & deployment
-│   │   └── running-and-testing.md     # Running and testing components
-│   ├── ui-developer/                  # UI/schema development guides
-│   │   ├── overview.md                # Complete schema reference
-│   │   ├── ui-elements.md             # UI field formats & options
-│   │   ├── conditional-fields.md      # Conditional field patterns
-│   │   ├── sync-actions.md            # Dynamic dropdowns & validation
-│   │   ├── advanced.md                # Advanced schema patterns
-│   │   └── examples.md                # Production examples
-│   ├── debugger/                      # Debugging guides
-│   │   ├── debugging.md               # Troubleshooting techniques
-│   │   └── telemetry-debugging.md     # Keboola telemetry queries
-│   ├── tester/                        # (Future: testing guides)
-│   └── reviewer/                      # (Future: review guides)
-├── tools/
-│   ├── schema-tester/                 # Interactive schema testing tool
-│   └── playwright-setup/              # Playwright MCP setup scripts
+│   └── plugin.json                    # Plugin configuration
+├── skills/                             # Agent Skills format
+│   ├── build-component/               # Python component development
+│   │   ├── SKILL.md                   # Skill definition
+│   │   ├── references/                # Documentation
+│   │   │   ├── architecture.md
+│   │   │   ├── best-practices.md
+│   │   │   ├── code-quality.md
+│   │   │   ├── workflow-patterns.md
+│   │   │   ├── developer-portal.md
+│   │   │   └── running-and-testing.md
+│   │   └── scripts/                   # Helper scripts
+│   ├── build-component-ui/            # UI/schema development
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   │   ├── overview.md
+│   │   │   ├── ui-elements.md
+│   │   │   ├── conditional-fields.md
+│   │   │   ├── sync-actions.md
+│   │   │   ├── advanced.md
+│   │   │   └── examples.md
+│   │   ├── schema-tester/             # Interactive testing tool
+│   │   ├── playwright-setup/          # Automated testing
+│   │   └── scripts/
+│   ├── debug-component/               # Debugging
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   │   ├── debugging.md
+│   │   │   └── telemetry-debugging.md
+│   │   └── scripts/
+│   ├── test-component/                # Testing
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   │   └── testing.md
+│   │   └── scripts/
+│   ├── review-component/              # Code review
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   │   ├── review-checklist.md
+│   │   │   ├── review-principles.md
+│   │   │   └── review-style-guide.md
+│   │   └── scripts/
+│   └── get-started/                   # Getting started
+│       ├── SKILL.md
+│       ├── references/
+│       │   └── initialization.md
+│       └── scripts/
+├── commands/                           # Slash commands
+│   ├── fix.md
+│   └── review.md
 └── README.md                          # This file
 ```
 
@@ -472,22 +563,42 @@ plugins/component-developer/
 
 To improve this plugin:
 
-1. Update agent files in `agents/` directory
-   - `component-builder.md` for Python development features
-   - `ui-developer.md` for UI/schema features
-2. Add or update guides in `guides/` directory
-3. Update `plugin.json` with any new agents, guides, or tools
-4. Update this README with new features
-5. Test the agents thoroughly
-6. Submit a pull request
+1. Update skill files in `skills/*/SKILL.md`
+   - `build-component/SKILL.md` for Python development
+   - `build-component-ui/SKILL.md` for UI/schema development
+   - Other skills as needed
+2. Add or update documentation in `skills/*/references/`
+3. Add helper scripts to `skills/*/scripts/`
+4. Update `plugin.json` version if needed
+5. Update this README with new features
+6. Test the skills thoroughly
+7. Submit a pull request
 
 ---
 
-**Version**: 2.0.0
+**Version**: 3.0.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
+
+### 3.0.0 (2025-12-19)
+- **BREAKING**: Migrated to Agent Skills format
+- **NEW Structure**: Reorganized from `agents/` + `guides/` to unified `skills/` directory
+- **Renamed Skills** for consistency:
+  - `component-builder` → `build-component`
+  - `ui-developer` → `build-component-ui`
+  - `debugger` → `debug-component`
+  - `tester` → `test-component`
+  - `reviewer` → `review-component`
+  - Added: `get-started` skill
+- **Skill Structure**: Each skill now contains:
+  - `SKILL.md` - Main skill definition with YAML frontmatter
+  - `references/` - Documentation files
+  - `scripts/` - Helper scripts
+- **Tools Reorganized**: Moved to `build-component-ui/` (schema-tester, playwright-setup)
+- **Backwards Compatible**: Aliased old names (`@component-builder`, `@ui-developer`, etc.)
+- **Progressive Disclosure**: Follows agentskills.io standard for better performance
 
 ### 2.0.0 (2025-12-05)
 - **BREAKING**: Merged component-ui-developer plugin into component-developer
