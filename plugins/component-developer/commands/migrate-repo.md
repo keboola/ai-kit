@@ -203,92 +203,36 @@ echo "🔄 Migrating CI/CD to GitHub Actions..."
 # Remove Bitbucket Pipelines
 rm -f bitbucket-pipelines.yml
 
-# Create GitHub Actions workflow
+# Download latest GitHub Actions workflow from cookiecutter template
 mkdir -p .github/workflows
 
-cat > .github/workflows/push.yml << EOF
-name: GitHub Actions
-on: [push]
-concurrency: ci-\${{ github.ref }}
+echo "Downloading latest push.yml from cookiecutter template..."
+COOKIECUTTER_WORKFLOW_URL="https://raw.githubusercontent.com/keboola/cookiecutter-python-component/main/%7B%7Bcookiecutter.repository_folder_name%7D%7D/.github/workflows/push.yml"
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    outputs:
-      app_id: \${{ steps.get-app-id.outputs.app_id }}
-      is_semantic_tag: \${{ steps.check-tag.outputs.is_semantic_tag }}
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
+curl -fsSL "$COOKIECUTTER_WORKFLOW_URL" -o .github/workflows/push.yml || {
+  echo "Error: Failed to download workflow from cookiecutter template"
+  exit 1
+}
 
-      - name: Get app ID
-        id: get-app-id
-        run: |
-          APP_ID="${COMPONENT_ID}"
-          echo "app_id=\$APP_ID" >> \$GITHUB_OUTPUT
+# Replace cookiecutter placeholders with actual values
+sed -i.bak \
+  -e "s/COOKIECUTTER_DEV_PORTAL_VENDOR_NAME/keboola/g" \
+  -e "s/COOKIECUTTER_DEV_PORTAL_COMPONENT_ID/$COMPONENT_ID/g" \
+  .github/workflows/push.yml
 
-      - name: Check if semantic tag
-        id: check-tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          TAG=\${GITHUB_REF#refs/tags/}
-          if [[ "\$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "is_semantic_tag=true" >> \$GITHUB_OUTPUT
-          else
-            echo "is_semantic_tag=false" >> \$GITHUB_OUTPUT
-          fi
+rm -f .github/workflows/push.yml.bak
 
-      - name: Print Docker version
-        run: docker -v
-
-      - name: Build image
-        run: docker build . --tag=\${{ steps.get-app-id.outputs.app_id }}
-
-      - name: Run tests
-        run: docker run \${{ steps.get-app-id.outputs.app_id }} python -m pytest
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') && needs.build.outputs.is_semantic_tag == 'true'
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-
-      - name: Build image
-        run: docker build . --tag=\${{ needs.build.outputs.app_id }}
-
-      - name: Push image to ECR
-        env:
-          DOCKERHUB_TOKEN: \${{ secrets.DOCKERHUB_TOKEN }}
-          KBC_DEVELOPERPORTAL_USERNAME: \${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
-          KBC_DEVELOPERPORTAL_PASSWORD: \${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
-        run: |
-          export KBC_DEVELOPERPORTAL_VENDOR="keboola"
-          export KBC_DEVELOPERPORTAL_APP="\${{ needs.build.outputs.app_id }}"
-          docker pull quay.io/keboola/developer-portal-cli-v2:latest
-          docker run --rm \
-            -e KBC_DEVELOPERPORTAL_USERNAME \
-            -e KBC_DEVELOPERPORTAL_PASSWORD \
-            -e KBC_DEVELOPERPORTAL_URL \
-            -e KBC_DEVELOPERPORTAL_VENDOR \
-            -e KBC_DEVELOPERPORTAL_APP \
-            -e KBC_STORAGE_TOKEN \
-            quay.io/keboola/developer-portal-cli-v2:latest \
-            ecr:get-login \$KBC_DEVELOPERPORTAL_VENDOR \$KBC_DEVELOPERPORTAL_APP | sh
-          docker tag \$KBC_DEVELOPERPORTAL_APP:latest \$KBC_APP_REPOSITORY:latest
-          docker tag \$KBC_DEVELOPERPORTAL_APP:latest \$KBC_APP_REPOSITORY:\${GITHUB_REF#refs/tags/}
-          docker push \$KBC_APP_REPOSITORY:latest
-          docker push \$KBC_APP_REPOSITORY:\${GITHUB_REF#refs/tags/}
-EOF
+echo "✓ Downloaded and configured push.yml from cookiecutter template"
 
 # Commit changes
 git add -A
 git commit -m "ci: migrate from Bitbucket Pipelines to GitHub Actions
 
-- Added GitHub Actions workflow (.github/workflows/push.yml)
+- Added GitHub Actions workflow from cookiecutter template
+- Workflow: .github/workflows/push.yml
 - Removed bitbucket-pipelines.yml
 - Component ID: $COMPONENT_ID
+- Template: keboola/cookiecutter-python-component
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
