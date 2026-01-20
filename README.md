@@ -4,7 +4,75 @@ This repository is the central library for all AI prompts and agent configuratio
 
 ## Installation
 
-Run the following command to install Claude Kit marketplace:
+### Using add-skill (Recommended)
+
+The simplest way to install Claude Kit skills is using the [add-skill](https://github.com/vercel-labs/add-skill) package from Vercel Labs. This method works across multiple AI coding agents including Claude Code, Cursor, Codex, OpenCode, and more.
+
+```bash
+npx add-skill keboola/ai-kit
+```
+
+This command will automatically detect your installed AI coding agents and install the available skills to the appropriate directories.
+
+**Prerequisites:**
+- Node.js 18+
+- npm or pnpm
+
+**Options:**
+
+```bash
+# List available skills without installing
+npx add-skill keboola/ai-kit --list
+
+# Install to specific agents
+npx add-skill keboola/ai-kit -a claude-code -a cursor
+
+# Install specific skills only
+npx add-skill keboola/ai-kit --skill component-builder --skill dataapp-dev
+
+# Install globally (user directory instead of project)
+npx add-skill keboola/ai-kit -g
+
+# Non-interactive installation (CI/CD friendly)
+npx add-skill keboola/ai-kit -y -g
+```
+
+**Supported Agents:**
+- Claude Code (`.claude/skills/`)
+- Cursor (`.cursor/skills/`)
+- Codex (`.codex/skills/`)
+- OpenCode (`.opencode/skills/`)
+- GitHub Copilot (`.github/skills/`)
+- And [many more](https://github.com/vercel-labs/add-skill#available-agents)
+
+**Available Skills:**
+
+| Skill | Plugin | Description |
+|-------|--------|-------------|
+| `component-builder` | component-developer | Build production-ready Keboola Python components |
+| `get-started` | component-developer | Initialize new Keboola components with cookiecutter |
+| `review-component` | component-developer | Review component code for best practices |
+| `debug-component` | component-developer | Debug failing Keboola components |
+| `test-component` | component-developer | Write comprehensive tests for components |
+| `build-component-ui` | component-developer | Build configuration schemas and UI elements |
+| `migrate-component-to-uv` | component-developer | Migrate components to uv package manager |
+| `dataapp-dev` | dataapp-developer | Build Streamlit data apps for Keboola deployment |
+
+**Verification:**
+
+After installation, verify the skills are available by checking the appropriate directory for your agent:
+
+```bash
+# For Claude Code
+ls .claude/skills/
+
+# For Cursor
+ls .cursor/skills/
+```
+
+### Using Claude Code Plugin Marketplace
+
+Alternatively, install via the Claude Code plugin marketplace:
 
 ```bash
 /plugin marketplace add keboola/claude-kit
