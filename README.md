@@ -4,7 +4,9 @@ This repository is the central library for all AI prompts and agent configuratio
 
 ## Installation
 
-Run the following command to install Claude Kit marketplace:
+Install skills using [add-skill](https://github.com/vercel-labs/add-skill): `npx add-skill keboola/ai-kit`
+
+Alternatively, install via the Claude Code plugin marketplace:
 
 ```bash
 /plugin marketplace add keboola/claude-kit
