@@ -1,0 +1,9 @@
+{
+  "name": "keboola-changelog",
+  "version": "1.0.0",
+  "description": "Create changelog posts for the Keboola platform in the official style",
+  "author": {
+    "name": "Keboola Product Team"
+  },
+  "keywords": ["changelog", "release-notes", "ghost", "linear"]
+}
