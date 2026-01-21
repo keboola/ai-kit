@@ -269,7 +269,8 @@ plugins/developer/
 │   ├── code-mess-detector.md
 │   └── code-mess-fixer.md
 ├── commands/
-│   └── create-pr.md         # Slash command for PR creation
+│   ├── create-pr.md         # Slash command for PR creation
+│   └── handle-conflicts.md  # Slash command for merge conflicts
 └── README.md                # This file
 ```
 

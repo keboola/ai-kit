@@ -1,0 +1,15 @@
+{
+  "name": "incident-commander",
+  "version": "1.0.0",
+  "description": "Incident response toolkit for creating post-mortem documents from Slack incident channels",
+  "author": {
+    "name": "Keboola :(){:|:&};: s.r.o.",
+    "email": "support@keboola.com"
+  },
+  "mcpServers": {
+    "atlassian": {
+      "type": "sse",
+      "url": "https://mcp.atlassian.com/v1/sse"
+    }
+  }
+}
