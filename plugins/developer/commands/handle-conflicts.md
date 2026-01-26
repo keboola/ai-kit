@@ -181,9 +181,17 @@ When code is moved/refactored in one branch and modified in another, naive confl
 For each conflicted file, run these checks:
 
 ```bash
-# Check if file was deleted/renamed in target branch
-git diff --name-status HEAD~1 HEAD -- <conflicted-file>
+# Check if file was deleted/renamed in the branch you're merging/rebasing onto
+# MERGE CASE (when you know the target branch, e.g. main)
+# Replace <target-branch> with the branch you are merging into (e.g. origin/main)
+BASE_COMMIT=$(git merge-base HEAD <target-branch>)
+git diff --name-status "$BASE_COMMIT" <target-branch> -- <conflicted-file>
 
+# REBASE CASE (when an in-progress rebase has an onto/base commit recorded)
+ONTO=$(cat .git/rebase-merge/onto 2>/dev/null || cat .git/rebase-apply/onto 2>/dev/null || true)
+if [ -n "$ONTO" ]; then
+  git diff --name-status "$ONTO" HEAD -- <conflicted-file>
+fi
 # Check file history for renames
 git log --follow --oneline --name-status -5 -- <conflicted-file>
 
