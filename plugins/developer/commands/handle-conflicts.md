@@ -4,7 +4,7 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 ---
 
 Your goal is to assist human in resolving conflicts in git. Commits can occur
-during merge, rebase, cherrypick or other actions. Remember that there might be
+during merge, rebase, cherry-pick or other actions. Remember that there might be
 multiple conflicts occurring in adjacent commits.
 
 **Overall status and detect operation type:** 
