@@ -194,7 +194,7 @@ git grep -n "<unique_identifier>" HEAD
 
 ### Step 2: Identify the refactoring type
 
-Document in your conflict.md:
+Document this in `.scratch/conflicts-$branch/overview.md` or the relevant `commit-N-$hash.md` file:
 
 1. **Code moved to different file**: The functionality exists but in a new location
 2. **Code split into multiple files**: The functionality was decomposed
