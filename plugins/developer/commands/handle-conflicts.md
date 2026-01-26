@@ -256,11 +256,11 @@ yarn type-check
 
 1. **If errors exist in conflicted files** - These are likely resolution errors. Fix them before continuing.
 2. **If errors exist in files related to moved/refactored code** - The semantic change may not have been applied correctly to the new location.
-3. **If errors are in unrelated files** - These may be pre-existing. Check `git stash list` or compare with main branch to confirm.
+3. **If errors are in unrelated files** - These may be pre-existing. Check `git stash list` or compare with the pre-resolution state (current HEAD) to confirm.
 
 **Pre-existing errors check:**
 ```bash
-# Compare error count with main branch
+# Compare error count with pre-resolution HEAD (current commit)
 git stash push -m "conflict-check"
 git checkout HEAD -- .
 yarn type-check 2>&1 | tail -20
