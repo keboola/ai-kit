@@ -241,7 +241,7 @@ After resolving, verify:
 git grep -c "<key_function_name>"
 
 # Check that the semantic change is actually applied somewhere
-git diff HEAD -- <new_location_if_moved>
+git diff HEAD -- '<new_location_if_moved>'
 ```
 
 ### Step 5: Run typecheck after resolution
