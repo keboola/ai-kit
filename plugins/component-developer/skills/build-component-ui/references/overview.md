@@ -8,6 +8,9 @@ Complete reference for creating and configuring `configSchema.json` and `configR
 2. [File Structure and Location](#file-structure-and-location)
 3. [JSON Schema Basics](#json-schema-basics)
 4. [configSchema vs configRowSchema](#configschema-vs-configrowschema)
+   - [How They Work Together](#how-they-work-together)
+   - [Platform Execution Model](#platform-execution-model) ⚠️ **Important**
+   - [createConfigurationRowSchema.json](#createconfigurationrowschemajson)
 5. [Default Configurations](#default-configurations)
 6. [Code Pattern Components](#code-pattern-components)
 7. [Validation Rules](#validation-rules)
@@ -138,6 +141,135 @@ Root Config (configSchema)     Row Config (configRowSchema)
     "columns": ["id", "name"]
   }
 }
+```
+
+### Platform Execution Model
+
+**IMPORTANT**: The Keboola platform executes **one job per row configuration**.
+
+When you configure multiple rows in the UI:
+- Each row is executed as a **separate job**
+- The platform merges root config + single row config before job execution
+- The merged result is in `self.configuration.parameters` (NOT in `image_parameters`)
+- `image_parameters` contains **global component parameters** (same for all configurations)
+
+**What this means for component code:**
+
+```python
+# ❌ INCORRECT - Don't look for rows in image_parameters
+for row in self.configuration.image_parameters:  # Wrong!
+    process_row(row)
+
+# ❌ INCORRECT - image_parameters is for global settings only
+row_config = self.configuration.image_parameters[0]  # Wrong!
+
+# ✅ CORRECT - Read merged parameters directly
+# Platform already merged root + row config into parameters
+params = self.configuration.parameters  # Contains merged config
+process_merged_config(params)
+```
+
+**Example execution flow:**
+
+User configures component with root config and 3 rows in UI:
+
+**Root config (configSchema.json):**
+```json
+{
+  "connection": {
+    "url": "https://api.example.com",
+    "#api_key": "secret123"
+  }
+}
+```
+
+**Row configs (configRowSchema.json):**
+- Row 1: `{ "table": "users", "incremental": true }`
+- Row 2: `{ "table": "orders", "incremental": false }`
+- Row 3: `{ "table": "products", "incremental": true }`
+
+Platform creates **3 separate jobs**, each with merged config:
+
+```python
+# Job 1 - self.configuration.parameters contains:
+{
+  "connection": { "url": "...", "#api_key": "..." },  # from root
+  "table": "users",                                     # from row 1
+  "incremental": true                                   # from row 1
+}
+
+# Job 2 - self.configuration.parameters contains:
+{
+  "connection": { "url": "...", "#api_key": "..." },  # from root
+  "table": "orders",                                    # from row 2
+  "incremental": false                                  # from row 2
+}
+
+# Job 3 - self.configuration.parameters contains:
+{
+  "connection": { "url": "...", "#api_key": "..." },  # from root
+  "table": "products",                                  # from row 3
+  "incremental": true                                   # from row 3
+}
+```
+
+**Key implications:**
+1. No need for concurrency limits between rows (platform handles this)
+2. Component code processes merged parameters directly
+3. No iteration over rows needed - platform runs component once per row
+4. Memory usage is per-row, not per-component
+5. Each execution is completely isolated
+
+**Code pattern:**
+
+```python
+from pydantic import BaseModel, ConfigDict
+
+class Configuration(BaseModel):
+    """Configuration schema combining root + row parameters."""
+    model_config = ConfigDict(extra='ignore')  # Ignore unknown fields
+
+    # Root config fields (from configSchema.json)
+    connection: ConnectionConfig
+    debug: bool = False
+
+    # Row config fields (from configRowSchema.json)
+    table: str
+    incremental: bool = False
+
+class Component(ComponentBase):
+    def run(self):
+        # Load merged configuration (root + row already merged by platform)
+        config = Configuration.from_dict(self.configuration.parameters)
+
+        # Use connection from root config
+        client = create_client(config.connection)
+
+        # Use table and incremental from row config
+        extract_table(client, config.table, config.incremental)
+```
+
+**Alternative pattern** (separate root and row classes):
+
+```python
+class RootConfig(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    connection: ConnectionConfig
+    debug: bool = False
+
+class RowConfig(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    table: str
+    incremental: bool = False
+
+class Component(ComponentBase):
+    def run(self):
+        # Both read from same merged parameters
+        root = RootConfig.from_dict(self.configuration.parameters)
+        row = RowConfig.from_dict(self.configuration.parameters)
+
+        client = create_client(root.connection)
+        extract_table(client, row.table, row.incremental)
 ```
 
 ### createConfigurationRowSchema.json
