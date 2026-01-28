@@ -597,8 +597,8 @@ logging.exception("Critical error with stack trace")
 
 ### Prerequisites
 
-- Developer Portal account (requires email confirmation + 2FA)
-- Service account credentials (not personal credentials)
+- Your Developer Portal account (requires email confirmation + 2FA)
+- Component dedicated Developer Portal service account credentials (just for the component, not personal credentials)
 - GitHub repository created
 
 ### Registration Steps
