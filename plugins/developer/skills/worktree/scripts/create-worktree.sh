@@ -40,16 +40,16 @@ else
     git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" origin/main
 fi
 
-# Copy environment files if they exist
-echo "Copying environment files..."
-[ -f "$REPO_ROOT/apps/kai-assistant-backend/.env.local" ] && \
-    cp "$REPO_ROOT/apps/kai-assistant-backend/.env.local" "$WORKTREE_PATH/apps/kai-assistant-backend/.env.local"
-[ -f "$REPO_ROOT/apps/kbc-ui/.env" ] && \
-    cp "$REPO_ROOT/apps/kbc-ui/.env" "$WORKTREE_PATH/apps/kbc-ui/.env"
-
-# Install dependencies
-echo "Installing dependencies..."
-cd "$WORKTREE_PATH" && yarn install
+# Run repo-specific initialization if available
+INIT_SCRIPT="$REPO_ROOT/bin/worktree-init.sh"
+if [ -x "$INIT_SCRIPT" ]; then
+    echo "Running worktree initialization script..."
+    cd "$WORKTREE_PATH" && "$INIT_SCRIPT" "$REPO_ROOT"
+else
+    echo ""
+    echo "Tip: Create bin/worktree-init.sh (chmod +x) to customize worktree setup."
+    echo "     It runs in the new worktree with \$1=source_repo_root"
+fi
 
 echo ""
 echo "Worktree created successfully at: $WORKTREE_PATH"

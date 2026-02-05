@@ -5,7 +5,7 @@ description: Create and manage git worktrees for parallel development. Use when 
 
 # Git Worktree Management
 
-Create worktrees in `<repo-parent>/worktrees/<repo-name>/<branch-name>` with proper env file setup.
+Create worktrees in `<repo-parent>/worktrees/<repo-name>/<branch-name>`.
 
 `SKILL_DIR` = directory containing this SKILL.md
 
@@ -16,8 +16,25 @@ Create worktrees in `<repo-parent>/worktrees/<repo-name>/<branch-name>` with pro
 ```
 
 - Creates worktree for existing branch, or auto-creates from `origin/main` if branch doesn't exist
-- Copies env files from main repo
-- Runs `yarn install`
+- Runs `bin/worktree-init.sh` if present (see below)
+
+## Custom Initialization
+
+Create `bin/worktree-init.sh` in your repo to customize worktree setup:
+
+```bash
+#!/usr/bin/env bash
+# bin/worktree-init.sh - runs in new worktree, $1 = source repo root
+SOURCE_REPO="$1"
+
+# Example: copy env files
+cp "$SOURCE_REPO/.env" ./.env
+
+# Example: install dependencies
+yarn install
+```
+
+The script runs inside the new worktree directory with `$1` set to the source repo root.
 
 ## After Creating a Worktree
 
