@@ -15,7 +15,7 @@ allowed-tools:
   - Glob
   - Grep
   - Bash
-argument-hint: "[project-directory]"
+argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consolidate-only]"
 ---
 
 # Full Keboola Project Review
@@ -42,7 +42,51 @@ Run these checks in order. If ANY check fails, stop immediately, report the spec
 | 3 | MCP reachable | Call `mcp__keboola__get_project_info` | "Keboola MCP not reachable. Check your storage API token and network." |
 | 4 | Project has configs | Call `mcp__keboola__get_configs` and verify non-empty result | "Project has no configurations. Nothing to review." |
 
-All checks passed? Proceed to team creation.
+All checks passed? Proceed to scope selection.
+
+## Scope Selection
+
+Parse the user's arguments for optional flags:
+
+### `--scope=agent1,agent2,...`
+
+Run only the listed agents instead of all 9. Valid scope keywords:
+
+| Keyword | Agent type |
+|---------|-----------|
+| sql | kbc-sql-reviewer |
+| config | kbc-config-reviewer |
+| dwh | kbc-dwh-architect |
+| data-quality | kbc-data-quality-analyst |
+| financial | kbc-financial-analyst |
+| semantic | kbc-semantic-layer-reviewer |
+| security | kbc-security-auditor |
+| performance | kbc-performance-optimizer |
+| template | kbc-template-readiness |
+
+Example: `/kbc-review --scope=sql,security` runs only sql-reviewer and security-auditor.
+
+If `--scope` is not provided, run all 9 agents (default).
+
+### `--quick`
+
+Skip the consolidator agent entirely. When all selected reviewers finish, read their temp reports directly and present an inline summary to the user (severity counts + top findings from each report). Do NOT write `docs/PROJECT_REVIEW_REPORT.md`. Do NOT delete `docs/.review_temp/` (user may want to inspect individual reports).
+
+Quick mode is automatic when `--scope` selects 1-2 agents.
+
+### `--consolidate-only`
+
+Skip reviewer agents. Read existing reports from `docs/.review_temp/` and run only the consolidator. Use this to retry consolidation after a previous failed run.
+
+### Combined behavior
+
+| Agents selected | Consolidator | Output |
+|----------------|-------------|--------|
+| All 9 (default) | Yes | `docs/PROJECT_REVIEW_REPORT.md` |
+| 3+ with --scope | Yes | `docs/PROJECT_REVIEW_REPORT.md` |
+| 1-2 with --scope | No (auto-quick) | Inline summary, temp reports preserved |
+| Any + --quick | No | Inline summary, temp reports preserved |
+| --consolidate-only | Yes (only) | `docs/PROJECT_REVIEW_REPORT.md` |
 
 ## Team Structure
 
@@ -106,36 +150,63 @@ Use the Task tool to spawn each review agent with:
 - `prompt`: "You are part of the kbc-review team. Complete your assigned review task. Read the project configs using Keboola MCP tools and local files. Write your concise findings report to docs/.review_temp/[your-agent-name].md using the compact table format defined in your instructions. Keep output under 200 lines. When done, mark your task as completed."
 - `run_in_background`: true
 
-### 4. Wait for all 9 reviewers to finish
+### 4. Monitor reviewers with timeout
 
-Monitor task completion. When all 9 review tasks are marked completed, proceed.
+Do NOT just wait indefinitely. Use a monitoring loop:
 
-### 5. Spawn the consolidator
+1. Check `TaskList` every 30 seconds
+2. **Per-agent timeout: 5 minutes.** If an agent's task has been `in_progress` for > 5 minutes:
+   - Mark the task completed with description appended: "(TIMED OUT)"
+   - Send `shutdown_request` to the agent
+   - Log which agent timed out
+3. Continue monitoring until all reviewer tasks are completed (or timed out)
+4. Record which agents completed successfully vs timed out
 
-Use the Task tool to spawn the consolidator agent:
-- `subagent_type`: "kbc-review-consolidator"
-- `team_name`: "kbc-review"
-- `name`: "consolidator"
-- `prompt`: "You are the consolidator for the kbc-review team. All 9 review reports are in docs/.review_temp/. Start Phase 1 (data flow mapping -- hold in memory, do NOT write separate file). Then Phase 2: read all 9 temp reports from docs/.review_temp/. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md with full detail for critical+high, compact table for medium+low, inline data flow. Phase 4: delete docs/.review_temp/. When done, mark your task as completed."
+### 5. Spawn the consolidator (unless --quick)
+
+If `--quick` flag is set or only 1-2 agents were selected: skip to step 6 (quick summary).
+
+Otherwise:
+
+1. **Backup previous report** (if exists):
+   ```bash
+   if [ -f docs/PROJECT_REVIEW_REPORT.md ]; then
+     cp docs/PROJECT_REVIEW_REPORT.md "docs/PROJECT_REVIEW_REPORT.$(date +%Y%m%d_%H%M%S).md"
+   fi
+   ```
+2. Spawn the consolidator:
+   - `subagent_type`: "kbc-review-consolidator"
+   - `team_name`: "kbc-review"
+   - `name`: "consolidator"
+   - `prompt`: "You are the consolidator for the kbc-review team. Review reports are in docs/.review_temp/. [List which agents completed and which timed out/failed]. Start Phase 1 (data flow mapping -- hold in memory). Phase 2: read all available temp reports. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md. List any missing reviews in the report. Phase 4: delete docs/.review_temp/. Mark task completed."
+3. **Consolidator timeout: 8 minutes.** If consolidator times out:
+   - Preserve `docs/.review_temp/` (do NOT delete)
+   - Tell user: "Consolidator timed out. Individual reports preserved in docs/.review_temp/. Retry with `/kbc-review --consolidate-only`."
 
 ### 6. Report completion
 
-When the consolidator finishes:
+**Full mode** (consolidator ran):
 1. Read `docs/PROJECT_REVIEW_REPORT.md`
-2. Present a summary to the user with:
-   - Total issues found (by severity)
-   - Top 5 most critical findings
-   - Overall project health assessment
-   - Link to the full report file
+2. Present summary: total issues by severity, top 5 critical findings, health assessment, link to report
+3. Note any agents that timed out or failed
+
+**Quick mode** (no consolidator):
+1. Read each temp report from `docs/.review_temp/`
+2. Present inline summary: severity counts per agent, top findings from each
+3. Note: "Individual reports preserved in docs/.review_temp/. Run `/kbc-review --consolidate-only` for full consolidated report."
 
 ### 7. Clean up
 
 After presenting results:
 1. Send shutdown requests to all teammates
 2. Call TeamDelete to clean up the team
+3. In full mode, `docs/.review_temp/` is deleted by the consolidator
+4. In quick mode, temp dir is preserved for user inspection
 
 ## Error Handling
 
-- If an agent fails, note which review is missing and proceed with consolidation of available reports
-- If Keboola MCP tools are not available, inform the user to configure their storage API token
-- If no `.keboola` directory exists, suggest running `/kbc-init` or `/kbc-pull` first
+- **Agent timeout**: mark timed-out, proceed with available reports (see step 4)
+- **Consolidator timeout**: preserve temp dir, suggest `--consolidate-only` retry
+- **MCP unreachable**: caught by pre-flight (step 0)
+- **No .keboola dir**: caught by pre-flight (step 0)
+- **Partial results**: consolidator lists missing reviews in report, proceeds with what's available
