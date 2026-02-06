@@ -30,6 +30,20 @@ Launch a team of 10 specialized review agents to perform a comprehensive audit o
 
 If the argument specifies a directory, use that. Otherwise use the current directory.
 
+## Pre-flight Validation (mandatory -- run before spawning any agents)
+
+Run these checks in order. If ANY check fails, stop immediately, report the specific error, and do NOT spawn agents.
+
+| # | Check | How | Fail message |
+|---|-------|-----|-------------|
+| 0 | Clean stale temp dir | If `docs/.review_temp/` exists, delete it (leftover from previous failed run) | (no fail -- just clean up) |
+| 1 | `.keboola/` exists | `Glob: .keboola/manifest.json` | "No .keboola/ directory found. Run `/kbc-init` or `/kbc-pull` first." |
+| 2 | Manifest readable | `Read: .keboola/manifest.json` | "Cannot read .keboola/manifest.json. File may be corrupted." |
+| 3 | MCP reachable | Call `mcp__keboola__get_project_info` | "Keboola MCP not reachable. Check your storage API token and network." |
+| 4 | Project has configs | Call `mcp__keboola__get_configs` and verify non-empty result | "Project has no configurations. Nothing to review." |
+
+All checks passed? Proceed to team creation.
+
 ## Team Structure
 
 Create a team called `kbc-review` with the following agents and tasks:

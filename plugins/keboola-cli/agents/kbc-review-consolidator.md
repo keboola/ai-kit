@@ -116,9 +116,29 @@ Compact summary table only:
 
 ## Data Flow Overview
 
-Inline the data flow analysis (from Phase 1):
+### Data Flow Diagram
 
-### Dependency Chain
+Build a Mermaid diagram from the Phase 1 lineage mapping. Use `graph LR` (left-to-right). Rules:
+- Extractors = rounded boxes, Buckets = cylinders, Transformations = rectangles, Writers = rounded boxes
+- Color-code nodes with issues: `style nodeId fill:#ff4444` for critical, `style nodeId fill:#ff9944` for high
+- Group by layer: sources on left, staging/core in middle, writers on right
+- Keep node labels short (component name only)
+
+Example structure (adapt to actual project):
+````markdown
+```mermaid
+graph LR
+    EX1([Extractor A]) --> B1[(in.c-source)]
+    B1 --> TR1[Transform staging]
+    TR1 --> B2[(out.c-core)]
+    B2 --> TR2[Transform mart]
+    TR2 --> B3[(out.c-mart)]
+    B3 --> WR1([Writer X])
+    style TR1 fill:#ff4444
+```
+````
+
+### Dependency Chain (text fallback)
 1. [Source] -> [Tables]
 2. [Transformation] (reads ...) -> [Tables]
 3. [Writer] (reads ...) -> [Destination]
@@ -129,19 +149,55 @@ Inline the data flow analysis (from Phase 1):
 
 ## Prioritized Action Items
 
+Within each tier, order items so prerequisites come first. Add a "Requires" column when an item depends on another.
+
+Common dependency patterns:
+- Add primary keys -> then enable incremental loading
+- Add input mappings -> then fix SQL references
+- Remove hardcoded values -> then parameterize for template
+- Create mapping tables -> then replace hardcoded business values
+
 ### Immediate (blocks execution)
-1. [ ] Action item
+
+| # | Action | Requires | Location |
+|---|--------|----------|----------|
+| 1 | [ ] Action item | -- | component/file |
 
 ### Short-Term (quality/portability risks)
-1. [ ] Action item
+
+| # | Action | Requires | Location |
+|---|--------|----------|----------|
+| 1 | [ ] Action item | -- | component/file |
 
 ### Medium-Term (maintenance)
-1. [ ] Action item
+
+| # | Action | Requires | Location |
+|---|--------|----------|----------|
+| 1 | [ ] Action item | -- | component/file |
 ```
 
 ## Deduplication Rules
 
-If multiple reviewers flag the same issue: merge into one entry, credit all sources, use most specific description, escalate severity.
+### Definitions
+
+- **Same issue**: same location (component + file, within 10 lines) AND same root cause
+- **Related issues**: same root cause but different locations -- keep both, group together in report
+
+### Merge procedure
+
+When two or more findings are the "same issue":
+1. **Severity**: highest severity wins
+2. **Description**: most specific description wins
+3. **Sources**: credit all reviewer agents that found it
+4. **Fix**: most actionable fix recommendation wins
+
+### Cross-reference enrichment
+
+When merging, combine context from all finding agents. Example: SQL reviewer's problem description + template-readiness reviewer's parameterization solution = richer merged finding.
+
+### Sanity check
+
+If deduplication removes > 30% of raw findings, note this in the report -- it may indicate overlapping agent scope rather than true duplicates.
 
 ## Team Behavior
 
