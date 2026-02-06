@@ -122,14 +122,38 @@ All agents write concise findings to `docs/.review_temp/` (temporary directory, 
 TeamCreate: team_name="kbc-review", description="Full Keboola project review"
 ```
 
+### 1.5. Pre-scan with config-analyzer (skip if --quick)
+
+Unless `--quick` is set, spawn the `keboola-config-analyzer` agent on sonnet to produce a project overview:
+- `subagent_type`: "keboola-config-analyzer"
+- `team_name`: "kbc-review"
+- `name`: "pre-scanner"
+- `prompt`: "Pre-scan this Keboola project. Write a concise project overview to docs/.review_temp/PROJECT_OVERVIEW.md including: component inventory (type, name, count), data flow summary (sources -> transformations -> destinations), bucket structure with table counts. Keep under 100 lines. Mark task completed when done."
+- `model`: "sonnet"
+- **Timeout: 90 seconds.** If it times out, proceed without the overview -- reviewers will fetch their own context.
+
+Wait for pre-scanner to complete before spawning review agents.
+
 ### 2. Create temp directory and all tasks
 
-First, create the temp directory for intermediate reports:
+First, create the temp directory and shared context file:
 ```bash
 mkdir -p docs/.review_temp
 ```
 
-Then create 10 tasks using TaskCreate:
+Then create the shared context file for cross-agent findings:
+
+Write `docs/.review_temp/SHARED_CONTEXT.md`:
+```markdown
+# Shared Context (cross-agent findings)
+
+Agents: append cross-domain findings relevant to OTHER agents here.
+
+| Agent | Finding | Relevant-to |
+|-------|---------|-------------|
+```
+
+Then create tasks using TaskCreate:
 
 **Task 1-9: Individual reviews** (no dependencies)
 - Subject: "[Agent name] review"
@@ -147,7 +171,7 @@ Use the Task tool to spawn each review agent with:
 - `subagent_type`: the agent type from the table above (e.g., "kbc-sql-reviewer")
 - `team_name`: "kbc-review"
 - `name`: the agent name from the table above (e.g., "sql-reviewer")
-- `prompt`: "You are part of the kbc-review team. Complete your assigned review task. Read the project configs using Keboola MCP tools and local files. Write your concise findings report to docs/.review_temp/[your-agent-name].md using the compact table format defined in your instructions. Keep output under 200 lines. When done, mark your task as completed."
+- `prompt`: "You are part of the kbc-review team. If docs/.review_temp/PROJECT_OVERVIEW.md exists, read it first for project context. Complete your assigned review task using Keboola MCP tools and local files. Write your concise findings report to docs/.review_temp/[your-agent-name].md (compact table format, under 200 lines). After writing your report, read docs/.review_temp/SHARED_CONTEXT.md and append any cross-domain findings relevant to OTHER agents. Mark your task as completed."
 - `run_in_background`: true
 
 ### 4. Monitor reviewers with timeout
@@ -178,7 +202,7 @@ Otherwise:
    - `subagent_type`: "kbc-review-consolidator"
    - `team_name`: "kbc-review"
    - `name`: "consolidator"
-   - `prompt`: "You are the consolidator for the kbc-review team. Review reports are in docs/.review_temp/. [List which agents completed and which timed out/failed]. Start Phase 1 (data flow mapping -- hold in memory). Phase 2: read all available temp reports. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md. List any missing reviews in the report. Phase 4: delete docs/.review_temp/. Mark task completed."
+   - `prompt`: "You are the consolidator for the kbc-review team. Review reports are in docs/.review_temp/. [List which agents completed and which timed out/failed]. Start Phase 1 (data flow mapping -- hold in memory). Phase 2: read all available temp reports AND docs/.review_temp/SHARED_CONTEXT.md for cross-agent findings. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md, enriching merged findings with shared context. List any missing reviews in the report. Phase 4: delete docs/.review_temp/. Mark task completed."
 3. **Consolidator timeout: 8 minutes.** If consolidator times out:
    - Preserve `docs/.review_temp/` (do NOT delete)
    - Tell user: "Consolidator timed out. Individual reports preserved in docs/.review_temp/. Retry with `/kbc-review --consolidate-only`."

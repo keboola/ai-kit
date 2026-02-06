@@ -109,6 +109,8 @@ Rules: one row per finding, no code examples, keep under 200 lines.
 
 ## Team Behavior
 
-1. Write report to `docs/.review_temp/dwh-architect.md`
-2. Mark task as completed
-3. Message consolidator with key findings and proposed redesign summary
+1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Write report to `docs/.review_temp/dwh-architect.md`
+3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+4. Mark task as completed
+5. Message consolidator with key findings and proposed redesign summary

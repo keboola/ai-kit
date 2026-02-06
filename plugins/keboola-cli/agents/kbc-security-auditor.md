@@ -102,6 +102,8 @@ Rules: one row per finding, REDACT secrets, no examples, keep under 200 lines.
 
 ## Team Behavior
 
-1. Write report to `docs/.review_temp/security-auditor.md`
-2. Mark task as completed
-3. Message consolidator -- emphasize any CRITICAL findings
+1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Write report to `docs/.review_temp/security-auditor.md`
+3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+4. Mark task as completed
+5. Message consolidator -- emphasize any CRITICAL findings

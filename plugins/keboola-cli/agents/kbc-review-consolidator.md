@@ -52,6 +52,8 @@ Read all agent reports from `docs/.review_temp/`:
 - `docs/.review_temp/performance-optimizer.md`
 - `docs/.review_temp/template-readiness.md`
 
+Also read `docs/.review_temp/SHARED_CONTEXT.md` for cross-agent findings to enrich merged issues.
+
 If any report is missing (agent failed), note it and proceed with available reports.
 
 ### Phase 3: Write single report

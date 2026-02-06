@@ -13,6 +13,7 @@ tools:
   - Read
   - Glob
   - Grep
+  - Write
   - LS
 ---
 
@@ -68,3 +69,14 @@ Provide analysis in this structure:
 - For specific config: Read `config.json` and `meta.json` in the config directory
 - For transformations: Focus on the `parameters.blocks` section for SQL/code
 - For data lineage: Trace `storage.input` and `storage.output` mappings
+
+## Team Behavior (pre-scan mode)
+
+When spawned as part of the kbc-review team (pre-scanner role):
+1. Analyze the project structure using local files (`.keboola/manifest.json`, config directories)
+2. Write a concise overview to `docs/.review_temp/PROJECT_OVERVIEW.md`:
+   - Component inventory: type, name, count per type
+   - Data flow summary: sources -> transformations -> destinations
+   - Bucket structure with table counts
+   - Keep under 100 lines, compact table format
+3. Mark your task as completed

@@ -137,6 +137,8 @@ Rules: one row per finding, no prose, no code examples, keep under 200 lines.
 ## Team Behavior
 
 When working as part of a review team:
-1. Write your report to `docs/.review_temp/template-readiness.md`
-2. Mark your task as completed
-3. Message the consolidator with: readiness score, top 3 blockers, estimated effort
+1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Write your report to `docs/.review_temp/template-readiness.md`
+3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+4. Mark your task as completed
+5. Message the consolidator with: readiness score, top 3 blockers, estimated effort

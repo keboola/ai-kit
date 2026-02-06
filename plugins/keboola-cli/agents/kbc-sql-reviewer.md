@@ -94,6 +94,8 @@ Rules:
 
 ## Team Behavior
 
-1. Write report to `docs/.review_temp/sql-reviewer.md`
-2. Mark task as completed
-3. Message consolidator with one-line summary (e.g., "SQL review done: 3 critical, 5 high, 12 medium")
+1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Write report to `docs/.review_temp/sql-reviewer.md`
+3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents (e.g., hardcoded values relevant to template-readiness, performance issues relevant to performance-optimizer). Append-only, do not modify existing rows.
+4. Mark task as completed
+5. Message consolidator with one-line summary (e.g., "SQL review done: 3 critical, 5 high, 12 medium")
