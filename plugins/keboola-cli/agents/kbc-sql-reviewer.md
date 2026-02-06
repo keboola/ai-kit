@@ -53,6 +53,12 @@ Senior SQL reviewer for Snowflake SQL in Keboola transformation pipelines.
 | Dead code: commented-out SQL, unused CTEs | MEDIUM |
 | Complex logic without comments | MEDIUM |
 | Inconsistent column naming (camelCase vs snake_case) | MEDIUM |
+| Missing technical columns (SRC_ID, SRC_SYS_ID, INS_DT, UPD_DT) in L1+ tables | HIGH |
+| Column names not UPPERCASE | HIGH |
+| Missing column domain suffixes (_ID, _AMT, _D) on clearly typed columns | MEDIUM |
+| FK columns not following [TABLE]_SRC_ID pattern | MEDIUM |
+| Transformation not using CREATE OR REPLACE + INSERT INTO upsert pattern | MEDIUM |
+| Variables not using {{ moustache }} syntax or unassigned | HIGH |
 | Nested CASE statements 3+ levels deep | LOW |
 | Repeated PARTITION BY that could consolidate | LOW |
 | Unused columns selected but never used downstream | LOW |
@@ -95,7 +101,8 @@ Rules:
 ## Team Behavior
 
 1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Write report to `docs/.review_temp/sql-reviewer.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents (e.g., hardcoded values relevant to template-readiness, performance issues relevant to performance-optimizer). Append-only, do not modify existing rows.
-4. Mark task as completed
-5. Message consolidator with one-line summary (e.g., "SQL review done: 3 critical, 5 high, 12 medium")
+2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for naming, technical column, and transformation template standards
+3. Write report to `docs/.review_temp/sql-reviewer.md`
+4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents (e.g., hardcoded values relevant to template-readiness, performance issues relevant to performance-optimizer). Append-only, do not modify existing rows.
+5. Mark task as completed
+6. Message consolidator with one-line summary (e.g., "SQL review done: 3 critical, 5 high, 12 medium")

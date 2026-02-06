@@ -153,6 +153,12 @@ Agents: append cross-domain findings relevant to OTHER agents here.
 |-------|---------|-------------|
 ```
 
+Then copy the review standards reference file to the temp directory:
+```bash
+cp ${PLUGIN_DIR}/standards/review-standards.md docs/.review_temp/REVIEW_STANDARDS.md
+```
+If the file doesn't exist at the plugin path, use the Glob tool to find `review-standards.md` and copy it.
+
 Then create tasks using TaskCreate:
 
 **Task 1-9: Individual reviews** (no dependencies)
@@ -171,7 +177,7 @@ Use the Task tool to spawn each review agent with:
 - `subagent_type`: the agent type from the table above (e.g., "kbc-sql-reviewer")
 - `team_name`: "kbc-review"
 - `name`: the agent name from the table above (e.g., "sql-reviewer")
-- `prompt`: "You are part of the kbc-review team. If docs/.review_temp/PROJECT_OVERVIEW.md exists, read it first for project context. Complete your assigned review task using Keboola MCP tools and local files. Write your concise findings report to docs/.review_temp/[your-agent-name].md (compact table format, under 200 lines). After writing your report, read docs/.review_temp/SHARED_CONTEXT.md and append any cross-domain findings relevant to OTHER agents. Mark your task as completed."
+- `prompt`: "You are part of the kbc-review team. If docs/.review_temp/PROJECT_OVERVIEW.md exists, read it first for project context. Read docs/.review_temp/REVIEW_STANDARDS.md for Actum naming conventions and Keboola best practices -- validate against sections relevant to your domain. Complete your assigned review task using Keboola MCP tools and local files. Write your concise findings report to docs/.review_temp/[your-agent-name].md (compact table format, under 200 lines). After writing your report, read docs/.review_temp/SHARED_CONTEXT.md and append any cross-domain findings relevant to OTHER agents. Mark your task as completed."
 - `run_in_background`: true
 
 ### 4. Monitor reviewers with timeout

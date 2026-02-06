@@ -115,7 +115,8 @@ Rules: one row per finding, no code blocks, no prose, keep under 200 lines.
 
 When working as part of a review team:
 1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Write report to `docs/.review_temp/performance-optimizer.md`
+2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Check read-only input mappings, incremental loading with PKs, off-peak scheduling, flow parallelization.
+3. Write report to `docs/.review_temp/performance-optimizer.md`
 3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
 4. Mark task as completed
 5. Message consolidator: top 3 bottlenecks and estimated total savings

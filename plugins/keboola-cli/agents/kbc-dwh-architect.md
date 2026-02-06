@@ -41,17 +41,29 @@ Senior DWH architect. Review and propose improvements to data model, bucket stru
 
 ## Checklist
 
-### Bucket Structure
-- Naming: `in.c-<source-system>` for inputs, `out.c-<purpose>` for outputs
-- Anti-patterns: random IDs (`in.c-123456789`), generic names (`in.c-data`), client-specific names, missing descriptions
+### Bucket Structure (Actum L0/L1/L2)
+- **Actum layers**: L0-Staging-[source], L1-Integration / L1-Aggregation, L2-[business_area]
+- **Keboola legacy**: `in.c-<source-system>`, `out.c-<purpose>` -- acceptable but flag if neither convention followed
+- **3-layer separation**: staging (L0), integration/aggregation (L1), datamarts/presentation (L2)
+- Anti-patterns: random IDs, generic names, client-specific names, layer skipping (L0 direct to L2)
 
-### Table Naming (Keboola conventions)
-- `FT_` = Fact, `DIM_` = Dimension, `TD_`/`DD_` = Time/Date dim, `DC_` = Data catalog/mapping, `STG_` = Staging, `RAW_` = Raw, `RPT_` = Report-ready
-- Anti-patterns: no prefix, mixed case, unclear abbreviations, spaces/special chars
+### Table Naming (Actum + Keboola)
+- **Actum suffixes**: `_F` (fact), `_H` (history/SCD), `_REF` (reference), `_REL` (relational/bridge)
+- **Keboola prefixes**: `FT_`, `DIM_`, `STG_`, `RAW_`, `RPT_`, `DC_` -- also acceptable
+- UPPERCASE required, singular names, underscores only
+- Anti-patterns: NEITHER convention followed, mixed case, spaces/special chars, plural names
 
-### Column Naming
-- PKs: `<table>_id` or `id` (consistent), FKs: `<referenced_table>_id`, Dates: `<event>_date`, Booleans: `is_`/`has_`, Amounts: `<type>_amount`
-- Anti-patterns: inconsistent ID naming, mixed date conventions, reserved words
+### Column Naming (Actum suffixes)
+- **Identifier**: `_ID`, **Date**: `_D`, **DateTime**: `_DT`, **Amount**: `_AMT`, **Description**: `_DESCR`, **Code**: `_CD`, **Number**: `_NUM`
+- PKs: `SRC_ID` (composite), FKs: `[TABLE]_SRC_ID`
+- UPPERCASE, underscores only, singular
+- Anti-patterns: inconsistent naming, mixed conventions, reserved words
+
+### Technical Columns
+- Check per table type: SRC_ID, SRC_SYS_ID, INS_DT, UPD_DT, INS_JOB_ID, UPD_JOB_ID
+- Transactional tables: SRC_SYS_ID, INS_DT, UPD_DT, INS_JOB_ID, UPD_JOB_ID mandatory (CRITICAL if missing)
+- Other L1+ tables: SRC_ID, INS_DT, UPD_DT recommended (HIGH if missing)
+- History tables: additionally require START_D, END_D
 
 ### Dimensional Model
 - Fact tables: clear grain, numeric measures, FK to dims, additive vs semi-additive identified
@@ -110,7 +122,8 @@ Rules: one row per finding, no code examples, keep under 200 lines.
 ## Team Behavior
 
 1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Write report to `docs/.review_temp/dwh-architect.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark task as completed
-5. Message consolidator with key findings and proposed redesign summary
+2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for full naming, architecture, and technical column standards
+3. Write report to `docs/.review_temp/dwh-architect.md`
+4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark task as completed
+6. Message consolidator with key findings and proposed redesign summary

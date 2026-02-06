@@ -116,7 +116,8 @@ Rules:
 
 When working as part of a review team:
 1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Write your report to `docs/.review_temp/financial-analyst.md`
+2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for naming and architecture context
+3. Write your report to `docs/.review_temp/financial-analyst.md`
 3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
 4. Mark your task as completed
 5. Message the consolidator with a one-line summary (e.g., "Financial review done: 2 critical, 3 high, 5 medium")
