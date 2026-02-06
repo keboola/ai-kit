@@ -28,26 +28,35 @@ Type these directly in Claude Code:
 | `/kbc-pull` | Pull configurations from remote project |
 | `/kbc-push` | Push local changes to remote project |
 | `/kbc-diff` | Show differences between local and remote |
-| `/kbc-review` | Launch the full 10-agent project review team |
+| `/kbc-review` | Launch project review team (7 general + 2 FI with `--fi`) |
 
 ### /kbc-review
 
-The main review command. Spawns 10 specialized agents that run in parallel to audit every dimension of a Keboola project:
+The main review command. By default spawns 7 general-purpose agents. Add `--fi` for Financial Intelligence agents.
 
+**General Review Agents (default)**:
 1. **SQL Quality** - Anti-patterns, correctness, performance
 2. **Configuration** - Best practices, completeness, naming
 3. **DWH Architecture** - Data model, layering, naming conventions
 4. **Data Quality** - NULLs, duplicates, freshness, referential integrity
-5. **Financial Logic** - P&L, Balance Sheet, KPIs, COA mapping
-6. **Semantic Layer** - Metric definitions, generation readiness
-7. **Security** - Credentials, PII, access control, compliance
-8. **Performance** - Job durations, SQL efficiency, parallelization
+5. **Semantic Layer** - Metric definitions, generation readiness
+6. **Security** - Credentials, PII, access control, compliance
+7. **Performance** - Job durations, SQL efficiency, parallelization
+
+**Financial Intelligence Agents (`--fi`)**:
+8. **Financial Logic** - P&L, Balance Sheet, KPIs, COA mapping
 9. **Template Readiness** - Parameterization, mapping tables, generation blockers
+
+**Always**:
 10. **Data Flow + Consolidation** - End-to-end lineage + merged final report
 
-Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated) + 10 individual reports in `docs/`.
+Usage: `/kbc-review` (general) or `/kbc-review --fi` (with financial agents)
+
+Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated).
 
 ## Agents
+
+### General Review Agents (default)
 
 | Agent | Purpose |
 |-------|---------|
@@ -55,17 +64,23 @@ Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated) + 10 individual reports i
 | `kbc-config-reviewer` | Configuration best practices |
 | `kbc-dwh-architect` | Data warehouse architecture review |
 | `kbc-data-quality-analyst` | Live data quality analysis via MCP |
-| `kbc-financial-analyst` | Financial calculation validation (multi-ERP, SaaS metrics) |
 | `kbc-semantic-layer-reviewer` | Semantic layer and metric definitions |
 | `kbc-security-auditor` | Security audit (credentials, PII, compliance) |
 | `kbc-performance-optimizer` | Pipeline performance and optimization |
-| `kbc-template-readiness` | Template readiness for FIIA automation |
 | `kbc-review-consolidator` | Data flow mapping + report consolidation |
 | `keboola-config-analyzer` | General config analysis and explanation |
 
-## Skill
+### Financial Intelligence Agents (`--fi`)
+
+| Agent | Purpose |
+|-------|---------|
+| `kbc-financial-analyst` | Financial calculation validation (multi-ERP, SaaS metrics) |
+| `kbc-template-readiness` | Template readiness for project templatization |
+
+## Skills
 
 - **keboola-config**: Knowledge about Keboola project structure and configuration formats
+- **keboola-fi**: Financial intelligence domain context (ERP systems, financial metrics)
 
 ## Usage
 

@@ -1,12 +1,12 @@
 ---
 name: keboola-cli
-description: Use this skill for managing and reviewing Keboola projects. Activates when syncing project configs (init, pull, push, diff), running project reviews, analyzing SQL transformations, auditing security, assessing performance, validating financial logic, or evaluating template readiness. Covers the full Keboola CLI workflow and 10-agent review team.
+description: Use this skill for managing and reviewing Keboola projects. Activates when syncing project configs (init, pull, push, diff), running project reviews, analyzing SQL transformations, auditing security, or assessing performance. Covers the full Keboola CLI workflow and 7-agent review team (+ 2 optional FI agents with --fi).
 allowed-tools: ['*']
 ---
 
 # Keboola CLI Plugin
 
-Manage and review Keboola projects using the CLI and a 10-agent review team.
+Manage and review Keboola projects using the CLI and a 7-agent review team (+ 2 optional FI agents with `--fi`).
 
 ## Commands
 
@@ -16,24 +16,31 @@ Manage and review Keboola projects using the CLI and a 10-agent review team.
 | `/kbc-pull` | Pull configurations from remote project |
 | `/kbc-push` | Push local changes to remote project |
 | `/kbc-diff` | Show differences between local and remote |
-| `/kbc-review` | Launch the full 10-agent project review team |
+| `/kbc-review` | Launch project review team (7 general + 2 FI with `--fi`) |
 
 ## Review Team
 
-`/kbc-review` spawns 10 agents in parallel to audit every dimension of a Keboola project:
+`/kbc-review` spawns 7 general agents by default. Add `--fi` for 2 Financial Intelligence agents.
 
+**General Review Agents (default)**:
 1. **SQL Reviewer** -- Anti-patterns, correctness, Snowflake-specific issues
 2. **Config Reviewer** -- Naming, descriptions, mappings, best practices
 3. **DWH Architect** -- Data model, layering, dimensional modeling, naming
 4. **Data Quality Analyst** -- NULLs, duplicates, freshness, referential integrity (live MCP queries)
-5. **Financial Analyst** -- P&L, Balance Sheet, KPIs, COA mapping, multi-ERP awareness
-6. **Semantic Layer Reviewer** -- Metric definitions, completeness, auto-generation readiness
-7. **Security Auditor** -- Credentials, PII, access control, GDPR/CCPA compliance
-8. **Performance Optimizer** -- Job durations, SQL efficiency, incremental loading, parallelization
-9. **Template Readiness Assessor** -- Parameterization, mapping tables, generation blockers
-10. **Consolidator** -- Data flow mapping + merged report from all 9 reviewers
+5. **Semantic Layer Reviewer** -- Metric definitions, completeness, auto-generation readiness
+6. **Security Auditor** -- Credentials, PII, access control, GDPR/CCPA compliance
+7. **Performance Optimizer** -- Job durations, SQL efficiency, incremental loading, parallelization
 
-Output: Individual reports in `docs/review_*.md` plus a consolidated `docs/PROJECT_REVIEW_REPORT.md`.
+**Financial Intelligence Agents (`--fi`)**:
+8. **Financial Analyst** -- P&L, Balance Sheet, KPIs, COA mapping, multi-ERP awareness
+9. **Template Readiness Assessor** -- Parameterization, mapping tables, generation blockers
+
+**Always**:
+10. **Consolidator** -- Data flow mapping + merged report from all reviewers
+
+For Financial Intelligence reviews, use `/kbc-review --fi`. See `skills/keboola-fi/` for FI domain context.
+
+Output: Consolidated `docs/PROJECT_REVIEW_REPORT.md`.
 
 ## Prerequisites
 
@@ -41,18 +48,3 @@ Output: Individual reports in `docs/review_*.md` plus a consolidated `docs/PROJE
 - Keboola MCP server configured for live data analysis (data quality, performance agents)
 - Storage API token (Master token) for project access
 
-## ERP Systems Supported
-
-Financial review agents understand data structures from:
-- NetSuite (GL, journal entries, subsidiaries)
-- SAP S/4HANA / BW (BKPF/BSEG, cost centers, profit centers)
-- Oracle Fusion / EBS (GL segments, ledgers, subledger accounting)
-- Microsoft Dynamics 365 (financial dimensions, main accounts)
-- QuickBooks / Xero (simplified COA, class tracking)
-
-## Financial Metrics Covered
-
-- Core P&L + Balance Sheet (Revenue, COGS, EBITDA, Net Income, Working Capital)
-- SaaS metrics (MRR, ARR, Churn, LTV, CAC, NRR, Rule of 40)
-- Cash flow (Operating CF, Free CF, DSO, DPO, DIO, Cash Conversion Cycle)
-- Budget variance (Actual vs Budget, Forecast accuracy, YoY/MoM growth)

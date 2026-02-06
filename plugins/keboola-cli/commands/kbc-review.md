@@ -1,6 +1,6 @@
 ---
 name: kbc-review
-description: Launch the full 10-agent Keboola project review team
+description: Launch the Keboola project review team (7 general agents, + 2 FI agents with --fi)
 allowed-tools:
   - Task
   - TaskCreate
@@ -15,12 +15,12 @@ allowed-tools:
   - Glob
   - Grep
   - Bash
-argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consolidate-only]"
+argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consolidate-only] [--fi]"
 ---
 
 # Full Keboola Project Review
 
-Launch a team of 10 specialized review agents to perform a comprehensive audit of a Keboola project. Each agent reviews a different dimension and writes a concise findings report. The consolidator merges all findings into a single actionable report.
+Launch a team of specialized review agents to audit a Keboola project. By default, 7 general-purpose agents run. Add `--fi` to include 2 Financial Intelligence agents (financial-analyst, template-readiness). The consolidator merges all findings into a single actionable report.
 
 ## Prerequisites
 
@@ -50,23 +50,23 @@ Parse the user's arguments for optional flags:
 
 ### `--scope=agent1,agent2,...`
 
-Run only the listed agents instead of all 9. Valid scope keywords:
+Run only the listed agents instead of the default set. Valid scope keywords:
 
-| Keyword | Agent type |
-|---------|-----------|
-| sql | kbc-sql-reviewer |
-| config | kbc-config-reviewer |
-| dwh | kbc-dwh-architect |
-| data-quality | kbc-data-quality-analyst |
-| financial | kbc-financial-analyst |
-| semantic | kbc-semantic-layer-reviewer |
-| security | kbc-security-auditor |
-| performance | kbc-performance-optimizer |
-| template | kbc-template-readiness |
+| Keyword | Agent type | Default |
+|---------|-----------|---------|
+| sql | kbc-sql-reviewer | Yes |
+| config | kbc-config-reviewer | Yes |
+| dwh | kbc-dwh-architect | Yes |
+| data-quality | kbc-data-quality-analyst | Yes |
+| semantic | kbc-semantic-layer-reviewer | Yes |
+| security | kbc-security-auditor | Yes |
+| performance | kbc-performance-optimizer | Yes |
+| financial | kbc-financial-analyst | FI only (requires `--fi`) |
+| template | kbc-template-readiness | FI only (requires `--fi`) |
 
 Example: `/kbc-review --scope=sql,security` runs only sql-reviewer and security-auditor.
 
-If `--scope` is not provided, run all 9 agents (default).
+If `--scope` is not provided, run all 7 general agents (default). Add `--fi` to include financial-analyst and template-readiness (9 total).
 
 ### `--quick`
 
@@ -78,11 +78,18 @@ Quick mode is automatic when `--scope` selects 1-2 agents.
 
 Skip reviewer agents. Read existing reports from `docs/.review_temp/` and run only the consolidator. Use this to retry consolidation after a previous failed run.
 
+### `--fi`
+
+Include Financial Intelligence agents (financial-analyst, template-readiness) alongside general review agents. Without this flag, only the 7 general-purpose agents run.
+
+Equivalent to adding `--scope=financial,template` to the default set.
+
 ### Combined behavior
 
 | Agents selected | Consolidator | Output |
 |----------------|-------------|--------|
-| All 9 (default) | Yes | `docs/PROJECT_REVIEW_REPORT.md` |
+| All 7 (default) | Yes | `docs/PROJECT_REVIEW_REPORT.md` |
+| All 9 (--fi) | Yes | `docs/PROJECT_REVIEW_REPORT.md` |
 | 3+ with --scope | Yes | `docs/PROJECT_REVIEW_REPORT.md` |
 | 1-2 with --scope | No (auto-quick) | Inline summary, temp reports preserved |
 | Any + --quick | No | Inline summary, temp reports preserved |
@@ -92,7 +99,7 @@ Skip reviewer agents. Read existing reports from `docs/.review_temp/` and run on
 
 Create a team called `kbc-review` with the following agents and tasks:
 
-### Review Agents (run in parallel)
+### General Review Agents (always run, in parallel)
 
 All agents write concise findings to `docs/.review_temp/` (temporary directory, cleaned up after consolidation).
 
@@ -102,17 +109,22 @@ All agents write concise findings to `docs/.review_temp/` (temporary directory, 
 | config-reviewer | kbc-config-reviewer | Review all component configurations for best practices and issues | `docs/.review_temp/config-reviewer.md` |
 | dwh-architect | kbc-dwh-architect | Assess data model architecture, naming, layering, and structure | `docs/.review_temp/dwh-architect.md` |
 | data-quality | kbc-data-quality-analyst | Analyze data quality: NULLs, duplicates, stale data, referential integrity | `docs/.review_temp/data-quality.md` |
-| financial-analyst | kbc-financial-analyst | Validate financial logic: P&L, Balance Sheet, KPIs, budget comparisons | `docs/.review_temp/financial-analyst.md` |
 | semantic-reviewer | kbc-semantic-layer-reviewer | Review semantic layer: metric definitions, completeness, generation readiness | `docs/.review_temp/semantic-reviewer.md` |
 | security-auditor | kbc-security-auditor | Audit security: credentials, PII, access control, compliance | `docs/.review_temp/security-auditor.md` |
 | performance-optimizer | kbc-performance-optimizer | Analyze performance: job durations, SQL efficiency, incremental loading, parallelization | `docs/.review_temp/performance-optimizer.md` |
+
+### Financial Intelligence Agents (only with `--fi` or `--scope=financial,template`)
+
+| Agent | Type | Task | Temp Output |
+|-------|------|------|-------------|
+| financial-analyst | kbc-financial-analyst | Validate financial logic: P&L, Balance Sheet, KPIs, budget comparisons | `docs/.review_temp/financial-analyst.md` |
 | template-readiness | kbc-template-readiness | Assess template readiness: parameterization, mapping tables, generation blockers | `docs/.review_temp/template-readiness.md` |
 
 ### Consolidator (runs after all reviewers finish)
 
 | Agent | Type | Task | Final Output |
 |-------|------|------|--------------|
-| consolidator | kbc-review-consolidator | Map data flow (inline), consolidate all 9 temp reports, clean up temp dir | `docs/PROJECT_REVIEW_REPORT.md` |
+| consolidator | kbc-review-consolidator | Map data flow (inline), consolidate all temp reports, clean up temp dir | `docs/PROJECT_REVIEW_REPORT.md` |
 
 ## Execution Steps
 
@@ -161,17 +173,23 @@ If the file doesn't exist at the plugin path, use the Glob tool to find `review-
 
 Then create tasks using TaskCreate:
 
-**Task 1-9: Individual reviews** (no dependencies)
+**Task 1-7: General reviews** (no dependencies, always created)
 - Subject: "[Agent name] review"
 - Description: "Run the [agent type] agent to review the project and write concise report to docs/.review_temp/[agent-name].md"
-- These 9 tasks have NO dependencies and can run in parallel
+- These 7 tasks have NO dependencies and can run in parallel
 
-**Task 10: Consolidation** (blocked by tasks 1-9)
+**Task 8-9: FI reviews** (no dependencies, only if `--fi` is set or `--scope` includes them)
+- Subject: "[Agent name] review"
+- Description: "Run the [agent type] agent to review the project and write concise report to docs/.review_temp/[agent-name].md"
+
+**Task N+1: Consolidation** (blocked by all review tasks)
 - Subject: "Consolidate all review reports"
-- Description: "Map data flow (inline), merge all 9 temp reports into docs/PROJECT_REVIEW_REPORT.md, then delete docs/.review_temp/"
-- Set `addBlockedBy` to all 9 review task IDs
+- Description: "Map data flow (inline), merge all temp reports into docs/PROJECT_REVIEW_REPORT.md, then delete docs/.review_temp/"
+- Set `addBlockedBy` to all review task IDs
 
-### 3. Spawn all 9 review agents in parallel
+### 3. Spawn review agents in parallel
+
+Spawn 7 general agents (or 9 if `--fi` is set, or the subset specified by `--scope`).
 
 Use the Task tool to spawn each review agent with:
 - `subagent_type`: the agent type from the table above (e.g., "kbc-sql-reviewer")
@@ -208,7 +226,7 @@ Otherwise:
    - `subagent_type`: "kbc-review-consolidator"
    - `team_name`: "kbc-review"
    - `name`: "consolidator"
-   - `prompt`: "You are the consolidator for the kbc-review team. Review reports are in docs/.review_temp/. [List which agents completed and which timed out/failed]. Start Phase 1 (data flow mapping -- hold in memory). Phase 2: read all available temp reports AND docs/.review_temp/SHARED_CONTEXT.md for cross-agent findings. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md, enriching merged findings with shared context. List any missing reviews in the report. Phase 4: delete docs/.review_temp/. Mark task completed."
+   - `prompt`: "You are the consolidator for the kbc-review team. Review reports are in docs/.review_temp/. [List which agents completed and which timed out/failed]. Start Phase 1 (data flow mapping -- hold in memory). Phase 2: use Glob to find all *.md reports in docs/.review_temp/, read all available temp reports AND docs/.review_temp/SHARED_CONTEXT.md for cross-agent findings. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md, enriching merged findings with shared context. List any missing reviews in the report. Phase 4: delete docs/.review_temp/. Mark task completed."
 3. **Consolidator timeout: 8 minutes.** If consolidator times out:
    - Preserve `docs/.review_temp/` (do NOT delete)
    - Tell user: "Consolidator timed out. Individual reports preserved in docs/.review_temp/. Retry with `/kbc-review --consolidate-only`."

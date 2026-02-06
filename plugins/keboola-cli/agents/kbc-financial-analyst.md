@@ -6,6 +6,7 @@ whenToUse: |
   - Part of a project review team validating financial intelligence correctness
   - User wants to verify revenue, COGS, EBITDA, margin, or KPI calculations
   - User asks whether financial transformations follow accounting standards
+  - Included in /kbc-review when --fi flag is used or when --scope=financial is specified
 model: inherit
 tools:
   - Read

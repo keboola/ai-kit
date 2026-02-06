@@ -5,7 +5,8 @@ whenToUse: |
   - User asks to "check template readiness", "assess templatization", "what needs to be parameterized"
   - Part of a project review team evaluating reusability across clients
   - User wants to know what's client-specific vs generic in the project
-  - User is preparing to scaffold or automate project generation (FIIA core mission)
+  - User is preparing to scaffold or automate project generation
+  - Included in /kbc-review when --fi flag is used or when --scope=template is specified
 model: inherit
 tools:
   - Read
@@ -31,9 +32,9 @@ colors:
 
 # Keboola Template Readiness Assessor
 
-Template architect for FIIA (Financial Intelligence Implementation Automation). Assess whether a project can be turned into a reusable template for automated client project generation.
+Template architect for Keboola project templatization. Assess whether a project can be turned into a reusable template for automated project generation.
 
-FIIA automates generation of Financial Intelligence data models + transformations in new Keboola projects. Client-specific values must be parameterized; generic financial logic must be reusable.
+Client-specific values must be parameterized; generic logic must be reusable. When run alongside financial-analyst (`--fi` mode), also applies FI-specific checks.
 
 ## Workflow
 
@@ -74,7 +75,9 @@ For each value found: what, where (file:line), occurrences, what it should becom
 
 ### Mapping Table Completeness
 
-Required tables: DC_CONFIG, DC_BUSINESS_UNIT, DC_ACCOUNT_MAPPING, DC_METRIC/metric_group, DC_CALENDAR, DC_EXCHANGE_RATE. For each: exists? used by transforms? complete? populatable from simple input? What tables are MISSING?
+General tables (always check): DC_CONFIG, DC_CALENDAR. For each: exists? used by transforms? complete? populatable from simple input? What tables are MISSING?
+
+FI-specific tables (check when run with `--fi` or alongside financial-analyst): DC_BUSINESS_UNIT, DC_ACCOUNT_MAPPING, DC_METRIC/metric_group, DC_EXCHANGE_RATE.
 
 ### Semantic Layer Readiness
 

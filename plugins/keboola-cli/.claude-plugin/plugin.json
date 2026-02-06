@@ -1,7 +1,7 @@
 {
   "name": "keboola-cli",
-  "version": "1.3.0",
-  "description": "Keboola project management and review toolkit with 10-agent review team, CLI sync commands, and financial intelligence analysis",
+  "version": "1.4.0",
+  "description": "Keboola project management and review toolkit with 7-agent review team, CLI sync commands, and optional financial intelligence analysis (--fi)",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"

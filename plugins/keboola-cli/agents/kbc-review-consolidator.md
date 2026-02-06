@@ -42,19 +42,11 @@ Map end-to-end data lineage and merge findings from all review teammates into a 
 ### Phase 2: Consolidation (after all teammates finish)
 
 Read all agent reports from `docs/.review_temp/`:
-- `docs/.review_temp/sql-reviewer.md`
-- `docs/.review_temp/config-reviewer.md`
-- `docs/.review_temp/dwh-architect.md`
-- `docs/.review_temp/data-quality.md`
-- `docs/.review_temp/financial-analyst.md`
-- `docs/.review_temp/semantic-reviewer.md`
-- `docs/.review_temp/security-auditor.md`
-- `docs/.review_temp/performance-optimizer.md`
-- `docs/.review_temp/template-readiness.md`
+Use `Glob: docs/.review_temp/*.md` to find all report files. Exclude SHARED_CONTEXT.md, REVIEW_STANDARDS.md, and PROJECT_OVERVIEW.md (these are reference files, not agent reports).
 
 Also read `docs/.review_temp/SHARED_CONTEXT.md` for cross-agent findings to enrich merged issues.
 
-If any report is missing (agent failed), note it and proceed with available reports.
+If any expected report is missing (agent failed or was not in scope), note it and proceed with available reports.
 
 ### Phase 3: Write single report
 
@@ -77,7 +69,7 @@ The single output file `docs/PROJECT_REVIEW_REPORT.md` must follow this exact st
 # Project Review Report
 
 **Generated**: YYYY-MM-DD | **Project**: [name]
-**Agents**: 9 reviewers + data flow analysis
+**Agents**: [N] reviewers + data flow analysis
 
 ## Executive Summary
 
