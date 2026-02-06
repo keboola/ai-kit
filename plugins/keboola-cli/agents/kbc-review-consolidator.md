@@ -112,13 +112,7 @@ Compact summary table only:
 
 ### Data Flow Diagram
 
-Build a Mermaid diagram from the Phase 1 lineage mapping. Use `graph LR` (left-to-right). Rules:
-- Extractors = rounded boxes, Buckets = cylinders, Transformations = rectangles, Writers = rounded boxes
-- Color-code nodes with issues: `style nodeId fill:#ff4444` for critical, `style nodeId fill:#ff9944` for high
-- Group by layer: sources on left, staging/core in middle, writers on right
-- Keep node labels short (component name only)
-
-Build a Mermaid `graph LR` diagram. Extractors = rounded `([...])`, Buckets = cylinders `[(...)]`, Transforms = rectangles `[...]`, Writers = rounded. Color nodes with issues: `style nodeId fill:#ff4444` (critical), `fill:#ff9944` (high).
+Build a Mermaid `graph LR` diagram. Extractors = rounded `([...])`, Buckets = cylinders `[(...)]`, Transforms = rectangles `[...]`, Writers = rounded. Color nodes with issues: `style nodeId fill:#ff4444` (critical), `fill:#ff9944` (high). Group by layer: sources on left, staging/core in middle, writers on right. Keep node labels short (component name only).
 
 ### Dependency Chain (text fallback)
 1. [Source] -> [Tables]
