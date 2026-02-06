@@ -53,14 +53,16 @@ Scan every SQL file and config for hardcoded values that change per client:
 
 | Value Type | Template Action |
 |-----------|-----------------|
-| Entity names/IDs, subsidiary codes | Template variable |
-| COA account numbers, hierarchies | Mapping table (CSV upload) |
-| Fiscal year start, period definitions | Template variable |
-| Currency codes, exchange rate sources | Template variable |
+| Organization names/IDs, hierarchy codes | Template variable |
+| Category/account mapping tables | Mapping table (CSV upload) |
+| Period boundaries, calendar definitions | Template variable |
+| Unit conversion codes, rate sources | Template variable |
 | Business unit hierarchies | Mapping table |
-| Tax/labor rates, hardcoded decimals | Config parameter |
+| Domain-specific rates, hardcoded decimals | Config parameter |
 | Hardcoded date ranges/filters | Template variable |
-| KPI formulas, thresholds | Semantic layer (DC_METRIC) |
+| Metric formulas, thresholds | Semantic layer (DC_METRIC) |
+
+In `--fi` mode, financial-specific examples include: COA hierarchies, fiscal year boundaries, currency exchange rates, entity consolidation codes.
 
 For each value found: what, where (file:line), occurrences, what it should become.
 
@@ -143,6 +145,6 @@ When working as part of a review team:
 1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
 2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Validate naming conventions, technical columns, transformation template pattern, L0/L1/L2 architecture for templatization.
 3. Write your report to `docs/.review_temp/template-readiness.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark your task as completed
-5. Message the consolidator with: readiness score, top 3 blockers, estimated effort
+4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark your task as completed
+6. Message the consolidator with: readiness score, top 3 blockers, estimated effort

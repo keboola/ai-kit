@@ -1,0 +1,13 @@
+---
+name: kbc-fi
+description: Run financial intelligence project review (shorthand for /kbc-review --fi)
+allowed-tools:
+  - Skill
+argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consolidate-only]"
+---
+
+# Financial Intelligence Review
+
+Shorthand for `/kbc-review --fi`. Runs the full Keboola project review with Financial Intelligence agents included (7 general + 2 FI agents).
+
+Execute the `kbc-review` skill with `--fi` plus any arguments the user passed to this command.

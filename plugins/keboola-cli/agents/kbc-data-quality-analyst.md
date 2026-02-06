@@ -118,6 +118,6 @@ Rules: one row per finding, no SQL code blocks, keep under 200 lines.
 1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
 2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Validate PK patterns (SRC_ID composite), nullable PKs with incremental loading, column data type domains.
 3. Write report to `docs/.review_temp/data-quality.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark task as completed
-5. Message consolidator with one-line summary
+4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark task as completed
+6. Message consolidator with one-line summary

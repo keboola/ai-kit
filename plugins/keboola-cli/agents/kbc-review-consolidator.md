@@ -118,19 +118,7 @@ Build a Mermaid diagram from the Phase 1 lineage mapping. Use `graph LR` (left-t
 - Group by layer: sources on left, staging/core in middle, writers on right
 - Keep node labels short (component name only)
 
-Example structure (adapt to actual project):
-````markdown
-```mermaid
-graph LR
-    EX1([Extractor A]) --> B1[(in.c-source)]
-    B1 --> TR1[Transform staging]
-    TR1 --> B2[(out.c-core)]
-    B2 --> TR2[Transform mart]
-    TR2 --> B3[(out.c-mart)]
-    B3 --> WR1([Writer X])
-    style TR1 fill:#ff4444
-```
-````
+Build a Mermaid `graph LR` diagram. Extractors = rounded `([...])`, Buckets = cylinders `[(...)]`, Transforms = rectangles `[...]`, Writers = rounded. Color nodes with issues: `style nodeId fill:#ff4444` (critical), `fill:#ff9944` (high).
 
 ### Dependency Chain (text fallback)
 1. [Source] -> [Tables]
@@ -172,26 +160,13 @@ Common dependency patterns:
 
 ## Deduplication Rules
 
-### Definitions
+**Same issue** = same location (component + file, within 10 lines) AND same root cause. Merge: highest severity wins, most specific description wins, credit all agents, most actionable fix wins.
 
-- **Same issue**: same location (component + file, within 10 lines) AND same root cause
-- **Related issues**: same root cause but different locations -- keep both, group together in report
+**Related issues** = same root cause, different locations -- keep both, group together.
 
-### Merge procedure
+When merging, combine context from all agents (e.g., SQL reviewer's problem + template reviewer's parameterization fix = richer finding).
 
-When two or more findings are the "same issue":
-1. **Severity**: highest severity wins
-2. **Description**: most specific description wins
-3. **Sources**: credit all reviewer agents that found it
-4. **Fix**: most actionable fix recommendation wins
-
-### Cross-reference enrichment
-
-When merging, combine context from all finding agents. Example: SQL reviewer's problem description + template-readiness reviewer's parameterization solution = richer merged finding.
-
-### Sanity check
-
-If deduplication removes > 30% of raw findings, note this in the report -- it may indicate overlapping agent scope rather than true duplicates.
+If deduplication removes >30% of raw findings, note this -- may indicate agent scope overlap.
 
 ## Team Behavior
 

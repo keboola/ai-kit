@@ -29,6 +29,7 @@ Type these directly in Claude Code:
 | `/kbc-push` | Push local changes to remote project |
 | `/kbc-diff` | Show differences between local and remote |
 | `/kbc-review` | Launch project review team (7 general + 2 FI with `--fi`) |
+| `/kbc-fi` | Shorthand for `/kbc-review --fi` (financial intelligence review) |
 
 ### /kbc-review
 
@@ -99,3 +100,43 @@ Create `~/.claude/keboola-cli.local.md` for default settings:
 default_host: connection.keboola.com
 ---
 ```
+
+## Review Workflow
+
+1. Pre-flight validation (5 checks: temp dir, .keboola/, manifest, MCP, configs)
+2. Pre-scan with config-analyzer (project overview, optional)
+3. Spawn review agents in parallel (7 general, +2 with --fi)
+4. Monitor with 5-min per-agent timeout
+5. Consolidator merges all findings into single report
+6. Cleanup: delete temp dir, shut down team
+
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| (none) | 7 general agents + consolidator |
+| `--fi` | Add 2 FI agents (9 total) |
+| `--scope=x,y` | Run only listed agents |
+| `--quick` | Skip consolidator, inline summary |
+| `--consolidate-only` | Re-run consolidator on existing temp reports |
+
+### Scope Presets
+
+| Preset | Expands to | Use case |
+|--------|-----------|----------|
+| `quick-check` | sql, config | Fast syntax + config validation |
+| `architecture` | dwh, semantic, performance | Data model and pipeline design |
+| `compliance` | security, data-quality | Security audit + data integrity |
+
+Example: `/kbc-review --scope=architecture`
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.5.0 | 2026-02-06 | /kbc-fi shorthand, scope presets, README expansion |
+| 1.4.0 | 2026-02-06 | FI agents gated behind --fi, keboola-fi skill, dynamic consolidator |
+| 1.3.0 | 2026-02-06 | Actum standards integration, review-standards.md |
+| 1.2.0 | 2026-02-06 | Pre-flight validation, --scope/--quick/--consolidate-only, timeouts |
+| 1.1.0 | 2026-02-06 | Agent prompt optimization (47% reduction) |
+| 1.0.0 | 2026-02-06 | Initial 10-agent review team |

@@ -17,6 +17,7 @@ Manage and review Keboola projects using the CLI and a 7-agent review team (+ 2 
 | `/kbc-push` | Push local changes to remote project |
 | `/kbc-diff` | Show differences between local and remote |
 | `/kbc-review` | Launch project review team (7 general + 2 FI with `--fi`) |
+| `/kbc-fi` | Shorthand for `/kbc-review --fi` (financial intelligence review) |
 
 ## Review Team
 

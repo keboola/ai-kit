@@ -61,12 +61,25 @@ Run only the listed agents instead of the default set. Valid scope keywords:
 | semantic | kbc-semantic-layer-reviewer | Yes |
 | security | kbc-security-auditor | Yes |
 | performance | kbc-performance-optimizer | Yes |
-| financial | kbc-financial-analyst | FI only (requires `--fi`) |
-| template | kbc-template-readiness | FI only (requires `--fi`) |
+| financial | kbc-financial-analyst | FI |
+| template | kbc-template-readiness | FI |
 
 Example: `/kbc-review --scope=sql,security` runs only sql-reviewer and security-auditor.
 
 If `--scope` is not provided, run all 7 general agents (default). Add `--fi` to include financial-analyst and template-readiness (9 total).
+
+Note: If `--scope` explicitly includes `financial` or `template`, the `--fi` flag is auto-enabled.
+You do NOT need to pass both `--scope=financial` and `--fi` -- either one works.
+
+#### Scope presets
+
+| Preset | Expands to | Use case |
+|--------|-----------|----------|
+| `quick-check` | sql, config | Fast syntax + config validation |
+| `architecture` | dwh, semantic, performance | Data model and pipeline design |
+| `compliance` | security, data-quality | Security audit + data integrity |
+
+Example: `/kbc-review --scope=architecture`
 
 ### `--quick`
 
@@ -188,6 +201,8 @@ Then create tasks using TaskCreate:
 - Set `addBlockedBy` to all review task IDs
 
 ### 3. Spawn review agents in parallel
+
+If `--scope` includes `financial` or `template`, treat as if `--fi` is set.
 
 Spawn 7 general agents (or 9 if `--fi` is set, or the subset specified by `--scope`).
 
