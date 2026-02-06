@@ -20,11 +20,11 @@ argument-hint: "[project-directory]"
 
 # Full Keboola Project Review
 
-Launch a team of 10 specialized review agents to perform a comprehensive audit of a Keboola project. Each agent reviews a different dimension of the project and writes a report. The consolidator merges all findings into a single actionable report.
+Launch a team of 10 specialized review agents to perform a comprehensive audit of a Keboola project. Each agent reviews a different dimension and writes a concise findings report. The consolidator merges all findings into a single actionable report.
 
 ## Prerequisites
 
-1. The project must be pulled locally (run `/kbc-pull` first if needed)
+1. Project must be pulled locally (`/kbc-pull` first if needed)
 2. A `.keboola` directory must exist in the target directory
 3. Keboola MCP tools must be available (storage API token configured)
 
@@ -36,23 +36,25 @@ Create a team called `kbc-review` with the following agents and tasks:
 
 ### Review Agents (run in parallel)
 
-| Agent | Type | Task | Report Output |
-|-------|------|------|---------------|
-| sql-reviewer | kbc-sql-reviewer | Review all SQL transformations for quality, anti-patterns, and correctness | `docs/review_sql_quality.md` |
-| config-reviewer | kbc-config-reviewer | Review all component configurations for best practices and issues | `docs/review_configurations.md` |
-| dwh-architect | kbc-dwh-architect | Assess data model architecture, naming, layering, and structure | `docs/review_data_model_architecture.md` |
-| data-quality | kbc-data-quality-analyst | Analyze data quality: NULLs, duplicates, stale data, referential integrity | `docs/review_data_quality.md` |
-| financial-analyst | kbc-financial-analyst | Validate financial logic: P&L, Balance Sheet, KPIs, budget comparisons | `docs/review_financial_logic.md` |
-| semantic-reviewer | kbc-semantic-layer-reviewer | Review semantic layer: metric definitions, completeness, generation readiness | `docs/review_semantic_layer.md` |
-| security-auditor | kbc-security-auditor | Audit security: credentials, PII, access control, compliance | `docs/review_security.md` |
-| performance-optimizer | kbc-performance-optimizer | Analyze performance: job durations, SQL efficiency, incremental loading, parallelization | `docs/review_performance.md` |
-| template-readiness | kbc-template-readiness | Assess template readiness: parameterization, mapping tables, generation blockers | `docs/review_template_readiness.md` |
+All agents write concise findings to `docs/.review_temp/` (temporary directory, cleaned up after consolidation).
+
+| Agent | Type | Task | Temp Output |
+|-------|------|------|-------------|
+| sql-reviewer | kbc-sql-reviewer | Review all SQL transformations for quality, anti-patterns, and correctness | `docs/.review_temp/sql-reviewer.md` |
+| config-reviewer | kbc-config-reviewer | Review all component configurations for best practices and issues | `docs/.review_temp/config-reviewer.md` |
+| dwh-architect | kbc-dwh-architect | Assess data model architecture, naming, layering, and structure | `docs/.review_temp/dwh-architect.md` |
+| data-quality | kbc-data-quality-analyst | Analyze data quality: NULLs, duplicates, stale data, referential integrity | `docs/.review_temp/data-quality.md` |
+| financial-analyst | kbc-financial-analyst | Validate financial logic: P&L, Balance Sheet, KPIs, budget comparisons | `docs/.review_temp/financial-analyst.md` |
+| semantic-reviewer | kbc-semantic-layer-reviewer | Review semantic layer: metric definitions, completeness, generation readiness | `docs/.review_temp/semantic-reviewer.md` |
+| security-auditor | kbc-security-auditor | Audit security: credentials, PII, access control, compliance | `docs/.review_temp/security-auditor.md` |
+| performance-optimizer | kbc-performance-optimizer | Analyze performance: job durations, SQL efficiency, incremental loading, parallelization | `docs/.review_temp/performance-optimizer.md` |
+| template-readiness | kbc-template-readiness | Assess template readiness: parameterization, mapping tables, generation blockers | `docs/.review_temp/template-readiness.md` |
 
 ### Consolidator (runs after all reviewers finish)
 
-| Agent | Type | Task | Report Output |
-|-------|------|------|---------------|
-| consolidator | kbc-review-consolidator | Map data flow, then consolidate all 9 review reports into one actionable report | `docs/review_data_flow.md` + `docs/PROJECT_REVIEW_REPORT.md` |
+| Agent | Type | Task | Final Output |
+|-------|------|------|--------------|
+| consolidator | kbc-review-consolidator | Map data flow (inline), consolidate all 9 temp reports, clean up temp dir | `docs/PROJECT_REVIEW_REPORT.md` |
 
 ## Execution Steps
 
@@ -62,18 +64,23 @@ Create a team called `kbc-review` with the following agents and tasks:
 TeamCreate: team_name="kbc-review", description="Full Keboola project review"
 ```
 
-### 2. Create all tasks
+### 2. Create temp directory and all tasks
 
-Create 10 tasks using TaskCreate:
+First, create the temp directory for intermediate reports:
+```bash
+mkdir -p docs/.review_temp
+```
+
+Then create 10 tasks using TaskCreate:
 
 **Task 1-9: Individual reviews** (no dependencies)
 - Subject: "[Agent name] review"
-- Description: "Run the [agent type] agent to review the project and write report to [output file]"
+- Description: "Run the [agent type] agent to review the project and write concise report to docs/.review_temp/[agent-name].md"
 - These 9 tasks have NO dependencies and can run in parallel
 
 **Task 10: Consolidation** (blocked by tasks 1-9)
 - Subject: "Consolidate all review reports"
-- Description: "Map data flow and merge all 9 review reports into docs/PROJECT_REVIEW_REPORT.md"
+- Description: "Map data flow (inline), merge all 9 temp reports into docs/PROJECT_REVIEW_REPORT.md, then delete docs/.review_temp/"
 - Set `addBlockedBy` to all 9 review task IDs
 
 ### 3. Spawn all 9 review agents in parallel
@@ -82,7 +89,7 @@ Use the Task tool to spawn each review agent with:
 - `subagent_type`: the agent type from the table above (e.g., "kbc-sql-reviewer")
 - `team_name`: "kbc-review"
 - `name`: the agent name from the table above (e.g., "sql-reviewer")
-- `prompt`: "You are part of the kbc-review team. Complete your assigned review task. Read the project configs using Keboola MCP tools and local files. Write your report to the specified output file. When done, mark your task as completed."
+- `prompt`: "You are part of the kbc-review team. Complete your assigned review task. Read the project configs using Keboola MCP tools and local files. Write your concise findings report to docs/.review_temp/[your-agent-name].md using the compact table format defined in your instructions. Keep output under 200 lines. When done, mark your task as completed."
 - `run_in_background`: true
 
 ### 4. Wait for all 9 reviewers to finish
@@ -95,7 +102,7 @@ Use the Task tool to spawn the consolidator agent:
 - `subagent_type`: "kbc-review-consolidator"
 - `team_name`: "kbc-review"
 - `name`: "consolidator"
-- `prompt`: "You are the consolidator for the kbc-review team. All 9 review reports are now written. Start Phase 1 (data flow mapping), then execute Phase 2 (consolidation). Read all reports from docs/ and produce the final docs/PROJECT_REVIEW_REPORT.md. When done, mark your task as completed."
+- `prompt`: "You are the consolidator for the kbc-review team. All 9 review reports are in docs/.review_temp/. Start Phase 1 (data flow mapping -- hold in memory, do NOT write separate file). Then Phase 2: read all 9 temp reports from docs/.review_temp/. Phase 3: write single docs/PROJECT_REVIEW_REPORT.md with full detail for critical+high, compact table for medium+low, inline data flow. Phase 4: delete docs/.review_temp/. When done, mark your task as completed."
 
 ### 6. Report completion
 
