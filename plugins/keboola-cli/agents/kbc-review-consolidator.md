@@ -41,29 +41,31 @@ Map end-to-end data lineage and merge findings from all review teammates into a 
 
 ### Phase 2: Consolidation (after all teammates finish)
 
-Read all agent reports from `docs/.review_temp/`:
-Use `Glob: docs/.review_temp/*.md` to find all report files. Exclude SHARED_CONTEXT.md, REVIEW_STANDARDS.md, and PROJECT_OVERVIEW.md (these are reference files, not agent reports).
+Read all agent reports from the review output directory (path provided in spawn prompt):
+Use `Glob: <review_output_dir>/*.md` to find all report files. Exclude SHARED_CONTEXT.md, REVIEW_STANDARDS.md, and PROJECT_OVERVIEW.md (these are reference files, not agent reports).
 
-Also read `docs/.review_temp/SHARED_CONTEXT.md` for cross-agent findings to enrich merged issues.
+Also read `<review_output_dir>/SHARED_CONTEXT.md` for cross-agent findings to enrich merged issues.
 
 If any expected report is missing (agent failed or was not in scope), note it and proceed with available reports.
 
 ### Phase 3: Write single report
 
-Write ONE file: `docs/PROJECT_REVIEW_REPORT.md`
+Write ONE file: `<review_output_dir>/PROJECT_REVIEW_REPORT.md`
 
-Do NOT write `docs/review_data_flow.md` or any other separate file.
+Do NOT write any other separate file.
 
 ### Phase 4: Cleanup
 
-After writing the report, delete the temp directory:
+After writing the report, delete ONLY working files from the review output directory -- preserve agent reports and PROJECT_OVERVIEW.md:
 ```bash
-rm -rf docs/.review_temp
+rm -f <review_output_dir>/SHARED_CONTEXT.md <review_output_dir>/REVIEW_STANDARDS.md
 ```
+
+Do NOT delete agent report files or PROJECT_OVERVIEW.md.
 
 ## Report Structure
 
-The single output file `docs/PROJECT_REVIEW_REPORT.md` must follow this exact structure:
+The single output file `<review_output_dir>/PROJECT_REVIEW_REPORT.md` must follow this exact structure:
 
 ```markdown
 # Project Review Report
@@ -165,8 +167,8 @@ If deduplication removes >30% of raw findings, note this -- may indicate agent s
 ## Team Behavior
 
 1. Start Phase 1 immediately -- hold results in memory
-2. Wait for teammates to complete reports in `docs/.review_temp/`
-3. Phase 2: read all temp reports
-4. Phase 3: write single `docs/PROJECT_REVIEW_REPORT.md`
-5. Phase 4: delete `docs/.review_temp/`
+2. Wait for teammates to complete reports in the review output directory
+3. Phase 2: read all agent reports (Glob *.md, exclude working files)
+4. Phase 3: write single `<review_output_dir>/PROJECT_REVIEW_REPORT.md`
+5. Phase 4: delete ONLY working files (SHARED_CONTEXT.md, REVIEW_STANDARDS.md) -- preserve agent reports and PROJECT_OVERVIEW.md
 6. Mark task as completed
