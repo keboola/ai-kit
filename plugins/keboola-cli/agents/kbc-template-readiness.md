@@ -62,24 +62,17 @@ Scan every SQL file and config for hardcoded values that change per client:
 | Hardcoded date ranges/filters | Template variable |
 | Metric formulas, thresholds | Semantic layer (DC_METRIC) |
 
-In `--fi` mode, financial-specific examples include: COA hierarchies, fiscal year boundaries, currency exchange rates, entity consolidation codes.
-
-For each value found: what, where (file:line), occurrences, what it should become.
+For each value found: what, where (file:line), occurrences, what it should become. In `--fi` mode, FI-specific value examples (COA hierarchies, fiscal boundaries, currency rates) are covered by the fi-template-spec agent.
 
 ### Component Classification
 
-| Classification | Meaning | Template Action |
-|---------------|---------|-----------------|
-| Generic | Same for all clients | Include as-is |
-| Parameterizable | Same structure, different values | Template variable |
-| Client-specific | Unique to this client | Optional module |
-| Reference-only | Not generic | Exclude |
+Classify each component: **Generic** (include as-is), **Parameterizable** (template variable), **Client-specific** (optional module), **Reference-only** (exclude).
 
 ### Mapping Table Completeness
 
-General tables (always check): DC_CONFIG, DC_CALENDAR. For each: exists? used by transforms? complete? populatable from simple input? What tables are MISSING?
+Check DC_CONFIG, DC_CALENDAR, and any domain mapping tables. For each: exists? used by transforms? complete? populatable from simple input? What tables are MISSING?
 
-FI-specific tables (check when run with `--fi` or alongside financial-analyst): DC_BUSINESS_UNIT, DC_ACCOUNT_MAPPING, DC_METRIC/metric_group, DC_EXCHANGE_RATE.
+In `--fi` mode, defer FI-specific mapping table checks (DC_BUSINESS_UNIT, DC_ACCOUNT_MAPPING, DC_METRIC, DC_EXCHANGE_RATE) to the fi-template-spec agent.
 
 ### Semantic Layer Readiness
 

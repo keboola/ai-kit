@@ -6,7 +6,7 @@ allowed-tools: ['*']
 
 # Financial Intelligence Context
 
-Financial domain knowledge for Keboola project reviews. Used by `kbc-financial-analyst` and `kbc-template-readiness` agents when `--fi` flag is passed to `/kbc-review`.
+Financial domain knowledge for Keboola project reviews. Used by `kbc-financial-analyst`, `kbc-template-readiness`, and `kbc-fi-template-spec` agents when `--fi` flag is passed to `/kbc-review`.
 
 ## ERP Systems Supported
 
@@ -41,3 +41,13 @@ Recommended Keboola bucket/table naming for financial projects:
 - Fact tables: suffix `_fact` (e.g., `journal_entries_fact`, `budget_fact`)
 - Dimension tables: prefix `dim_` (e.g., `dim_account`, `dim_entity`, `dim_period`)
 - Mapping tables: prefix `DC_` (e.g., `DC_ACCOUNT_MAPPING`, `DC_EXCHANGE_RATE`)
+
+## Template Specification Patterns
+
+When building a master FI template from a reference project:
+
+- **Universal logic**: P&L cascade, BS balance check, journal entry validation, period aggregation -- these are the same for every client
+- **Always parameterize**: COA hierarchy root, fiscal year start month, base currency, entity list, budget version names, GL account ranges
+- **Required mapping tables**: DC_ACCOUNT_MAPPING (COA to standard categories), DC_EXCHANGE_RATE (currency pairs + rate types), DC_BUSINESS_UNIT (entity hierarchy), DC_METRIC (semantic layer definitions)
+- **Source-agnostic staging**: template extractors should produce a standard staging schema regardless of ERP; staging-to-core transforms normalize ERP-specific structures
+- **ER model FK conventions**: dimension PKs use `SRC_ID` suffix, fact FKs reference `[DIM_TABLE]_SRC_ID`, all relationships documented in DC_METRIC source_tables field

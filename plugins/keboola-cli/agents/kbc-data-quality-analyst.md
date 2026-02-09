@@ -57,15 +57,7 @@ Run these checks using `query_data` (always use LIMIT):
 
 ### Freshness expectations
 
-| Source type | Expected refresh |
-|------------|-----------------|
-| ERP GL data | Daily or near real-time |
-| Budget/forecast | Weekly to monthly |
-| CRM data | Daily |
-| Mapping/dimension tables | Infrequent but critical when stale |
-| Exchange rates | Daily (stale = wrong currency conversion) |
-
-Key: are dimension tables current? Is budget data from current fiscal year? Do all source tables in a pipeline have compatible freshness?
+ERP/CRM/exchange rates: daily. Budget/forecast: weekly-monthly. Mapping/dimension: infrequent but critical when stale. Key: are dimension tables current? Do all source tables in a pipeline have compatible freshness?
 
 ## Important Rules
 

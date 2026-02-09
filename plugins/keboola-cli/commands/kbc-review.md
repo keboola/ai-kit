@@ -1,6 +1,6 @@
 ---
 name: kbc-review
-description: Launch the Keboola project review team (7 general agents, + 2 FI agents with --fi)
+description: Launch the Keboola project review team (7 general agents, + 3 FI agents with --fi)
 allowed-tools:
   - Task
   - TaskCreate
@@ -20,7 +20,7 @@ argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consoli
 
 # Full Keboola Project Review
 
-Launch a team of specialized review agents to audit a Keboola project. By default, 7 general-purpose agents run. Add `--fi` to include 2 Financial Intelligence agents (financial-analyst, template-readiness). The consolidator merges all findings into a single actionable report.
+Launch a team of specialized review agents to audit a Keboola project. By default, 7 general-purpose agents run. Add `--fi` to include 3 Financial Intelligence agents (financial-analyst, template-readiness, fi-template-spec). The consolidator merges all findings into a single actionable report.
 
 ## Prerequisites
 
@@ -73,10 +73,11 @@ Run only the listed agents instead of the default set. Valid scope keywords:
 | performance | kbc-performance-optimizer | Yes |
 | financial | kbc-financial-analyst | FI |
 | template | kbc-template-readiness | FI |
+| fi-spec | kbc-fi-template-spec | FI |
 
 Example: `/kbc-review --scope=sql,security` runs only sql-reviewer and security-auditor.
 
-If `--scope` is not provided, run all 7 general agents (default). Add `--fi` to include financial-analyst and template-readiness (9 total).
+If `--scope` is not provided, run all 7 general agents (default). Add `--fi` to include financial-analyst, template-readiness, and fi-template-spec (10 total).
 
 Note: If `--scope` explicitly includes `financial` or `template`, the `--fi` flag is auto-enabled.
 You do NOT need to pass both `--scope=financial` and `--fi` -- either one works.
@@ -103,16 +104,16 @@ Skip reviewer agents. Read existing reports from `REVIEW_OUTPUT_DIR` and run onl
 
 ### `--fi`
 
-Include Financial Intelligence agents (financial-analyst, template-readiness) alongside general review agents. Without this flag, only the 7 general-purpose agents run.
+Include Financial Intelligence agents (financial-analyst, template-readiness, fi-template-spec) alongside general review agents. Without this flag, only the 7 general-purpose agents run.
 
-Equivalent to adding `--scope=financial,template` to the default set.
+Equivalent to adding `--scope=financial,template,fi-spec` to the default set.
 
 ### Combined behavior
 
 | Agents selected | Consolidator | Output |
 |----------------|-------------|--------|
 | All 7 (default) | Yes | `REVIEW_OUTPUT_DIR/PROJECT_REVIEW_REPORT.md` |
-| All 9 (--fi) | Yes | `REVIEW_OUTPUT_DIR/PROJECT_REVIEW_REPORT.md` |
+| All 10 (--fi) | Yes | `REVIEW_OUTPUT_DIR/PROJECT_REVIEW_REPORT.md` |
 | 3+ with --scope | Yes | `REVIEW_OUTPUT_DIR/PROJECT_REVIEW_REPORT.md` |
 | 1-2 with --scope | No (auto-quick) | Inline summary, agent reports preserved |
 | Any + --quick | No | Inline summary, agent reports preserved |
@@ -142,6 +143,7 @@ All agents write concise findings to `REVIEW_OUTPUT_DIR` (preserved after consol
 |-------|------|------|--------|
 | financial-analyst | kbc-financial-analyst | Validate financial logic: P&L, Balance Sheet, KPIs, budget comparisons | `REVIEW_OUTPUT_DIR/financial-analyst.md` |
 | template-readiness | kbc-template-readiness | Assess template readiness: parameterization, mapping tables, generation blockers | `REVIEW_OUTPUT_DIR/template-readiness.md` |
+| fi-template-spec | kbc-fi-template-spec | Template specification: delta analysis, ER diagram, source KB, template gaps | `REVIEW_OUTPUT_DIR/fi-template-spec.md` |
 
 ### Consolidator (runs after all reviewers finish)
 
@@ -202,7 +204,7 @@ Then create tasks using TaskCreate:
 - Description: "Run the [agent type] agent to review the project and write concise report to REVIEW_OUTPUT_DIR/[agent-name].md"
 - These 7 tasks have NO dependencies and can run in parallel
 
-**Task 8-9: FI reviews** (no dependencies, only if `--fi` is set or `--scope` includes them)
+**Task 8-10: FI reviews** (no dependencies, only if `--fi` is set or `--scope` includes them)
 - Subject: "[Agent name] review"
 - Description: "Run the [agent type] agent to review the project and write concise report to REVIEW_OUTPUT_DIR/[agent-name].md"
 
@@ -215,7 +217,7 @@ Then create tasks using TaskCreate:
 
 If `--scope` includes `financial` or `template`, treat as if `--fi` is set.
 
-Spawn 7 general agents (or 9 if `--fi` is set, or the subset specified by `--scope`).
+Spawn 7 general agents (or 10 if `--fi` is set, or the subset specified by `--scope`).
 
 Use the Task tool to spawn each review agent with:
 - `subagent_type`: the agent type from the table above (e.g., "kbc-sql-reviewer")

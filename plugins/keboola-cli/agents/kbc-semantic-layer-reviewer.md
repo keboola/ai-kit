@@ -60,6 +60,14 @@ For each metric in DC_METRIC: has name, description, formula/calculation, unit, 
 ### Generation Readiness
 Can the semantic layer drive auto-generation? Check: formula field queryable? Source tables/columns referenced? Output mapping defined? Dependencies captured? What percentage of metrics are fully described?
 
+### FI Metric Depth (when run with `--fi` or alongside financial-analyst)
+- Every P&L line item must have a corresponding DC_METRIC row
+- Metric formulas must specify sign convention (debit-positive vs credit-positive)
+- Metric groups must map to financial statement sections (Revenue, COGS, OpEx, etc.)
+- Aggregation type: flow metrics use SUM, stock metrics use latest snapshot
+- Budget vs Actual must reference the same base metric with a version qualifier
+- Missing depth = semantic layer cannot drive correct financial report generation
+
 ## Issue Severity
 
 | Issue | Severity |

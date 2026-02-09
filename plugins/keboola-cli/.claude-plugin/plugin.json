@@ -1,7 +1,7 @@
 {
   "name": "keboola-cli",
-  "version": "1.5.0",
-  "description": "Keboola project management and review toolkit with 7-agent review team, /kbc-fi shorthand, scope presets, CLI sync commands, and optional financial intelligence analysis (--fi)",
+  "version": "1.7.0",
+  "description": "Keboola project management and review toolkit with 7-agent review team (+ 3 FI agents with --fi), /kbc-fi shorthand, scope presets, CLI sync commands, and optional financial intelligence analysis",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"

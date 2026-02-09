@@ -66,15 +66,7 @@ Review all financial calculations in transformation SQL, validate formulas again
 
 ## Common Pitfalls
 
-| Pitfall | Severity | What to check |
-|---------|----------|---------------|
-| Unmapped COA accounts silently drop from reports | CRITICAL | Verify mapped total = raw GL total |
-| Incomplete intercompany eliminations | CRITICAL | Check consolidated view removes all internal transactions |
-| Stale dimension data applied to current transactions | HIGH | COA/entity tables current? |
-| Hardcoded account numbers instead of mapping table | HIGH | Scan SQL for literal account codes |
-| Overlapping account numbers across merged entities | HIGH | Check for entity-scoped COA mappings |
-| Different fiscal year start months across entities | MEDIUM | Verify fiscal calendar is parameterized per entity |
-| Budget data stale while actuals are current | MEDIUM | Compare refresh timestamps |
+Watch for: unmapped COA accounts silently dropping from reports (verify mapped total = raw GL total), incomplete intercompany eliminations, stale dimension data applied to current transactions, hardcoded account numbers instead of mapping table references, overlapping account numbers across merged entities without entity-scoped COA.
 
 ## Output Format
 

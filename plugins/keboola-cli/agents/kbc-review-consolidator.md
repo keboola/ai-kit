@@ -156,13 +156,9 @@ Common dependency patterns:
 
 ## Deduplication Rules
 
-**Same issue** = same location (component + file, within 10 lines) AND same root cause. Merge: highest severity wins, most specific description wins, credit all agents, most actionable fix wins.
+**Same issue** = same location (component + file, within 10 lines) AND same root cause. Merge: highest severity, most specific description, credit all agents, most actionable fix. Combine cross-agent context for richer findings.
 
-**Related issues** = same root cause, different locations -- keep both, group together.
-
-When merging, combine context from all agents (e.g., SQL reviewer's problem + template reviewer's parameterization fix = richer finding).
-
-If deduplication removes >30% of raw findings, note this -- may indicate agent scope overlap.
+**Related issues** = same root cause, different locations -- keep both, group together. If deduplication removes >30% of findings, note potential agent scope overlap.
 
 ## Team Behavior
 
