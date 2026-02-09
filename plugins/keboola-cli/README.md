@@ -110,7 +110,7 @@ default_host: connection.keboola.com
 3. Spawn review agents in parallel (7 general, +3 with --fi)
 4. Monitor with 5-min per-agent timeout
 5. Consolidator merges all findings into single report
-6. Cleanup: delete temp dir, shut down team
+6. Cleanup: delete working files, shut down team
 
 ### Flags
 

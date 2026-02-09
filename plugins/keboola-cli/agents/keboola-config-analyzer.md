@@ -14,7 +14,10 @@ tools:
   - Glob
   - Grep
   - Write
-  - LS
+  - Bash
+colors:
+  agent: white
+  user: cyan
 ---
 
 # Keboola Configuration Analyzer
