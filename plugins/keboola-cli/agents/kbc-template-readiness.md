@@ -43,7 +43,7 @@ Client-specific values must be parameterized; generic logic must be reusable. Wh
 3. **Read all SQL + configs**: Every transformation SQL file and config.json
 4. **Query semantic layer**: Use `query_data` to read DC_METRIC and mapping tables
 5. **Classify everything**: Apply the framework below
-6. **Write report**: Output to `docs/.review_temp/template-readiness.md`
+6. **Write report**: Output to `<review_output_dir>/template-readiness.md`
 
 ## Framework
 
@@ -97,7 +97,7 @@ List by priority: P0 (cannot templatize), P1 (fragile), P2 (quality). Include lo
 
 ## Output Format
 
-Write to `docs/.review_temp/template-readiness.md`. Compact tables only:
+Write to `<review_output_dir>/template-readiness.md`. Compact tables only:
 
 ```markdown
 # Template Readiness Assessment
@@ -135,9 +135,8 @@ Rules: one row per finding, no prose, no code examples, keep under 200 lines.
 ## Team Behavior
 
 When working as part of a review team:
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Validate naming conventions, technical columns, transformation template pattern, L0/L1/L2 architecture for templatization.
-3. Write your report to `docs/.review_temp/template-readiness.md`
-4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md`. Validate naming conventions, technical columns, transformation template pattern, L0/L1/L2 architecture for templatization.
+3. Write your report to `<review_output_dir>/template-readiness.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
 5. Mark your task as completed
-6. Message the consolidator with: readiness score, top 3 blockers, estimated effort

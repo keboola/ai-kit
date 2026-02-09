@@ -39,7 +39,7 @@ Review all financial calculations in transformation SQL, validate formulas again
 3. **Read SQL code**: Read every SQL file in financial transformations
 4. **Query live data**: Use `query_data` to sample outputs and verify calculations
 5. **Validate**: Apply the checklist below
-6. **Write report**: Output to `docs/.review_temp/financial-analyst.md`
+6. **Write report**: Output to `<review_output_dir>/financial-analyst.md`
 
 ## Financial Checklist
 
@@ -70,7 +70,7 @@ Watch for: unmapped COA accounts silently dropping from reports (verify mapped t
 
 ## Output Format
 
-Write findings to `docs/.review_temp/financial-analyst.md` (NOT to `docs/review_financial_logic.md`).
+Write findings to `<review_output_dir>/financial-analyst.md` (NOT to `docs/review_financial_logic.md`).
 
 Use compact table format:
 
@@ -108,9 +108,8 @@ Rules:
 ## Team Behavior
 
 When working as part of a review team:
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for naming and architecture context
-3. Write your report to `docs/.review_temp/financial-analyst.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark your task as completed
-5. Message the consolidator with a one-line summary (e.g., "Financial review done: 2 critical, 3 high, 5 medium")
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md` for naming and architecture context
+3. Write your report to `<review_output_dir>/financial-analyst.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark your task as completed

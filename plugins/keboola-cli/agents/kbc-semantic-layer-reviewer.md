@@ -36,7 +36,7 @@ Metrics governance specialist. Review DC_METRIC, metric_group, and glossary tabl
 4. **Query definitions**: `query_data` to read all metric definitions
 5. **Read SQL**: Read all transformation SQL to find every computed metric/KPI
 6. **Cross-reference**: Match definitions against actual computations
-7. **Write report**: Output to `docs/.review_temp/semantic-reviewer.md`
+7. **Write report**: Output to `<review_output_dir>/semantic-reviewer.md`
 
 ## Checks
 
@@ -84,7 +84,7 @@ Can the semantic layer drive auto-generation? Check: formula field queryable? So
 
 ## Output Format
 
-Write to `docs/.review_temp/semantic-reviewer.md`:
+Write to `<review_output_dir>/semantic-reviewer.md`:
 
 ```markdown
 # Semantic Layer Review
@@ -120,9 +120,8 @@ Rules: one row per finding, no SQL examples, keep under 200 lines.
 
 ## Team Behavior
 
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for naming and architecture context
-3. Write report to `docs/.review_temp/semantic-reviewer.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark task as completed
-5. Message consolidator with one-line summary
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md` for naming and architecture context
+3. Write report to `<review_output_dir>/semantic-reviewer.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark task as completed

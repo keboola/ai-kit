@@ -1,12 +1,12 @@
 ---
 name: keboola-cli
-description: Use this skill for managing and reviewing Keboola projects. Activates when syncing project configs (init, pull, push, diff), running project reviews, analyzing SQL transformations, auditing security, or assessing performance. Covers the full Keboola CLI workflow and 7-agent review team (+ 2 optional FI agents with --fi).
+description: Use this skill for managing and reviewing Keboola projects. Activates when the user asks to "review project", "run kbc review", "check Keboola config", "pull project", "push changes", "diff configs", "init project", or mentions Keboola CLI workflow. Covers sync commands (init, pull, push, diff), 7-agent review team (+ 3 optional FI agents with --fi), SQL analysis, security audit, and performance optimization.
 allowed-tools: ['*']
 ---
 
 # Keboola CLI Plugin
 
-Manage and review Keboola projects using the CLI and a 7-agent review team (+ 2 optional FI agents with `--fi`).
+Manage and review Keboola projects using the CLI and a 7-agent review team (+ 3 optional FI agents with `--fi`).
 
 ## Commands
 
@@ -16,12 +16,12 @@ Manage and review Keboola projects using the CLI and a 7-agent review team (+ 2 
 | `/kbc-pull` | Pull configurations from remote project |
 | `/kbc-push` | Push local changes to remote project |
 | `/kbc-diff` | Show differences between local and remote |
-| `/kbc-review` | Launch project review team (7 general + 2 FI with `--fi`) |
+| `/kbc-review` | Launch project review team (7 general + 3 FI with `--fi`) |
 | `/kbc-fi` | Shorthand for `/kbc-review --fi` (financial intelligence review) |
 
 ## Review Team
 
-`/kbc-review` spawns 7 general agents by default. Add `--fi` for 2 Financial Intelligence agents.
+`/kbc-review` spawns 7 general agents by default. Add `--fi` for 3 Financial Intelligence agents.
 
 **General Review Agents (default)**:
 1. **SQL Reviewer** -- Anti-patterns, correctness, Snowflake-specific issues
@@ -35,13 +35,17 @@ Manage and review Keboola projects using the CLI and a 7-agent review team (+ 2 
 **Financial Intelligence Agents (`--fi`)**:
 8. **Financial Analyst** -- P&L, Balance Sheet, KPIs, COA mapping, multi-ERP awareness
 9. **Template Readiness Assessor** -- Parameterization, mapping tables, generation blockers
+10. **FI Template Spec** -- Template delta, ER diagram, source knowledge base, gap analysis
 
 **Always**:
-10. **Consolidator** -- Data flow mapping + merged report from all reviewers
+11. **Consolidator** -- Data flow mapping + merged report from all reviewers
+
+**Pre-scan**:
+- **Config Analyzer** -- Project structure overview (runs before review agents)
 
 For Financial Intelligence reviews, use `/kbc-review --fi`. See `skills/keboola-fi/` for FI domain context.
 
-Output: Consolidated `docs/PROJECT_REVIEW_REPORT.md`.
+Output: Consolidated `docs/output/review/<project-name>/PROJECT_REVIEW_REPORT.md`.
 
 ## Prerequisites
 

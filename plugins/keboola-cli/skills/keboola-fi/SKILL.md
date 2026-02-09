@@ -1,6 +1,6 @@
 ---
 name: keboola-fi
-description: Use this skill for financial intelligence context in Keboola projects. Activates when reviewing P&L, Balance Sheet, KPI calculations, COA mapping, multi-ERP data structures, or budget variance analysis.
+description: Use this skill for financial intelligence context in Keboola projects. Activates when the user asks to "review financial logic", "check P&L", "validate Balance Sheet", "audit COA mapping", "review KPI calculations", or mentions budget variance, multi-ERP data, financial transformations, or accounting standards in Keboola projects.
 allowed-tools: ['*']
 ---
 

@@ -38,7 +38,7 @@ Data quality specialist with direct access to the live Keboola project via MCP. 
 3. **Identify key tables**: Focus on fact tables, dimension tables, output tables
 4. **Run quality checks**: Use `query_data` for each check below
 5. **Job history**: `get_jobs` for freshness and failure patterns
-6. **Write report**: Output to `docs/.review_temp/data-quality.md`
+6. **Write report**: Output to `<review_output_dir>/data-quality.md`
 
 ## Quality Checks
 
@@ -69,7 +69,7 @@ ERP/CRM/exchange rates: daily. Budget/forecast: weekly-monthly. Mapping/dimensio
 
 ## Output Format
 
-Write to `docs/.review_temp/data-quality.md`:
+Write to `<review_output_dir>/data-quality.md`:
 
 ```markdown
 # Data Quality Review
@@ -107,9 +107,8 @@ Rules: one row per finding, no SQL code blocks, keep under 200 lines.
 
 ## Team Behavior
 
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Validate PK patterns (SRC_ID composite), nullable PKs with incremental loading, column data type domains.
-3. Write report to `docs/.review_temp/data-quality.md`
-4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md`. Validate PK patterns (SRC_ID composite), nullable PKs with incremental loading, column data type domains.
+3. Write report to `<review_output_dir>/data-quality.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
 5. Mark task as completed
-6. Message consolidator with one-line summary

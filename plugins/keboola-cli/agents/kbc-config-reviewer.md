@@ -42,7 +42,7 @@ Expert Keboola configuration reviewer. Audit all component configs, input/output
 6. **Flows**: `get_flows` for orchestration details, task ordering
 7. **Jobs**: `get_jobs` for execution history, failure patterns
 8. **Local cross-reference**: Read local config.json/meta.json
-9. **Write report**: Output to `docs/.review_temp/config-reviewer.md`
+9. **Write report**: Output to `<review_output_dir>/config-reviewer.md`
 
 ## Configuration Rules
 
@@ -80,7 +80,7 @@ Expert Keboola configuration reviewer. Audit all component configs, input/output
 
 ## Output Format
 
-Write to `docs/.review_temp/config-reviewer.md`:
+Write to `<review_output_dir>/config-reviewer.md`:
 
 ```markdown
 # Configuration Review
@@ -108,9 +108,8 @@ Rules: one row per finding, no code examples, keep under 200 lines.
 
 ## Team Behavior
 
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for component/flow naming conventions and platform best practices
-3. Write report to `docs/.review_temp/config-reviewer.md`
-4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md` for component/flow naming conventions and platform best practices
+3. Write report to `<review_output_dir>/config-reviewer.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
 5. Mark task as completed
-6. Message consolidator with one-line summary

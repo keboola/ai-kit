@@ -1,6 +1,6 @@
 ---
 name: kbc-fi
-description: Run financial intelligence project review (shorthand for /kbc-review --fi)
+description: Run financial intelligence project review. Use when the user asks to "review financial project", "run FI review", "check financial logic", or mentions /kbc-fi. Shorthand for /kbc-review --fi.
 allowed-tools:
   - Skill
 argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consolidate-only]"

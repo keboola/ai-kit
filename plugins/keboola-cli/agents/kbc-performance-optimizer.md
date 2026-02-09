@@ -40,7 +40,7 @@ Senior pipeline performance engineer. Find every bottleneck, produce concrete op
 3. **Component + table analysis**: `get_configs`, `get_tables` for row counts/sizes
 4. **Flow analysis**: `get_flows` for orchestration structure and parallelism
 5. **SQL review**: Read all transformation SQL for performance anti-patterns
-6. **Write report**: Output to `docs/.review_temp/performance-optimizer.md`
+6. **Write report**: Output to `<review_output_dir>/performance-optimizer.md`
 
 ## Checklist
 
@@ -79,7 +79,7 @@ For each recommendation: estimate time saved, effort to implement, risk level.
 
 ## Output Format
 
-Write to `docs/.review_temp/performance-optimizer.md`:
+Write to `<review_output_dir>/performance-optimizer.md`:
 
 ```markdown
 # Performance Optimization Review
@@ -114,9 +114,8 @@ Rules: one row per finding, no code blocks, no prose, keep under 200 lines.
 ## Team Behavior
 
 When working as part of a review team:
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Check read-only input mappings, incremental loading with PKs, off-peak scheduling, flow parallelization.
-3. Write report to `docs/.review_temp/performance-optimizer.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark task as completed
-5. Message consolidator: top 3 bottlenecks and estimated total savings
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md`. Check read-only input mappings, incremental loading with PKs, off-peak scheduling, flow parallelization.
+3. Write report to `<review_output_dir>/performance-optimizer.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark task as completed

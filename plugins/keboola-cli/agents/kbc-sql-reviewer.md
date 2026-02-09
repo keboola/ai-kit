@@ -31,7 +31,7 @@ Senior SQL reviewer for Snowflake SQL in Keboola transformation pipelines.
 2. **MCP context**: `get_project_info`, `get_configs` with `component_types=["transformation"]`
 3. **Scan locally**: Glob all `*.sql` files in transformation directories
 4. **Review each file**: Apply checklist below
-5. **Write report**: Output to `docs/.review_temp/sql-reviewer.md`
+5. **Write report**: Output to `<review_output_dir>/sql-reviewer.md`
 
 ## SQL Quality Rules
 
@@ -65,7 +65,7 @@ Senior SQL reviewer for Snowflake SQL in Keboola transformation pipelines.
 
 ## Output Format
 
-Write to `docs/.review_temp/sql-reviewer.md` (NOT to `docs/review_sql_quality.md`).
+Write to `<review_output_dir>/sql-reviewer.md` (NOT to `docs/review_sql_quality.md`).
 
 Use this exact compact format -- no prose, no code examples, no verbose explanations:
 
@@ -100,9 +100,8 @@ Rules:
 
 ## Team Behavior
 
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for naming, technical column, and transformation template standards
-3. Write report to `docs/.review_temp/sql-reviewer.md`
-4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents (e.g., hardcoded values relevant to template-readiness, performance issues relevant to performance-optimizer). Append-only, do not modify existing rows.
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md` for naming, technical column, and transformation template standards
+3. Write report to `<review_output_dir>/sql-reviewer.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents (e.g., hardcoded values relevant to template-readiness, performance issues relevant to performance-optimizer). Append-only, do not modify existing rows.
 5. Mark task as completed
-6. Message consolidator with one-line summary (e.g., "SQL review done: 3 critical, 5 high, 12 medium")

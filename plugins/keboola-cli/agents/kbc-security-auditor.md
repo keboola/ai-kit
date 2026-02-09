@@ -39,7 +39,7 @@ Exhaustive security audit of the entire Keboola project -- every config, SQL fil
 3. **SQL scan**: Read every SQL file, grep for PII and security anti-patterns
 4. **Live data sampling**: `query_data` to check for PII columns in output tables
 5. **Job log review**: `get_jobs` -- check if error messages expose sensitive info
-6. **Write report**: Output to `docs/.review_temp/security-auditor.md`
+6. **Write report**: Output to `<review_output_dir>/security-auditor.md`
 
 ## Security Rules
 
@@ -72,7 +72,7 @@ All secrets must use `KBC::ProjectSecure::` or `KBC::Encrypted::` wrapper.
 
 ## Output Format
 
-Write to `docs/.review_temp/security-auditor.md`:
+Write to `<review_output_dir>/security-auditor.md`:
 
 ```markdown
 # Security Audit Report
@@ -102,9 +102,8 @@ Rules: one row per finding, REDACT secrets, no examples, keep under 200 lines.
 
 ## Team Behavior
 
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md`. Validate technical user accounts for extractors/writers, encryption of all sensitive values (# prefix).
-3. Write report to `docs/.review_temp/security-auditor.md`
-3. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
-4. Mark task as completed
-5. Message consolidator -- emphasize any CRITICAL findings
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md`. Validate technical user accounts for extractors/writers, encryption of all sensitive values (# prefix).
+3. Write report to `<review_output_dir>/security-auditor.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+5. Mark task as completed

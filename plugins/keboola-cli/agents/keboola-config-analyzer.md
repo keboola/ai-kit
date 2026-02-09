@@ -8,7 +8,7 @@ whenToUse: |
   - Get an overview of a Keboola project structure
   - Debug configuration issues
   - Understand data flow through configurations
-model: sonnet
+model: inherit
 tools:
   - Read
   - Glob
@@ -74,7 +74,7 @@ Provide analysis in this structure:
 
 When spawned as part of the kbc-review team (pre-scanner role):
 1. Analyze the project structure using local files (`.keboola/manifest.json`, config directories)
-2. Write a concise overview to `docs/.review_temp/PROJECT_OVERVIEW.md`:
+2. Write a concise overview to `<review_output_dir>/PROJECT_OVERVIEW.md`:
    - Component inventory: type, name, count per type
    - Data flow summary: sources -> transformations -> destinations
    - Bucket structure with table counts

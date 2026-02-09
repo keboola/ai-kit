@@ -37,7 +37,7 @@ Senior DWH architect. Review and propose improvements to data model, bucket stru
 4. **Transformation configs**: `get_configs` for input/output mappings
 5. **Read SQL**: Understand dimensional model from transformation logic
 6. **Sample data**: `query_data` selectively to verify table grain and relationships
-7. **Write report**: Output to `docs/.review_temp/dwh-architect.md`
+7. **Write report**: Output to `<review_output_dir>/dwh-architect.md`
 
 ## Checklist
 
@@ -87,7 +87,7 @@ Senior DWH architect. Review and propose improvements to data model, bucket stru
 
 ## Output Format
 
-Write to `docs/.review_temp/dwh-architect.md`:
+Write to `<review_output_dir>/dwh-architect.md`:
 
 ```markdown
 # Data Model Architecture Review
@@ -121,9 +121,8 @@ Rules: one row per finding, no code examples, keep under 200 lines.
 
 ## Team Behavior
 
-1. If `docs/.review_temp/PROJECT_OVERVIEW.md` exists, read it first for project context
-2. Read `docs/.review_temp/REVIEW_STANDARDS.md` for full naming, architecture, and technical column standards
-3. Write report to `docs/.review_temp/dwh-architect.md`
-4. Read `docs/.review_temp/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
+1. If `<review_output_dir>/PROJECT_OVERVIEW.md` exists, read it first for project context
+2. Read `<review_output_dir>/REVIEW_STANDARDS.md` for full naming, architecture, and technical column standards
+3. Write report to `<review_output_dir>/dwh-architect.md`
+4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append any cross-domain findings relevant to OTHER agents. Append-only, do not modify existing rows.
 5. Mark task as completed
-6. Message consolidator with key findings and proposed redesign summary

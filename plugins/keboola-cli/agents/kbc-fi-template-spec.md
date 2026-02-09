@@ -152,4 +152,3 @@ Rules: one row per item, no prose paragraphs, no SQL code blocks, keep under 250
 3. Write report to `<review_output_dir>/fi-template-spec.md`
 4. Read `<review_output_dir>/SHARED_CONTEXT.md` and append cross-domain findings relevant to OTHER agents (especially template-readiness and financial-analyst). Append-only, do not modify existing rows.
 5. Mark task as completed
-6. Message consolidator with: source count, universal vs parameterizable ratio, top 3 gaps

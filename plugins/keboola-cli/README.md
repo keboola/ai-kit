@@ -28,12 +28,12 @@ Type these directly in Claude Code:
 | `/kbc-pull` | Pull configurations from remote project |
 | `/kbc-push` | Push local changes to remote project |
 | `/kbc-diff` | Show differences between local and remote |
-| `/kbc-review` | Launch project review team (7 general + 2 FI with `--fi`) |
+| `/kbc-review` | Launch project review team (7 general + 3 FI with `--fi`) |
 | `/kbc-fi` | Shorthand for `/kbc-review --fi` (financial intelligence review) |
 
 ### /kbc-review
 
-The main review command. By default spawns 7 general-purpose agents. Add `--fi` for Financial Intelligence agents.
+The main review command. By default spawns 7 general-purpose agents. Add `--fi` for 3 Financial Intelligence agents.
 
 **General Review Agents (default)**:
 1. **SQL Quality** - Anti-patterns, correctness, performance
@@ -47,13 +47,14 @@ The main review command. By default spawns 7 general-purpose agents. Add `--fi` 
 **Financial Intelligence Agents (`--fi`)**:
 8. **Financial Logic** - P&L, Balance Sheet, KPIs, COA mapping
 9. **Template Readiness** - Parameterization, mapping tables, generation blockers
+10. **FI Template Spec** - Template delta, ER diagram, source KB, gap analysis
 
 **Always**:
-10. **Data Flow + Consolidation** - End-to-end lineage + merged final report
+11. **Data Flow + Consolidation** - End-to-end lineage + merged final report
 
 Usage: `/kbc-review` (general) or `/kbc-review --fi` (with financial agents)
 
-Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated).
+Output: `docs/output/review/<project-name>/PROJECT_REVIEW_REPORT.md` (consolidated).
 
 ## Agents
 
@@ -77,6 +78,7 @@ Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated).
 |-------|---------|
 | `kbc-financial-analyst` | Financial calculation validation (multi-ERP, SaaS metrics) |
 | `kbc-template-readiness` | Template readiness for project templatization |
+| `kbc-fi-template-spec` | Template specification: delta, ER diagram, source KB, gaps |
 
 ## Skills
 
@@ -88,7 +90,7 @@ Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated).
 1. Navigate to a directory with a Keboola project (or use `/kbc-init`)
 2. Use `/kbc-pull` to sync from remote
 3. Use `/kbc-review` to run the full project review
-4. Check `docs/PROJECT_REVIEW_REPORT.md` for the consolidated report
+4. Check `docs/output/review/<project-name>/PROJECT_REVIEW_REPORT.md` for the consolidated report
 5. Use `/kbc-push` to push any fixes back
 
 ## Settings
@@ -105,7 +107,7 @@ default_host: connection.keboola.com
 
 1. Pre-flight validation (5 checks: temp dir, .keboola/, manifest, MCP, configs)
 2. Pre-scan with config-analyzer (project overview, optional)
-3. Spawn review agents in parallel (7 general, +2 with --fi)
+3. Spawn review agents in parallel (7 general, +3 with --fi)
 4. Monitor with 5-min per-agent timeout
 5. Consolidator merges all findings into single report
 6. Cleanup: delete temp dir, shut down team
@@ -115,7 +117,7 @@ default_host: connection.keboola.com
 | Flag | Effect |
 |------|--------|
 | (none) | 7 general agents + consolidator |
-| `--fi` | Add 2 FI agents (9 total) |
+| `--fi` | Add 3 FI agents (10 total) |
 | `--scope=x,y` | Run only listed agents |
 | `--quick` | Skip consolidator, inline summary |
 | `--consolidate-only` | Re-run consolidator on existing temp reports |
@@ -134,6 +136,9 @@ Example: `/kbc-review --scope=architecture`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7.1 | 2026-02-09 | Quality fixes: stale paths, FI agent count, step numbering, fork bomb |
+| 1.7.0 | 2026-02-09 | FI template spec agent, FI metric depth, 3 FI agents |
+| 1.6.0 | 2026-02-09 | Persistent review output dir, agent report preservation |
 | 1.5.0 | 2026-02-06 | /kbc-fi shorthand, scope presets, README expansion |
 | 1.4.0 | 2026-02-06 | FI agents gated behind --fi, keboola-fi skill, dynamic consolidator |
 | 1.3.0 | 2026-02-06 | Actum standards integration, review-standards.md |
