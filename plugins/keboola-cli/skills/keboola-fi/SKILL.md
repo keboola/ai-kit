@@ -1,6 +1,6 @@
 ---
 name: keboola-fi
-description: Use this skill for financial intelligence context in Keboola projects. Activates when the user asks to "review financial logic", "check P&L", "validate Balance Sheet", "audit COA mapping", "review KPI calculations", or mentions budget variance, multi-ERP data, financial transformations, or accounting standards in Keboola projects.
+description: This skill provides financial intelligence domain knowledge for Keboola projects. It should be used when reviewing financial logic, checking P&L calculations, validating Balance Sheet structure, auditing COA mappings, reviewing KPI calculations, or working with budget variance, multi-ERP data, financial transformations, or accounting standards in Keboola projects.
 allowed-tools: ['*']
 ---
 
@@ -51,3 +51,29 @@ When building a master FI template from a reference project:
 - **Required mapping tables**: DC_ACCOUNT_MAPPING (COA to standard categories), DC_EXCHANGE_RATE (currency pairs + rate types), DC_BUSINESS_UNIT (entity hierarchy), DC_METRIC (semantic layer definitions)
 - **Source-agnostic staging**: template extractors should produce a standard staging schema regardless of ERP; staging-to-core transforms normalize ERP-specific structures
 - **ER model FK conventions**: dimension PKs use `SRC_ID` suffix, fact FKs reference `[DIM_TABLE]_SRC_ID`, all relationships documented in DC_METRIC source_tables field
+
+## Validation Rules
+
+### P&L Cascade
+Revenue - COGS = Gross Profit
+Gross Profit - OpEx = EBITDA
+EBITDA - D&A = EBIT
+EBIT - Interest - Tax = Net Income
+Each subtotal must be independently verifiable from GL line items.
+
+### Balance Sheet
+Assets = Liabilities + Equity (must balance to zero difference)
+Current Assets + Non-Current Assets = Total Assets
+Current Liabilities + Non-Current Liabilities + Equity = Total Assets
+
+### SaaS Metrics
+MRR = sum of active subscription monthly values
+ARR = MRR * 12
+Net Revenue Retention = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR
+Rule of 40 = Revenue Growth % + EBITDA Margin %
+
+### Common ERP Gotchas
+- NetSuite: multi-subsidiary requires consolidation elimination entries; TRANSACTION_LINES.AMOUNT is base currency, use AMOUNT_FOREIGN for transaction currency
+- SAP: filter BKPF.STBLG (reversal indicator) to avoid double-counting; BSEG compound key is BUKRS+BELNR+GJAHR+BUZEI
+- Oracle: GL_JE_LINES uses ENTERED_DR/ENTERED_CR (transaction) vs ACCOUNTED_DR/ACCOUNTED_CR (functional currency)
+- D365: GeneralJournalAccountEntry links to MainAccount via MainAccount_FK; filter by PostingType to separate actuals from budget

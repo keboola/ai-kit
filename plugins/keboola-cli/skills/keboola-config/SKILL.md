@@ -1,7 +1,6 @@
 ---
 name: Keboola Configuration
-description: Use this skill when working with Keboola project configurations, understanding JSON config files, editing transformations, or analyzing Keboola project structure. Triggers on questions about Keboola configs, transformations, orchestrations, extractors, writers, or .keboola directories.
-version: 1.0.0
+description: This skill provides Keboola configuration knowledge. It should be used when the user needs to understand Keboola project structure, JSON config files (config.json, meta.json, manifest.json), storage input/output mappings, transformation blocks, extractor/writer components, orchestration setup, or .keboola directory layout. Covers component types, configuration editing patterns, and troubleshooting.
 ---
 
 # Keboola Configuration Knowledge
@@ -137,6 +136,10 @@ Located in `keboola.orchestrator/` with:
 - Input tables: Map source tables to working names
 - Output tables: Map result tables to destination buckets
 - Use consistent naming conventions
+
+### Naming Conventions
+
+For bucket/table/column naming standards used in project reviews, see `standards/review-standards.md` (Actum + Keboola best practices, 10 sections with severity levels).
 
 ### Transformations
 

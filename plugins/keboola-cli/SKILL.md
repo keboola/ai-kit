@@ -1,6 +1,6 @@
 ---
 name: keboola-cli
-description: Use this skill for managing and reviewing Keboola projects. Activates when the user asks to "review project", "run kbc review", "check Keboola config", "pull project", "push changes", "diff configs", "init project", or mentions Keboola CLI workflow. Covers sync commands (init, pull, push, diff), 7-agent review team (+ 3 optional FI agents with --fi), SQL analysis, security audit, and performance optimization.
+description: This skill should be used when the user wants to review, audit, or sync a Keboola project. Triggers on "review project", "run kbc review", "pull project", "push changes", "diff configs", "init project", or Keboola CLI workflow. Provides a 7-agent review team (+ 3 optional FI agents with --fi) covering SQL, security, performance, config, DWH architecture, data quality, and semantic layer, plus sync commands (init, pull, push, diff).
 allowed-tools: ['*']
 ---
 

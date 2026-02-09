@@ -136,6 +136,7 @@ Example: `/kbc-review --scope=architecture`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7.2 | 2026-02-09 | Skill description quality: trigger sharpening, FI validation rules, standards reference |
 | 1.7.1 | 2026-02-09 | Quality fixes: stale paths, FI agent count, step numbering, fork bomb |
 | 1.7.0 | 2026-02-09 | FI template spec agent, FI metric depth, 3 FI agents |
 | 1.6.0 | 2026-02-09 | Persistent review output dir, agent report preservation |

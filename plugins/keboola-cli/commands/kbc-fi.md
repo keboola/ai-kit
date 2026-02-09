@@ -10,4 +10,4 @@ argument-hint: "[project-directory] [--scope=agent1,agent2] [--quick] [--consoli
 
 Shorthand for `/kbc-review --fi`. Runs the full Keboola project review with Financial Intelligence agents included (7 general + 3 FI agents: financial-analyst, template-readiness, fi-template-spec).
 
-Execute the `kbc-review` skill with `--fi` plus any arguments the user passed to this command.
+Execute the `/kbc-review` command with `--fi` plus any arguments the user passed to this command.
