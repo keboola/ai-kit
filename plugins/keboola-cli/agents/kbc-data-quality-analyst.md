@@ -54,6 +54,7 @@ Run these checks using `query_data` (always use LIMIT):
 | Empty tables | Row count = 0 | Any table with 0 rows that should have data |
 | Type mismatches | Compare declared types vs actual patterns | Numeric data in VARCHAR, date strings not DATE |
 | Row count anomalies | Very few rows (< 10) or unexpectedly large | Tables that seem wrong for their purpose |
+| SCD date ranges | GROUP BY business_key, check for overlapping/gapped START_D/END_D | Overlapping or gapped date ranges in _H tables |
 
 ### Freshness expectations
 

@@ -1,6 +1,6 @@
 # Review Standards Reference
 
-Standards from Actum Standards for Keboola + Keboola official best practices.
+Keboola data warehouse naming and architecture standards.
 Agents: validate project against these rules. Flag violations per severity listed.
 
 ## 1. Architecture (validate: dwh-architect)
@@ -96,6 +96,25 @@ Required columns per table type (x = required, X = mandatory):
 | END_D | -- | -- | -- | -- | -- | x |
 
 Severity: Missing mandatory (X) = CRITICAL, missing recommended (x) = HIGH
+
+## 7a. Slowly Changing Dimensions (validate: dwh-architect, sql-reviewer, data-quality)
+
+| Rule | Standard | Severity |
+|------|----------|----------|
+| SCD candidates identified | Dimensions with mutable attributes need SCD strategy | HIGH |
+| Type 2 tables use _H suffix | History tables named TABLE_H with START_D, END_D | HIGH |
+| No overlapping date ranges | For each business key, date ranges must not overlap | CRITICAL |
+| No gaps in date ranges | END_D of previous row = START_D of next row (or day before) | HIGH |
+| Current row marker | CURRENT_FLAG or END_D = '9999-12-31' for active record | MEDIUM |
+| Change detection | CHANGE_HASH or column-level comparison for detecting changes | MEDIUM |
+| Original insert preserved | SCD merge must preserve INS_DT and INS_JOB_ID of original row | HIGH |
+
+Common SCD candidates (recommend historization when these attributes change):
+- Account/cost center hierarchies (reclassification, reorganization)
+- Customer/vendor master data (address, status, classification changes)
+- Product attributes (category, pricing tier changes)
+- Employee data (department, role, cost center changes)
+- Organizational structure (reporting lines, business unit changes)
 
 ## 8. Data Types (validate: sql-reviewer, data-quality)
 

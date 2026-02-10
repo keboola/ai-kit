@@ -136,13 +136,14 @@ Example: `/kbc-review --scope=architecture`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8.0 | 2026-02-10 | Remove Actum branding, SCD/historization guidance, naming conventions report |
 | 1.7.2 | 2026-02-09 | Skill description quality: trigger sharpening, FI validation rules, standards reference |
 | 1.7.1 | 2026-02-09 | Quality fixes: stale paths, FI agent count, step numbering, fork bomb |
 | 1.7.0 | 2026-02-09 | FI template spec agent, FI metric depth, 3 FI agents |
 | 1.6.0 | 2026-02-09 | Persistent review output dir, agent report preservation |
 | 1.5.0 | 2026-02-06 | /kbc-fi shorthand, scope presets, README expansion |
 | 1.4.0 | 2026-02-06 | FI agents gated behind --fi, keboola-fi skill, dynamic consolidator |
-| 1.3.0 | 2026-02-06 | Actum standards integration, review-standards.md |
+| 1.3.0 | 2026-02-06 | Naming standards integration, review-standards.md |
 | 1.2.0 | 2026-02-06 | Pre-flight validation, --scope/--quick/--consolidate-only, timeouts |
 | 1.1.0 | 2026-02-06 | Agent prompt optimization (47% reduction) |
 | 1.0.0 | 2026-02-06 | Initial 10-agent review team |

@@ -41,19 +41,19 @@ Senior DWH architect. Review and propose improvements to data model, bucket stru
 
 ## Checklist
 
-### Bucket Structure (Actum L0/L1/L2)
-- **Actum layers**: L0-Staging-[source], L1-Integration / L1-Aggregation, L2-[business_area]
+### Bucket Structure (L0/L1/L2)
+- **Standard layers**: L0-Staging-[source], L1-Integration / L1-Aggregation, L2-[business_area]
 - **Keboola legacy**: `in.c-<source-system>`, `out.c-<purpose>` -- acceptable but flag if neither convention followed
 - **3-layer separation**: staging (L0), integration/aggregation (L1), datamarts/presentation (L2)
 - Anti-patterns: random IDs, generic names, client-specific names, layer skipping (L0 direct to L2)
 
-### Table Naming (Actum + Keboola)
-- **Actum suffixes**: `_F` (fact), `_H` (history/SCD), `_REF` (reference), `_REL` (relational/bridge)
+### Table Naming
+- **Table suffixes**: `_F` (fact), `_H` (history/SCD), `_REF` (reference), `_REL` (relational/bridge)
 - **Keboola prefixes**: `FT_`, `DIM_`, `STG_`, `RAW_`, `RPT_`, `DC_` -- also acceptable
 - UPPERCASE required, singular names, underscores only
 - Anti-patterns: NEITHER convention followed, mixed case, spaces/special chars, plural names
 
-### Column Naming (Actum suffixes)
+### Column Naming
 - **Identifier**: `_ID`, **Date**: `_D`, **DateTime**: `_DT`, **Amount**: `_AMT`, **Description**: `_DESCR`, **Code**: `_CD`, **Number**: `_NUM`
 - PKs: `SRC_ID` (composite), FKs: `[TABLE]_SRC_ID`
 - UPPERCASE, underscores only, singular
@@ -67,9 +67,16 @@ Senior DWH architect. Review and propose improvements to data model, bucket stru
 
 ### Dimensional Model
 - Fact tables: clear grain, numeric measures, FK to dims, additive vs semi-additive identified
-- Dimensions: business key + surrogate key, descriptive attributes, SCD handling where needed
+- Dimensions: business key + surrogate key, descriptive attributes
 - Star schema: clean fact/dim separation, no fact-to-fact joins, conformed dimensions
 - Missing: time dim, currency dim, bridge tables for M:N
+
+### SCD / Historization
+- **Identify candidates**: Which dimensions have mutable attributes? (e.g., account hierarchies, customer classifications, org structure)
+- **Recommend SCD Type 2** when: attribute changes are business-relevant, historical reporting needed, audit trail required
+- **Check implementation**: _H suffix tables have START_D + END_D, current row marked (CURRENT_FLAG or END_D='9999-12-31')
+- **Check completeness**: no gaps or overlaps in date ranges per business key
+- Anti-patterns: overwriting dimension attributes without history (silent SCD Type 1), missing change detection
 
 ### Layered Architecture
 - Expected: Raw/Landing -> Staging -> Core/Integration -> Mart/App
@@ -112,6 +119,23 @@ Write to `<review_output_dir>/dwh-architect.md`:
 
 ### Missing Elements
 - DIM_CURRENCY, DIM_TIME, etc.
+
+### Naming Conventions Compliance
+
+| Category | Expected Pattern | Found | Status |
+|----------|-----------------|-------|--------|
+| Buckets | L0-Staging-[source], L1-Integration, L2-[area] | ... | OK/ISSUE |
+| Tables | UPPERCASE, _F/_H/_REF/_REL or FT_/DIM_/STG_ | ... | OK/ISSUE |
+| Columns | UPPERCASE, _ID/_D/_DT/_AMT/_DESCR/_CD/_NUM | ... | OK/ISSUE |
+| PKs/FKs | SRC_ID composite, [TABLE]_SRC_ID for FKs | ... | OK/ISSUE |
+| Technical cols | SRC_ID, INS_DT, UPD_DT per table type | ... | OK/ISSUE |
+| Components | IN-[Src]-[Purpose]-[Freq], OUT-[Tgt]-[Purpose]-[Freq] | ... | OK/ISSUE |
+
+### SCD Recommendations
+
+| Dimension | Mutable Attributes | Recommendation | Priority |
+|-----------|--------------------|----------------|----------|
+| DIM_ACCOUNT | hierarchy, classification | SCD Type 2 (_H table) | HIGH |
 
 ### Architecture Diagram
 [Source] -> [Staging] -> [Core] -> [Mart/App]

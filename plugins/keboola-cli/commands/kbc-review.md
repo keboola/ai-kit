@@ -223,7 +223,7 @@ Use the Task tool to spawn each review agent with:
 - `subagent_type`: the agent type from the table above (e.g., "kbc-sql-reviewer")
 - `team_name`: "kbc-review"
 - `name`: the agent name from the table above (e.g., "sql-reviewer")
-- `prompt`: "You are part of the kbc-review team. Your output directory is REVIEW_OUTPUT_DIR. If REVIEW_OUTPUT_DIR/PROJECT_OVERVIEW.md exists, read it first for project context. Read REVIEW_OUTPUT_DIR/REVIEW_STANDARDS.md for Actum naming conventions and Keboola best practices -- validate against sections relevant to your domain. Complete your assigned review task using Keboola MCP tools and local files. Write your concise findings report to REVIEW_OUTPUT_DIR/[your-agent-name].md (compact table format, under 200 lines). After writing your report, read REVIEW_OUTPUT_DIR/SHARED_CONTEXT.md and append any cross-domain findings relevant to OTHER agents. Mark your task as completed."
+- `prompt`: "You are part of the kbc-review team. Your output directory is REVIEW_OUTPUT_DIR. If REVIEW_OUTPUT_DIR/PROJECT_OVERVIEW.md exists, read it first for project context. Read REVIEW_OUTPUT_DIR/REVIEW_STANDARDS.md for naming conventions and Keboola best practices -- validate against sections relevant to your domain. Complete your assigned review task using Keboola MCP tools and local files. Write your concise findings report to REVIEW_OUTPUT_DIR/[your-agent-name].md (compact table format, under 200 lines). After writing your report, read REVIEW_OUTPUT_DIR/SHARED_CONTEXT.md and append any cross-domain findings relevant to OTHER agents. Mark your task as completed."
   (Replace all `REVIEW_OUTPUT_DIR` with the actual path)
 - `run_in_background`: true
 

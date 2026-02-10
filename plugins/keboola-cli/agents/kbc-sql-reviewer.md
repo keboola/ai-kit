@@ -59,6 +59,8 @@ Senior SQL reviewer for Snowflake SQL in Keboola transformation pipelines.
 | FK columns not following [TABLE]_SRC_ID pattern | MEDIUM |
 | Transformation not using CREATE OR REPLACE + INSERT INTO upsert pattern | MEDIUM |
 | Variables not using {{ moustache }} syntax or unassigned | HIGH |
+| SCD history table missing START_D/END_D columns | HIGH |
+| SCD merge not preserving original INS_DT/INS_JOB_ID | HIGH |
 | Nested CASE statements 3+ levels deep | LOW |
 | Repeated PARTITION BY that could consolidate | LOW |
 | Unused columns selected but never used downstream | LOW |

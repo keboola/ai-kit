@@ -139,7 +139,7 @@ Located in `keboola.orchestrator/` with:
 
 ### Naming Conventions
 
-For bucket/table/column naming standards used in project reviews, see `standards/review-standards.md` (Actum + Keboola best practices, 10 sections with severity levels).
+For bucket/table/column naming standards used in project reviews, see `standards/review-standards.md` (Keboola best practices, 10 sections with severity levels).
 
 ### Transformations
 
