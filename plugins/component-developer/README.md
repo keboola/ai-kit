@@ -75,6 +75,19 @@ Expert skill for code review with actionable feedback grouped by severity.
 
 Guide for initializing new Keboola components using cookiecutter template.
 
+### VCR Tester
+**Command**: `@vcr-tester` (alias: `@test-component-vcr`)
+**Color**: 🔵 Cyan
+
+Expert skill for setting up VCR (Video Cassette Recording) functional tests for Keboola Python components. Records real HTTP interactions as cassettes and replays them deterministically in CI without credentials.
+
+**Use cases:**
+- Add functional tests to extractors/writers that call external APIs
+- Set up datadirtest with VCR replay
+- Scaffold test cases from configs
+- Migrate from mock-based tests to VCR replay tests
+- Handle OAuth token chaining across test runs
+
 ### Migrate Component to UV
 **Command**: `@migrate-component-to-uv`
 **Color**: 🟣 Purple
@@ -559,6 +572,10 @@ plugins/component-developer/
 │   │   │   ├── review-principles.md
 │   │   │   └── review-style-guide.md
 │   │   └── scripts/
+│   ├── test-component-vcr/            # VCR functional testing
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── vcr-quickstart.md
 │   └── get-started/                   # Getting started
 │       ├── SKILL.md
 │       ├── references/
@@ -593,11 +610,17 @@ To improve this plugin:
 
 ---
 
-**Version**: 3.0.0
+**Version**: 3.1.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
+
+### 3.1.0 (2026-02-11)
+- **NEW**: Added `test-component-vcr` skill for VCR-based functional testing
+- Records real HTTP interactions as cassettes and replays them in CI without credentials
+- Supports OAuth token chaining, time freezing, and automatic credential sanitization
+- Includes quick reference guide and step-by-step setup instructions
 
 ### 3.0.0 (2025-12-19)
 - **BREAKING**: Migrated to Agent Skills format

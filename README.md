@@ -60,7 +60,7 @@ A comprehensive toolkit for developers including specialized agents for code rev
 A specialized toolkit for building production-ready Keboola Python components following best practices and architectural patterns.
 
 **Features:**
-- 🎯 **Skills**: Build component, build UI, debug, test, review, migrate to UV, getting started
+- 🎯 **Skills**: Build component, build UI, debug, test, VCR test, review, migrate to UV, getting started
 - ⚡ **Commands**: Init, run, fix, review, migrate-repo, schema-test
 - 🔌 **MCP Server**: Keboola integration
 - 📋 **Configuration Schemas**: JSON Schema with UI elements
