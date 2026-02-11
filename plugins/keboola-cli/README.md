@@ -136,6 +136,7 @@ Example: `/kbc-review --scope=architecture`
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.9.0 | 2026-02-11 | PK/FK validation rules, dwh-architect + data-quality PK/FK checks, core vs addon template scope |
 | 1.8.0 | 2026-02-10 | Remove Actum branding, SCD/historization guidance, naming conventions report |
 | 1.7.2 | 2026-02-09 | Skill description quality: trigger sharpening, FI validation rules, standards reference |
 | 1.7.1 | 2026-02-09 | Quality fixes: stale paths, FI agent count, step numbering, fork bomb |

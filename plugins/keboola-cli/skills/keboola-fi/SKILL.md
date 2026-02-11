@@ -52,6 +52,23 @@ When building a master FI template from a reference project:
 - **Source-agnostic staging**: template extractors should produce a standard staging schema regardless of ERP; staging-to-core transforms normalize ERP-specific structures
 - **ER model FK conventions**: dimension PKs use `SRC_ID` suffix, fact FKs reference `[DIM_TABLE]_SRC_ID`, all relationships documented in DC_METRIC source_tables field
 
+## Core Template Scope
+
+**Core tables (14):** DC_BUSINESS_UNIT, DC_BUSINESS_SUBUNIT, DC_COA, DC_CURRENCY, DC_DATE, DC_UPLOAD_MODE, DC_METRIC, DC_METRIC_THRESHOLD, FT_FIN_JOURNAL, FT_FIN_STAT_PM, FT_METRIC_VALUE, FT_LOCAL_2_FININ_ASSIGNMENT_BUGS, DC_UNASSIGNED_FIN_ACCOUNT, FT_BUSINESS_UNIT_TOTAL_BALANCE_MONTHLY
+
+**Addon (not template):** Operational entities, CFO cockpit, DC_TERM, DC_DIMENSION, timesheets, credits
+
+**COA Hierarchy:** Always a core table, but content is client-variable (manual input per entity).
+
+**Root variables:** group_code, reporting_currency, accounting_book_name, country_code, fiscal_year_start, fiscal_year_end
+
+**Core metrics:** REV, EXP, ASSET, EQUITY, LIAB, P_AND_L, NPM, ROA, ROE, D/E, ER, CIR
+
+**Addon-dependent metrics:**
+- GPM, OPM -- require COGS/OPEX line items (not always available in source)
+- CR (Current Ratio) -- requires current/non-current asset/liability split
+- CCC (Cash Conversion Cycle) -- requires DIO/DSO/DPO operational data
+
 ## Validation Rules
 
 ### P&L Cascade
