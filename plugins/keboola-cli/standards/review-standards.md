@@ -76,6 +76,11 @@ Agents: validate project against these rules. Flag violations per severity liste
 | PK not nullable | PK columns must not be NULL | CRITICAL |
 | FK naming | [Referenced_TABLE]_SRC_ID | HIGH |
 | FK referential integrity | Every FK must reference an existing PK | HIGH |
+| PK on every L1+ table | Every table beyond staging must have a defined primary key | HIGH |
+| Composite PK uniqueness | Composite PKs must be verified for uniqueness; no NULL components | CRITICAL |
+| FK explicit references | FK columns should document which table.PK they reference | MEDIUM |
+| FK cardinality documented | Expected 1:1/1:N/M:N should be inferable from model | MEDIUM |
+| No orphan FKs in L2 | Mart tables must not contain FK values absent from referenced dimension | HIGH |
 
 ## 7. Technical Columns (validate: sql-reviewer, dwh-architect)
 
