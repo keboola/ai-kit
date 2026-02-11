@@ -55,6 +55,9 @@ Run these checks using `query_data` (always use LIMIT):
 | Type mismatches | Compare declared types vs actual patterns | Numeric data in VARCHAR, date strings not DATE |
 | Row count anomalies | Very few rows (< 10) or unexpectedly large | Tables that seem wrong for their purpose |
 | SCD date ranges | GROUP BY business_key, check for overlapping/gapped START_D/END_D | Overlapping or gapped date ranges in _H tables |
+| Cross-layer FK integrity | LEFT JOIN L2 fact FK -> L1 dim PK WHERE dim.pk IS NULL | Any orphan FK values in mart tables |
+| PK uniqueness | SELECT pk_cols, COUNT(*) GROUP BY pk_cols HAVING COUNT > 1 | Any duplicate composite PK combinations |
+| Composite PK NULLs | SELECT COUNT(*) WHERE any PK component IS NULL | Any NULL values in PK component columns |
 
 ### Freshness expectations
 

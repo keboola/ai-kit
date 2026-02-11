@@ -78,6 +78,13 @@ Senior DWH architect. Review and propose improvements to data model, bucket stru
 - **Check completeness**: no gaps or overlaps in date ranges per business key
 - Anti-patterns: overwriting dimension attributes without history (silent SCD Type 1), missing change detection
 
+### PK/FK Integrity
+- **PK exists**: Every L1+ table must have at least one PK column (check storage metadata + transformation SQL)
+- **Composite PK uniqueness**: For composite PKs, verify uniqueness via `SELECT pk_cols, COUNT(*) HAVING COUNT > 1` (sample query)
+- **FK naming consistency**: FK columns follow `FK_[REFERENCED_TABLE]` pattern (e.g., FK_BUSINESS_SUBUNIT references DC_BUSINESS_SUBUNIT)
+- **FK referential integrity**: LEFT JOIN fact->dim WHERE dim.pk IS NULL to detect orphan FK values
+- **Cardinality analysis**: Sample key relationships to classify as 1:1, 1:N, or M:N
+
 ### Layered Architecture
 - Expected: Raw/Landing -> Staging -> Core/Integration -> Mart/App
 - Layers clearly separated in buckets? Clean progression? Transforms skipping layers?
@@ -136,6 +143,12 @@ Write to `<review_output_dir>/dwh-architect.md`:
 | Dimension | Mutable Attributes | Recommendation | Priority |
 |-----------|--------------------|----------------|----------|
 | DIM_ACCOUNT | hierarchy, classification | SCD Type 2 (_H table) | HIGH |
+
+### PK/FK Validation
+
+| Table | PK Defined | PK Unique | FK Naming | Orphan FKs | Cardinality |
+|-------|-----------|-----------|-----------|------------|-------------|
+| out.c-bucket.TABLE | Yes/No | OK/FAIL | OK/ISSUE | 0/N orphans | 1:N |
 
 ### Architecture Diagram
 [Source] -> [Staging] -> [Core] -> [Mart/App]
