@@ -37,11 +37,15 @@ Your job is limited to:
    ```
    Always check the repo for the latest documentation before proceeding. The instructions below are a guide, but the repo README is the source of truth.
 
-2. **Check the component's existing test setup** — read `pyproject.toml`, `tests/`, `Dockerfile`, and `.github/workflows/push.yml` to understand what already exists.
+2. **Check the component's existing test setup** — read `pyproject.toml` or `requirements.txt`, `tests/`, `Dockerfile`, and `.github/workflows/push.yml` to understand what already exists. Determine whether the project uses `pyproject.toml` + `uv` or `requirements.txt` + `pip`.
 
 ## Step-by-Step Setup
 
 ### Step 1: Add datadirtest dependency
+
+**Detect the project's dependency system first** — check for `pyproject.toml` vs `requirements.txt`.
+
+#### Option A: pyproject.toml + uv (modern projects)
 
 Add to `pyproject.toml` under `[dependency-groups]`:
 ```toml
@@ -57,43 +61,99 @@ Then run:
 uv sync
 ```
 
+#### Option B: requirements.txt + pip (legacy projects)
+
+Add to `requirements.txt`:
+```
+datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing
+```
+
+Then run:
+```bash
+pip install -r requirements.txt
+```
+
+> **Note:** pip fully supports installing from git branches via `@ git+https://...@branch-name` syntax. The `[vcr]` extra installs `vcrpy` and `freezegun` automatically — you do NOT need to add them separately.
+
 ### Step 2: Create the test runner
 
 Create `tests/test_functional.py` — this is the ONLY Python file you need to write:
 ```python
-import unittest
 from pathlib import Path
 
-from datadirtest.vcr import VCRDataDirTester
+import pytest
+from datadirtest.vcr import get_test_cases
+
+FUNCTIONAL_DIR = Path(__file__).parent / "functional"
+COMPONENT_SCRIPT = str(Path(__file__).parent.parent / "src" / "component.py")
 
 
-class TestComponent(unittest.TestCase):
-    def test_functional(self):
-        functional_tests = VCRDataDirTester(
-            data_dir=str(Path(__file__).parent / "functional"),
-            component_script=str(Path(__file__).parent.parent / "src" / "component.py"),
-        )
-        functional_tests.run()
+@pytest.mark.parametrize("test_name", get_test_cases(str(FUNCTIONAL_DIR)))
+def test_functional(test_name):
+    from datadirtest.vcr import VCRTestDataDir
 
-
-if __name__ == "__main__":
-    unittest.main()
+    test = VCRTestDataDir(
+        data_dir=str(FUNCTIONAL_DIR / test_name),
+        component_script=COMPONENT_SCRIPT,
+        vcr_mode="replay",
+    )
+    test.setUp()
+    try:
+        test.compare_source_and_expected()
+    finally:
+        test.tearDown()
 ```
 
-That's it. `VCRDataDirTester` auto-discovers test dirs, replays cassettes with frozen time, and compares outputs.
+That's it. `get_test_cases` auto-discovers test dirs with cassettes. Each test case runs individually with its own name in pytest output (e.g., `test_functional[generation]`).
+
+**Important:** Import `VCRTestDataDir` inside the function, not at the top level — pytest will try to collect it as a test class otherwise.
 
 ### Step 3: Help user prepare configs.json
 
-Ask the user for the Keboola component configurations they want to test. Create `configs.json` in the project root — an array of raw Keboola configs with **dummy credentials** (real ones go in `secrets.json`):
+Ask the user for the Keboola component configurations they want to test. Create `configs.json` in the project root.
+
+**Two supported formats:**
+
+#### Format A: Wrapped format (recommended for custom test names)
+
+Use this when the component's parameters don't follow the `reports[0].report_type` pattern, or when you want explicit control over test directory names:
 
 ```json
 [
   {
-    "storage": {"input": {"files": [], "tables": []}, "output": {"tables": [], "files": []}},
+    "name": "test_full_load",
+    "config": {
+      "parameters": {
+        "date_from": "2024-01-01",
+        "date_to": "2024-01-02",
+        "endpoints": [
+          {"endpoint_name": "Generation", "granularity": "HR"},
+          {"endpoint_name": "Generation", "granularity": "DY"}
+        ]
+      }
+    }
+  },
+  {
+    "name": "test_missing_params",
+    "config": {
+      "parameters": {}
+    }
+  }
+]
+```
+
+Each entry produces a test directory named by the `name` field (e.g., `tests/functional/test_full_load/`).
+
+#### Format B: Raw Keboola configs (auto-detected)
+
+When entries have `parameters` but no `name`/`config` wrapper, the scaffolder auto-detects this format. Test names are generated from `parameters.reports[0].report_type` (e.g., `01_FullLoad`), or fall back to numbered names (`01_test`, `02_test`).
+
+```json
+[
+  {
     "parameters": {
-      "reports": [{"report_type": "FullLoad", "destination": {"load_type": "full_load"}}]
+      "reports": [{"report_type": "FullLoad"}]
     },
-    "action": "run",
     "authorization": {
       "oauth_api": {
         "credentials": {
@@ -107,9 +167,13 @@ Ask the user for the Keboola component configurations they want to test. Create 
 ]
 ```
 
-### Step 4: Help user prepare secrets.json
+> **Important:** Raw format auto-naming ONLY works well for configs with `parameters.reports[0].report_type`. For all other parameter structures, use the **wrapped format** with explicit `name` fields.
 
-Create `secrets.json` (gitignored!) with real credentials. Structure must mirror the config paths to override:
+### Step 4: Help user prepare secrets.json (if needed)
+
+**Public APIs (no auth):** Skip this step entirely. No `secrets.json` needed — put real parameter values directly in `configs.json` and run scaffold without `--secrets`.
+
+**Authenticated APIs:** Create `secrets.json` (gitignored!) with real credentials. Structure must mirror the config paths to override:
 
 ```json
 {
@@ -138,6 +202,12 @@ For non-OAuth components with API keys:
 
 Run the **datadirtest CLI** — it does ALL the heavy lifting:
 
+**Public API (no secrets):**
+```bash
+python -m datadirtest scaffold configs.json tests/functional src/component.py
+```
+
+**Authenticated API (with secrets):**
 ```bash
 python -m datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json
@@ -145,10 +215,10 @@ python -m datadirtest scaffold configs.json tests/functional src/component.py \
 
 The CLI automatically:
 - Creates the directory structure for each config
-- Runs the component with real credentials (merged from secrets.json)
+- Runs the component (merging real credentials from secrets.json if provided)
 - Records all HTTP interactions to `cassettes/requests.json`
 - Copies outputs to `expected/`
-- Restores config.json to dummy values
+- Restores config.json to dummy values (when secrets are used)
 - Sanitizes credentials from cassettes
 
 For **OAuth/ERP components** that refresh tokens, add `--chain-state`:
@@ -213,8 +283,23 @@ Empty directories aren't tracked by git. `datadirtest` automatically creates req
 
 ### Tests pass locally but fail in Docker
 Run `docker build && docker run` locally to simulate CI. Common causes:
-- Missing `git` in Docker image
+- Missing `git` in Docker image (needed for git-based pip/uv dependency)
 - `uv.lock` pointing to old datadirtest commit — run `uv lock --upgrade-package datadirtest`
+- `requirements.txt` projects: ensure `git` is installed before `pip install`
+
+### Auto-generated test names are all "01_test", "02_test"
+The raw Keboola config format auto-names from `parameters.reports[0].report_type`. If your component uses a different parameter structure (e.g., `endpoints`, `tables`, `queries`), use the **wrapped format** with explicit `name` fields instead.
+
+### SOAP/WSDL APIs (Zeep)
+SOAP clients like Zeep make an initial WSDL fetch before data calls. The VCR cassette must capture BOTH the WSDL fetch AND the subsequent SOAP requests. This happens automatically with `datadirtest scaffold`.
+
+The datadirtest `VCRRecorder` has `decode_compressed_response=True` by default, which decompresses gzip/deflate response bodies before storing in cassettes. This is **required** for SOAP/WSDL — servers often return gzip-compressed WSDL XML, and Zeep's parser expects raw XML. Without decompression, replay feeds compressed bytes to the XML parser and fails with `XMLSyntaxError`.
+
+### Scaffold stops on first fatal error
+The scaffold command processes tests sequentially and stops on the first fatal error (e.g., endpoint doesn't exist in the API). If one test fails, remaining tests are skipped. Workaround: put likely-to-fail tests last, or scaffold in batches with separate configs files.
+
+### datadirtest[vcr] replaces vcrpy
+When adding `datadirtest[vcr]` to your dependencies, **remove** any standalone `vcrpy` or `freezegun` entries — they're included as extras of `datadirtest[vcr]` and should not be listed separately.
 
 ## Reference
 

@@ -147,6 +147,13 @@ Migrate Keboola component repository from Bitbucket to GitHub with full history.
 /migrate-repo git@bitbucket.org:workspace/repo.git
 ```
 
+### `/generate-vcr-tests` - Generate VCR Functional Tests
+Set up VCR-based functional tests — records real HTTP interactions and replays them in CI without credentials.
+```bash
+/generate-vcr-tests                          # Interactive setup
+/generate-vcr-tests --secrets secrets.json   # With pre-existing secrets
+```
+
 ---
 
 ## 📖 Core Capabilities
@@ -583,6 +590,7 @@ plugins/component-developer/
 │       └── scripts/
 ├── commands/                           # Slash commands
 │   ├── fix.md                         # Apply review fixes
+│   ├── generate-vcr-tests.md         # Generate VCR functional tests
 │   ├── init.md                        # Initialize new component
 │   ├── migrate-repo.md                # Migrate from Bitbucket
 │   ├── review.md                      # Code review

@@ -6,6 +6,8 @@ All commands below use the `datadirtest` CLI from `https://github.com/keboola/da
 
 ## Install
 
+### pyproject.toml + uv (modern projects)
+
 ```toml
 # pyproject.toml [dependency-groups]
 dev = [
@@ -17,10 +19,26 @@ dev = [
 uv sync
 ```
 
+### requirements.txt + pip (legacy projects)
+
+```
+# requirements.txt
+datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing
+```
+
+```bash
+pip install -r requirements.txt
+```
+
+> **Note:** pip supports `@ git+https://...@branch-name` syntax for installing from git branches. The `[vcr]` extra installs `vcrpy` and `freezegun` automatically.
+
 ## Scaffold (Record) Tests
 
 ```bash
-# Basic — records HTTP interactions and creates test structure
+# Public API (no auth) — no --secrets needed
+python -m datadirtest scaffold configs.json tests/functional src/component.py
+
+# Authenticated API — merges real credentials from secrets.json
 python -m datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json
 
@@ -33,24 +51,76 @@ python -m datadirtest scaffold configs.json tests/functional --no-record
 
 # Custom freeze time
 python -m datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json --freeze-time 2025-06-01T12:00:00
+    --freeze-time 2025-06-01T12:00:00
 ```
 
 ## Test Runner (only Python file you write)
 
 ```python
 # tests/test_functional.py
-import unittest
 from pathlib import Path
-from datadirtest.vcr import VCRDataDirTester
+import pytest
+from datadirtest.vcr import get_test_cases
 
-class TestComponent(unittest.TestCase):
-    def test_functional(self):
-        VCRDataDirTester(
-            data_dir=str(Path(__file__).parent / "functional"),
-            component_script=str(Path(__file__).parent.parent / "src" / "component.py"),
-        ).run()
+FUNCTIONAL_DIR = Path(__file__).parent / "functional"
+COMPONENT_SCRIPT = str(Path(__file__).parent.parent / "src" / "component.py")
+
+@pytest.mark.parametrize("test_name", get_test_cases(str(FUNCTIONAL_DIR)))
+def test_functional(test_name):
+    from datadirtest.vcr import VCRTestDataDir  # import inside to avoid pytest collection
+
+    test = VCRTestDataDir(
+        data_dir=str(FUNCTIONAL_DIR / test_name),
+        component_script=COMPONENT_SCRIPT,
+        vcr_mode="replay",
+    )
+    test.setUp()
+    try:
+        test.compare_source_and_expected()
+    finally:
+        test.tearDown()
 ```
+
+## configs.json Formats
+
+### Wrapped format (explicit test names — recommended for most components)
+
+```json
+[
+  {
+    "name": "test_generation_all_granularities",
+    "config": {
+      "parameters": {
+        "date_from": "2024-01-01",
+        "date_to": "2024-01-02",
+        "endpoints": [
+          {"endpoint_name": "Generation", "granularity": "HR"},
+          {"endpoint_name": "Generation", "granularity": "DY"}
+        ]
+      }
+    }
+  },
+  {
+    "name": "test_missing_params",
+    "config": {
+      "parameters": {}
+    }
+  }
+]
+```
+
+### Raw Keboola format (auto-named from `reports[0].report_type`)
+
+```json
+[
+  {"parameters": {"reports": [{"report_type": "Sales"}]}, "authorization": {...}},
+  {"parameters": {"reports": [{"report_type": "Inventory"}]}, "authorization": {...}}
+]
+```
+
+Generates: `01_Sales/`, `02_Inventory/`
+
+> **Limitation:** Auto-naming only works with `parameters.reports[0].report_type`. For other parameter structures, use the wrapped format.
 
 ## Required .gitignore
 
@@ -68,7 +138,7 @@ tests/functional/*/source/data/in/
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 ```
 
-## secrets.json (gitignored — real credentials)
+## secrets.json (gitignored — only for authenticated APIs)
 
 OAuth component:
 ```json
@@ -94,16 +164,7 @@ API key component:
 }
 ```
 
-## configs.json (gitignored — dummy credentials)
-
-```json
-[
-  {"parameters": {"report_type": "Sales"}, "action": "run", "authorization": {...}},
-  {"parameters": {"report_type": "Inventory"}, "action": "run", "authorization": {...}}
-]
-```
-
-Generates test dirs: `01_Sales/`, `02_Inventory/`
+Public API (no auth): **No secrets.json needed** — put real values directly in configs.json.
 
 ## Run Tests
 
@@ -119,18 +180,20 @@ docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
 ## Update datadirtest
 
 ```bash
+# pyproject.toml + uv
 uv lock --upgrade-package datadirtest
 uv sync
+
+# requirements.txt + pip
+pip install --upgrade "datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing"
 ```
 
 ## Re-record Tests
 
 ```bash
-# 1. Update secrets.json with fresh credentials
-# 2. Delete test dirs to re-record
-rm -rf tests/functional/01_FullLoad
-# 3. Re-run scaffold
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json
-# 4. Commit updated cassettes and expected output
+# 1. Delete test dirs to re-record
+rm -rf tests/functional/test_generation
+# 2. Re-run scaffold (with --secrets if authenticated)
+python -m datadirtest scaffold configs.json tests/functional src/component.py
+# 3. Commit updated cassettes and expected output
 ```
