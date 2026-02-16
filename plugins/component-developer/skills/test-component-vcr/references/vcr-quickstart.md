@@ -1,17 +1,34 @@
 # VCR Testing Quick Reference
 
-## Scaffold Command
+All commands below use the `datadirtest` CLI from `https://github.com/keboola/datadirtest` (branch: `feature/vcr-testing`).
+
+**Always check the [datadirtest README](https://github.com/keboola/datadirtest/tree/feature/vcr-testing) for the latest usage.**
+
+## Install
+
+```toml
+# pyproject.toml [dependency-groups]
+dev = [
+    "datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing",
+]
+```
 
 ```bash
-# Basic (single config or simple components)
+uv sync
+```
+
+## Scaffold (Record) Tests
+
+```bash
+# Basic — records HTTP interactions and creates test structure
 python -m datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json
 
-# OAuth/ERP components (token chaining between tests)
+# OAuth/ERP components — chains refreshed tokens between tests
 python -m datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json --chain-state
 
-# Without recording (structure only)
+# Structure only (no recording)
 python -m datadirtest scaffold configs.json tests/functional --no-record
 
 # Custom freeze time
@@ -19,7 +36,7 @@ python -m datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json --freeze-time 2025-06-01T12:00:00
 ```
 
-## Minimal Test Runner
+## Test Runner (only Python file you write)
 
 ```python
 # tests/test_functional.py
@@ -35,7 +52,7 @@ class TestComponent(unittest.TestCase):
         ).run()
 ```
 
-## Required .gitignore entries
+## Required .gitignore
 
 ```gitignore
 secrets.json
@@ -45,25 +62,15 @@ tests/functional/*/source/data/out/
 tests/functional/*/source/data/in/
 ```
 
-## Required Dockerfile addition
+## Required Dockerfile Addition
 
 ```dockerfile
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 ```
 
-## Required pyproject.toml dependency
+## secrets.json (gitignored — real credentials)
 
-```toml
-[dependency-groups]
-dev = [
-    "datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing",
-]
-```
-
-## secrets.json Structure
-
-The structure must mirror the config paths you want to override:
-
+OAuth component:
 ```json
 {
   "authorization": {
@@ -78,7 +85,7 @@ The structure must mirror the config paths you want to override:
 }
 ```
 
-For non-OAuth components with API keys:
+API key component:
 ```json
 {
   "parameters": {
@@ -87,9 +94,7 @@ For non-OAuth components with API keys:
 }
 ```
 
-## configs.json Format
-
-Array of raw Keboola configs. Test names are auto-generated from `parameters.reports[0].report_type` or numbered:
+## configs.json (gitignored — dummy credentials)
 
 ```json
 [
@@ -98,31 +103,34 @@ Array of raw Keboola configs. Test names are auto-generated from `parameters.rep
 ]
 ```
 
-Generates: `01_Sales/`, `02_Inventory/`
+Generates test dirs: `01_Sales/`, `02_Inventory/`
 
-## Docker Test Command
+## Run Tests
 
 ```bash
-# Build and test (same as CI)
+# Locally
+pytest tests/test_functional.py --tb=short -q
+
+# Docker (same as CI)
 docker build -t mycomponent:test . && \
 docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
 ```
 
-## Updating datadirtest
+## Update datadirtest
 
 ```bash
-# After changes to datadirtest are pushed
 uv lock --upgrade-package datadirtest
 uv sync
 ```
 
-## Chain State Flow (OAuth components)
+## Re-record Tests
 
+```bash
+# 1. Update secrets.json with fresh credentials
+# 2. Delete test dirs to re-record
+rm -rf tests/functional/01_FullLoad
+# 3. Re-run scaffold
+python -m datadirtest scaffold configs.json tests/functional src/component.py \
+    --secrets secrets.json
+# 4. Commit updated cassettes and expected output
 ```
-Test 1: {} → component runs → out/state.json = {refreshed_token}
-Test 2: {refreshed_token} → component runs → out/state.json = {refreshed_token_2}
-Test 3: {refreshed_token_2} → component runs → ...
-```
-
-Each test's `out/state.json` becomes the next test's `in/state.json` during scaffolding.
-During replay, cassettes serve pre-recorded responses — the state content doesn't matter.
