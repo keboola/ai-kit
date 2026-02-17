@@ -165,6 +165,8 @@ Assists with resolving git merge conflicts during merge, rebase, or cherry-pick 
 Systematically process GitHub PR review comments by fetching threads to local JSON, implementing fixes one-by-one, and tracking progress.
 
 **Features:**
+- Single CLI entry point (`review.sh`) with subcommands: fetch, list, get, reply, mark
+- Auto-detects PR and reviews file from current branch — no manual path threading
 - Fetches review threads via GraphQL (includes resolution status)
 - Stores reviews locally in `.scratch/reviews/` to avoid context pollution
 - Lists unresolved threads with smart filtering (excludes resolved/outdated)
@@ -398,7 +400,8 @@ plugins/developer/
 ├── skills/
 │   └── gh-process-review/   # GitHub PR review processing skill
 │       ├── SKILL.md
-│       └── scripts/         # Helper scripts for review processing
+│       └── scripts/
+│           └── review.sh    # Single CLI entry point (fetch/list/get/reply/mark)
 └── README.md                # This file
 ```
 
@@ -443,6 +446,6 @@ To add or improve agents:
 
 ---
 
-**Version**: 1.4.0
+**Version**: 1.6.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
