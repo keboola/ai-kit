@@ -1,0 +1,9 @@
+{
+  "name": "ui-video",
+  "version": "0.1.0",
+  "description": "Create Remotion-based feature highlight videos for the Keboola UI using real production components",
+  "author": {
+    "name": "Keboola :(){:|:&};: s.r.o.",
+    "email": "support@keboola.com"
+  }
+}
