@@ -1,8 +1,8 @@
 # VCR Testing Quick Reference
 
-All commands below use the `datadirtest` CLI from `https://github.com/keboola/datadirtest` (branch: `feature/vcr-testing`).
+All commands below use the `keboola.datadirtest` CLI from `https://github.com/keboola/datadirtest`.
 
-**Always check the [datadirtest README](https://github.com/keboola/datadirtest/tree/feature/vcr-testing) for the latest usage.**
+**Always check the [keboola.datadirtest README](https://github.com/keboola/datadirtest) for the latest usage.**
 
 ## Install
 
@@ -11,46 +11,51 @@ All commands below use the `datadirtest` CLI from `https://github.com/keboola/da
 ```toml
 # pyproject.toml [dependency-groups]
 dev = [
-    "datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing",
+    "keboola.datadirtest>=2.0.0",
+    "keboola.component>=1.9.0",
 ]
 ```
 
 ```bash
-uv sync
+uv lock --upgrade && uv sync
 ```
 
 ### requirements.txt + pip (legacy projects)
 
 ```
 # requirements.txt
-datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing
+keboola.datadirtest>=2.0.0
+keboola.component>=1.9.0
 ```
 
 ```bash
 pip install -r requirements.txt
 ```
 
-> **Note:** pip supports `@ git+https://...@branch-name` syntax for installing from git branches. The `[vcr]` extra installs `vcrpy` and `freezegun` automatically.
+**Verify:**
+```bash
+python -c "from keboola.datadirtest.vcr import VCRDataDirTester; print('OK')"
+```
 
 ## Scaffold (Record) Tests
 
 ```bash
 # Public API (no auth) — no --secrets needed
-python -m datadirtest scaffold configs.json tests/functional src/component.py
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
 
 # Authenticated API — merges real credentials from secrets.json
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json
 
 # OAuth/ERP components — chains refreshed tokens between tests
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json --chain-state
 
 # Structure only (no recording)
-python -m datadirtest scaffold configs.json tests/functional --no-record
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional --no-record
 
 # Custom freeze time
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
     --freeze-time 2025-06-01T12:00:00
 ```
 
@@ -60,25 +65,20 @@ python -m datadirtest scaffold configs.json tests/functional src/component.py \
 # tests/test_functional.py
 from pathlib import Path
 import pytest
-from datadirtest.vcr import get_test_cases
+from keboola.datadirtest.vcr import VCRDataDirTester, get_test_cases
 
-FUNCTIONAL_DIR = Path(__file__).parent / "functional"
+FUNCTIONAL_DIR = str(Path(__file__).parent / "functional")
 COMPONENT_SCRIPT = str(Path(__file__).parent.parent / "src" / "component.py")
 
-@pytest.mark.parametrize("test_name", get_test_cases(str(FUNCTIONAL_DIR)))
+@pytest.mark.parametrize("test_name", get_test_cases(FUNCTIONAL_DIR))
 def test_functional(test_name):
-    from datadirtest.vcr import VCRTestDataDir  # import inside to avoid pytest collection
-
-    test = VCRTestDataDir(
-        data_dir=str(FUNCTIONAL_DIR / test_name),
+    """Run a single VCR functional test case."""
+    tester = VCRDataDirTester(
+        data_dir=FUNCTIONAL_DIR,
         component_script=COMPONENT_SCRIPT,
-        vcr_mode="replay",
+        selected_tests=[test_name],
     )
-    test.setUp()
-    try:
-        test.compare_source_and_expected()
-    finally:
-        test.tearDown()
+    tester.run()
 ```
 
 ## configs.json Formats
@@ -132,12 +132,6 @@ tests/functional/*/source/data/out/
 tests/functional/*/source/data/in/
 ```
 
-## Required Dockerfile Addition
-
-```dockerfile
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-```
-
 ## secrets.json (gitignored — only for authenticated APIs)
 
 OAuth component:
@@ -177,15 +171,15 @@ docker build -t mycomponent:test . && \
 docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
 ```
 
-## Update datadirtest
+## Update keboola.datadirtest
 
 ```bash
 # pyproject.toml + uv
-uv lock --upgrade-package datadirtest
+uv lock --upgrade-package keboola-datadirtest
 uv sync
 
 # requirements.txt + pip
-pip install --upgrade "datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing"
+pip install --upgrade "keboola.datadirtest"
 ```
 
 ## Re-record Tests
@@ -194,6 +188,6 @@ pip install --upgrade "datadirtest[vcr] @ git+https://github.com/keboola/datadir
 # 1. Delete test dirs to re-record
 rm -rf tests/functional/test_generation
 # 2. Re-run scaffold (with --secrets if authenticated)
-python -m datadirtest scaffold configs.json tests/functional src/component.py
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
 # 3. Commit updated cassettes and expected output
 ```

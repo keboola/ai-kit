@@ -6,11 +6,11 @@ argument-hint: [--secrets path/to/secrets.json] [--chain-state]
 
 # Generate VCR Functional Tests
 
-Set up VCR-based functional tests for the current Keboola Python component using the `datadirtest[vcr]` framework. Records real HTTP interactions once, replays them deterministically in CI — no credentials needed, no flaky mocks.
+Set up VCR-based functional tests for the current Keboola Python component using the `keboola.datadirtest` framework. Records real HTTP interactions once, replays them deterministically in CI — no credentials needed, no flaky mocks.
 
 ## What This Command Does
 
-1. **Checks/installs datadirtest[vcr]** — Adds the dependency and syncs
+1. **Checks/installs** — Adds the dependency and syncs
 2. **Creates configs.json** — Covers all endpoints (sync actions + run modes)
 3. **Creates secrets.json** — Asks user for real credentials (gitignored)
 4. **Creates test runner** — Writes `tests/test_functional.py` (parametrized)
@@ -44,18 +44,21 @@ else
 fi
 ```
 
-### Step 2: Add datadirtest[vcr] Dependency
+Validate we have .venv installed either via `uv venv` or via `python venv -m .venv`. Always use a version specified in `pyproject.toml` if available.
 
-Check if `datadirtest[vcr]` is already installed. If not, add it.
+### Step 2: Add keboola.datadirtest Dependency
+
+Check if `keboola.datadirtest` is already installed. If not, add it. Ideally via uv add keboola.datadirtest
 
 **For pyproject.toml + uv:**
 
-Read `pyproject.toml` and check if `datadirtest` is already in `[dependency-groups] dev`. If not, add it:
+Read `pyproject.toml` and check if `keboola.datadirtest` is already in `[dependency-groups] dev`. If not, add it:
 
 ```toml
 [dependency-groups]
 dev = [
-    "datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing",
+    "keboola.datadirtest>=2.0.0",
+    "keboola.component>=1.9.0",
     "pytest>=9.0.0",
     # ... keep existing dev deps
 ]
@@ -63,14 +66,15 @@ dev = [
 
 Then sync:
 ```bash
-uv lock && uv sync
+uv lock --upgrade && uv sync
 ```
 
 **For requirements.txt + pip:**
 
 Add to `requirements.txt` (or `requirements-dev.txt` if it exists):
 ```
-datadirtest[vcr] @ git+https://github.com/keboola/datadirtest.git@feature/vcr-testing
+keboola.datadirtest>=2.0.0
+keboola.component>=1.9.0
 pytest>=9.0.0
 ```
 
@@ -81,10 +85,10 @@ pip install -r requirements.txt
 
 **Verify installation:**
 ```bash
-python -c "from datadirtest.vcr import VCRDataDirTester; print('datadirtest[vcr] OK')"
+python -c "from keboola.datadirtest import VCRDataDirTester; print('keboola.datadirtest OK')"
 ```
 
-**IMPORTANT:** The `[vcr]` extra installs `vcrpy` and `freezegun` automatically — do NOT add them separately. If there is a standalone `vcrpy` or `freezegun` entry, remove it.
+**IMPORTANT:** The `keboola.component>=1.9.0` installs `vcrpy` and `keboola.vcr` automatically — do NOT add them separately. If there is a standalone `vcrpy` or `freezegun` or `keboola.vcr` entry, remove it.
 
 ### Step 3: Analyze Component and Build configs.json
 
@@ -132,7 +136,7 @@ Create `configs.json` in the project root using the **wrapped format** (explicit
 
 **Guidelines for configs.json:**
 - Use **dummy credentials** (e.g., `"DUMMY_KEY"`) — real ones go in `secrets.json`
-- Cover **every sync action** (testConnection, list_*, etc.) — one test per action
+- Cover **every sync action** (testConnection, list_*, etc.) — two test per action, one working config, one not working
 - Cover **every run mode** (full sync, incremental sync, field selection, etc.)
 - Test **edge cases** (empty table name for auto-resolution, complex field types, etc.)
 - Use the `{name, description, config}` wrapped format — never the raw format
@@ -184,7 +188,7 @@ Create `tests/test_functional.py` — this is the ONLY test Python file needed:
 from pathlib import Path
 
 import pytest
-from datadirtest.vcr import VCRDataDirTester, get_test_cases
+from keboola.datadirtest.vcr import VCRDataDirTester, get_test_cases
 
 FUNCTIONAL_DIR = str(Path(__file__).parent / "functional")
 COMPONENT_SCRIPT = str(Path(__file__).parent.parent / "src" / "component.py")
@@ -213,14 +217,14 @@ This is the critical step — runs the component with real credentials against t
 
 ```bash
 # Authenticated API
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json
 
 # Public API (no auth)
-python -m datadirtest scaffold configs.json tests/functional src/component.py
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
 
 # OAuth/ERP components (chains refreshed tokens between tests)
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json --chain-state
 ```
 
@@ -232,7 +236,7 @@ The scaffolder automatically:
 - Copies outputs to `expected/`
 - Restores `config.json` to dummy values
 - Sanitizes credentials from cassettes
-- Freezes time to `2025-01-01T12:00:00` (default)
+- Freezes time to moment the component run
 
 **If scaffold fails:**
 - Check error message — usually wrong resource IDs, expired credentials, or API errors
@@ -258,11 +262,7 @@ tests/functional/*/source/data/in/
 
 ### Step 8: Update Dockerfile
 
-The Docker image needs `git` to install the git-based `datadirtest` dependency. Add this line early in the Dockerfile (before `uv sync` or `pip install`):
-
-```dockerfile
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-```
+Ensure the Dockerfile copies `tests/` into the image. Add this line if missing:
 
 Also ensure the Dockerfile copies `tests/` into the image:
 ```dockerfile
@@ -333,11 +333,8 @@ The scaffolder expects the wrapped format: `{"name": "...", "config": {...}}`. M
 ### CI shows "Ran 0 tests"
 The CI pipeline uses `python -m unittest discover` which can't find pytest-parametrized functions. **Fix:** Change to `python -m pytest tests/ --tb=short -q` (Step 9).
 
-### Docker build fails — git not found
-The `datadirtest[vcr]` package is installed from a git URL. Docker needs `git` installed before `uv sync` / `pip install`. **Fix:** Add the `apt-get install git` line to Dockerfile (Step 8).
-
 ### uv.lock out of date
-After adding datadirtest, run `uv lock` before `uv sync`. If datadirtest was updated upstream, run `uv lock --upgrade-package datadirtest`.
+After adding keboola.datadirtest, run `uv lock` before `uv sync`. If keboola.datadirtest was updated upstream, run `uv lock --upgrade-package keboola-datadirtest`.
 
 ### Permission denied writing secrets.json
 Some security configurations block writing files matching `**/secrets*`. **Fix:** Ask the user to create `secrets.json` manually.
@@ -355,7 +352,7 @@ When the API changes or you need fresh data:
 rm -rf tests/functional/01_testConnection tests/functional/02_full_sync
 
 # 3. Re-run scaffold
-python -m datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
     --secrets secrets.json
 
 # 4. Verify tests pass
@@ -374,10 +371,10 @@ Step 1: Validating environment...
   Detected: pyproject.toml (uv)
   src/component.py exists
 
-Step 2: Adding datadirtest[vcr] dependency...
+Step 2: Adding keboola.datadirtest dependency...
   Added to pyproject.toml [dependency-groups] dev
   Running uv lock && uv sync...
-  datadirtest[vcr] OK
+  keboola.datadirtest OK
 
 Step 3: Analyzing component for configs.json...
   Found actions: testConnection, list_bases, list_tables, list_fields, list_views, run
@@ -415,5 +412,5 @@ VCR tests are ready! All 10 test cases pass.
 
 - `@test-component-vcr` — Full VCR setup skill with detailed documentation
 - `@test-component` — General testing patterns (unit tests, datadir tests)
-- [datadirtest repo](https://github.com/keboola/datadirtest/tree/feature/vcr-testing) — Source of truth
+- [keboola.datadirtest](https://github.com/keboola/datadirtest) — Source of truth
 - [VCR Quick Reference](../skills/test-component-vcr/references/vcr-quickstart.md) — Cheat sheet
