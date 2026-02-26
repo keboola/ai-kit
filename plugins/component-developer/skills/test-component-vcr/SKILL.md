@@ -109,7 +109,7 @@ That's it. `get_test_cases` auto-discovers test dirs with cassettes. Each test c
 
 ### Step 3: Help user prepare configs.json
 
-Ask the user for the Keboola component configurations they want to test. Create `configs.json` in the project root.
+Ask the user for the Keboola component configurations they want to test. Create `tests/setup/configs.json` (the default location expected by the scaffold CLI).
 
 **Two supported formats:**
 
@@ -142,6 +142,28 @@ Use this when the component's parameters don't follow the `reports[0].report_typ
 ```
 
 Each entry produces a test directory named by the `name` field (e.g., `tests/functional/test_full_load/`).
+
+**For writer components** that need input tables or files, add `storage.input` mappings and place the CSV files in `tests/setup/input_files/`. The scaffold CLI auto-copies them based on these mappings:
+
+```json
+[
+  {
+    "name": "01_write_rows",
+    "config": {
+      "parameters": {
+        "#api_key": "DUMMY_KEY"
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "my_input_table.csv"}
+          ]
+        }
+      }
+    }
+  }
+]
+```
 
 #### Format B: Raw Keboola configs (auto-detected)
 
@@ -199,17 +221,21 @@ For non-OAuth components with API keys:
 
 ### Step 5: Run keboola.datadirtest scaffold to record tests
 
-Run the **datadirtest CLI** — it does ALL the heavy lifting:
+Run the **datadirtest CLI** — it does ALL the heavy lifting. The scaffold command reads from `tests/setup/configs.json` by default (all paths have sensible defaults matching the standard layout):
 
 **Public API (no secrets):**
 ```bash
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
+uv run python -m keboola.datadirtest scaffold
 ```
 
 **Authenticated API (with secrets):**
 ```bash
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
+```
+
+**Writer components with input files** (CSVs from `tests/setup/input_files/` are auto-copied):
+```bash
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
 ```
 
 The CLI automatically:
@@ -219,11 +245,26 @@ The CLI automatically:
 - Copies outputs to `expected/`
 - Restores config.json to dummy values (when secrets are used)
 - Sanitizes credentials from cassettes
+- Copies input files from `tests/setup/input_files/` into each test (for writers)
+- **Skips tests that already have a cassette** — safe to re-run after fixing one test
 
 For **OAuth/ERP components** that refresh tokens, add `--chain-state`:
 ```bash
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json --chain-state
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --chain-state
+```
+
+To **force re-recording** all existing cassettes from the live API:
+```bash
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --regenerate
+```
+
+If not using the standard layout, specify paths explicitly:
+```bash
+uv run python -m keboola.datadirtest scaffold \
+    --definitions tests/setup/configs.json \
+    --output tests/functional \
+    --component src/component.py \
+    --secrets secrets.json
 ```
 
 ### Step 6: Update .gitignore
@@ -267,10 +308,17 @@ docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
 ## Re-recording Tests
 
 When the API changes or you need fresh data:
-1. Get a fresh token in `secrets.json`
-2. Delete the test directories you want to re-record
-3. Re-run the `uv run python -m keboola.datadirtest scaffold` command
-4. Commit the updated cassettes and expected output
+1. Get fresh credentials in `secrets.json`
+2. Re-record all tests at once:
+   ```bash
+   uv run python -m keboola.datadirtest scaffold --secrets secrets.json --regenerate
+   ```
+   Or re-record specific tests by deleting their directories (existing tests are skipped by default):
+   ```bash
+   rm -rf tests/functional/01_testConnection
+   uv run python -m keboola.datadirtest scaffold --secrets secrets.json
+   ```
+3. Commit the updated cassettes and expected output
 
 ## Troubleshooting
 
@@ -286,7 +334,7 @@ Run `docker build && docker run` locally to simulate CI. Common causes:
 - `requirements.txt` projects: ensure packages are installed correctly
 
 ### Auto-generated test names are all "01_test", "02_test"
-The raw Keboola config format auto-names from `parameters.reports[0].report_type`. If your component uses a different parameter structure (e.g., `endpoints`, `tables`, `queries`), use the **wrapped format** with explicit `name` fields instead.
+The raw Keboola config format auto-names from `parameters.reports[0].report_type`. If your component uses a different parameter structure (e.g., `endpoints`, `tables`, `queries`), use the **wrapped format** with explicit `name` fields in `tests/setup/configs.json` instead.
 
 ### SOAP/WSDL APIs (Zeep)
 SOAP clients like Zeep make an initial WSDL fetch before data calls. The VCR cassette must capture BOTH the WSDL fetch AND the subsequent SOAP requests. This happens automatically with `keboola.datadirtest scaffold`.

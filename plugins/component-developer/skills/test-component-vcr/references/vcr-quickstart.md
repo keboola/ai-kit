@@ -37,27 +37,60 @@ pip install -r requirements.txt
 python -c "from keboola.datadirtest.vcr import VCRDataDirTester; print('OK')"
 ```
 
+## Standard Repo Layout
+
+The scaffold CLI has sensible defaults that match the standard layout:
+
+```
+tests/
+├── setup/
+│   ├── configs.json          # Test definitions (default --definitions)
+│   └── input_files/          # CSVs for writer tests (default --input-files)
+│       └── my_table.csv
+├── functional/               # Generated test dirs (default --output)
+│   └── 01_testConnection/
+│       ├── source/data/
+│       │   ├── config.json
+│       │   ├── cassettes/requests.json
+│       │   └── in/tables/
+│       └── expected/data/out/
+└── test_functional.py        # Test runner (only file you write)
+```
+
 ## Scaffold (Record) Tests
 
 ```bash
-# Public API (no auth) — no --secrets needed
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
+# All defaults — standard repo layout (reads tests/setup/configs.json)
+uv run python -m keboola.datadirtest scaffold
 
-# Authenticated API — merges real credentials from secrets.json
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json
+# Authenticated API
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
 
 # OAuth/ERP components — chains refreshed tokens between tests
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json --chain-state
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --chain-state
+
+# Writer components — auto-copies CSVs from tests/setup/input_files/ based on storage mappings
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
+
+# Re-record all cassettes from scratch
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --regenerate
 
 # Structure only (no recording)
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional --no-record
+uv run python -m keboola.datadirtest scaffold --no-record
+
+# Custom paths (if not using standard layout)
+uv run python -m keboola.datadirtest scaffold \
+    --definitions tests/setup/configs.json \
+    --output tests/functional \
+    --component src/component.py \
+    --secrets secrets.json
 
 # Custom freeze time
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json \
     --freeze-time 2025-06-01T12:00:00
 ```
+
+**Skip-if-exists is the default**: tests that already have a cassette are skipped. Use `--regenerate` to force re-recording of all tests.
 
 ## Test Runner (only Python file you write)
 
@@ -83,7 +116,9 @@ def test_functional(test_name):
 
 ## configs.json Formats
 
-### Wrapped format (explicit test names — recommended for most components)
+### Wrapped format (recommended for most components)
+
+Place at `tests/setup/configs.json`:
 
 ```json
 [
@@ -109,6 +144,32 @@ def test_functional(test_name):
 ]
 ```
 
+### Writer components (with input tables/files)
+
+Place CSV files in `tests/setup/input_files/`. Reference them via `storage.input` in each config entry:
+
+```json
+[
+  {
+    "name": "01_write_rows",
+    "config": {
+      "parameters": {
+        "#api_key": "DUMMY_KEY"
+      },
+      "storage": {
+        "input": {
+          "tables": [
+            {"destination": "my_input_table.csv"}
+          ]
+        }
+      }
+    }
+  }
+]
+```
+
+The scaffolder auto-copies `tests/setup/input_files/my_input_table.csv` → each test's `source/data/in/tables/my_input_table.csv`.
+
 ### Raw Keboola format (auto-named from `reports[0].report_type`)
 
 ```json
@@ -126,7 +187,6 @@ Generates: `01_Sales/`, `02_Inventory/`
 
 ```gitignore
 secrets.json
-configs.json
 tests/functional/*/source/data/config.secrets.json
 tests/functional/*/source/data/out/
 tests/functional/*/source/data/in/
@@ -185,9 +245,12 @@ pip install --upgrade "keboola.datadirtest"
 ## Re-record Tests
 
 ```bash
-# 1. Delete test dirs to re-record
+# Re-record all (delete all cassettes and re-record from live API)
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --regenerate
+
+# Re-record specific test (delete dir, then re-run — existing tests skipped)
 rm -rf tests/functional/test_generation
-# 2. Re-run scaffold (with --secrets if authenticated)
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
-# 3. Commit updated cassettes and expected output
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
+
+# Commit updated cassettes and expected output
 ```

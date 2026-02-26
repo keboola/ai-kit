@@ -11,7 +11,7 @@ Set up VCR-based functional tests for the current Keboola Python component using
 ## What This Command Does
 
 1. **Checks/installs** — Adds the dependency and syncs
-2. **Creates configs.json** — Covers all endpoints (sync actions + run modes)
+2. **Creates tests/setup/configs.json** — Covers all endpoints (sync actions + run modes)
 3. **Creates secrets.json** — Asks user for real credentials (gitignored)
 4. **Creates test runner** — Writes `tests/test_functional.py` (parametrized)
 5. **Runs scaffold** — Records cassettes and generates expected outputs
@@ -99,7 +99,7 @@ Read the component source to understand all supported actions and parameters:
 3. **Read `component_config/configSchema.json`** — Understand the full config structure and valid parameter combinations
 4. **Check for existing test configs** — Read `data/config.json` or any existing test configurations
 
-Create `configs.json` in the project root using the **wrapped format** (explicit test names):
+Create `tests/setup/configs.json` (the default location for the scaffold CLI) using the **wrapped format** (explicit test names):
 
 ```json
 [
@@ -143,6 +143,26 @@ Create `configs.json` in the project root using the **wrapped format** (explicit
 - Prefix names with numbers for ordering: `01_`, `02_`, etc.
 - The `description` field is optional but helpful for documentation
 - Use real resource IDs (base IDs, table IDs, etc.) — these are not secrets
+
+**For writer components** that need input tables or files, add `storage.input` mappings and place the CSV files in `tests/setup/input_files/`. The scaffold CLI auto-copies them into each test's `in/tables/` or `in/files/` based on these mappings:
+
+```json
+{
+  "name": "01_write_data",
+  "config": {
+    "parameters": {
+      "#api_key": "DUMMY_KEY"
+    },
+    "storage": {
+      "input": {
+        "tables": [
+          {"destination": "my_input_table.csv"}
+        ]
+      }
+    }
+  }
+}
+```
 
 **IMPORTANT:** Use correct resource IDs from the actual API. If unsure, ask the user what IDs to use. Wrong IDs will cause scaffold to fail with API errors.
 
@@ -215,17 +235,27 @@ def test_functional(test_name):
 
 This is the critical step — runs the component with real credentials against the live API and records all HTTP interactions.
 
+The scaffold CLI reads from `tests/setup/configs.json` by default (all paths have sensible defaults):
+
 ```bash
-# Authenticated API
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json
+# Authenticated API — uses defaults: tests/setup/configs.json, tests/functional, src/component.py
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
 
 # Public API (no auth)
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py
+uv run python -m keboola.datadirtest scaffold
 
 # OAuth/ERP components (chains refreshed tokens between tests)
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json --chain-state
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --chain-state
+
+# Writer components with input files (auto-copies CSVs from tests/setup/input_files/)
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
+
+# Custom paths (if not using the standard layout)
+uv run python -m keboola.datadirtest scaffold \
+    --definitions tests/setup/configs.json \
+    --output tests/functional \
+    --component src/component.py \
+    --secrets secrets.json
 ```
 
 The scaffolder automatically:
@@ -237,12 +267,15 @@ The scaffolder automatically:
 - Restores `config.json` to dummy values
 - Sanitizes credentials from cassettes
 - Freezes time to moment the component run
+- Copies input CSV files from `tests/setup/input_files/` into each test's `in/tables/` or `in/files/` (for writers)
+- **Skips tests that already have a cassette** — re-run safely after fixing one test
 
 **If scaffold fails:**
 - Check error message — usually wrong resource IDs, expired credentials, or API errors
-- Fix the offending config in `configs.json` and re-run
+- Fix the offending config in `tests/setup/configs.json` and re-run
 - Scaffold processes tests sequentially and stops on first fatal error
-- Delete failed test directories before re-running
+- Existing successful tests are skipped automatically (cassette already present)
+- To force re-record a test, delete its directory or use `--regenerate`
 
 ### Step 7: Update .gitignore
 
@@ -258,7 +291,7 @@ tests/functional/*/source/data/out/
 tests/functional/*/source/data/in/
 ```
 
-**Note:** `configs.json` can optionally be gitignored too (it contains dummy creds, but some teams prefer to commit it for reference).
+**Note:** `tests/setup/configs.json` can optionally be gitignored too (it contains dummy creds, but most teams commit it for reference).
 
 ### Step 8: Update Dockerfile
 
@@ -328,7 +361,7 @@ If the component uses `set()` for column names anywhere (e.g., building manifest
 Using IDs from the wrong resource (e.g., wrong table ID) causes API errors during scaffold. **Fix:** Double-check all resource IDs against the actual API. Ask the user if unsure.
 
 ### configs.json format
-The scaffolder expects the wrapped format: `{"name": "...", "config": {...}}`. Missing the `config` wrapper causes `ScaffolderError: Test 'X' missing required 'config' field`.
+The scaffolder expects the wrapped format: `{"name": "...", "config": {...}}`. Missing the `config` wrapper causes `ScaffolderError: Test 'X' missing required 'config' field`. The default file location is `tests/setup/configs.json` — no path argument needed if you use the standard layout.
 
 ### CI shows "Ran 0 tests"
 The CI pipeline uses `python -m unittest discover` which can't find pytest-parametrized functions. **Fix:** Change to `python -m pytest tests/ --tb=short -q` (Step 9).
@@ -348,17 +381,18 @@ When the API changes or you need fresh data:
 
 ```bash
 # 1. Get fresh credentials in secrets.json
-# 2. Delete test directories to re-record
-rm -rf tests/functional/01_testConnection tests/functional/02_full_sync
 
-# 3. Re-run scaffold
-uv run python -m keboola.datadirtest scaffold configs.json tests/functional src/component.py \
-    --secrets secrets.json
+# 2a. Re-record all tests (delete cassettes and re-record from live API)
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json --regenerate
 
-# 4. Verify tests pass
+# 2b. Or delete specific test directories and re-run (existing tests are skipped by default)
+rm -rf tests/functional/01_testConnection
+uv run python -m keboola.datadirtest scaffold --secrets secrets.json
+
+# 3. Verify tests pass
 python -m pytest tests/test_functional.py --tb=short -q
 
-# 5. Commit updated cassettes and expected output
+# 4. Commit updated cassettes and expected output
 ```
 
 ## Example Session
@@ -379,7 +413,7 @@ Step 2: Adding keboola.datadirtest dependency...
 Step 3: Analyzing component for configs.json...
   Found actions: testConnection, list_bases, list_tables, list_fields, list_views, run
   Found run modes: full_sync, incremental_sync
-  Created configs.json with 10 test cases
+  Created tests/setup/configs.json with 10 test cases
 
 Step 4: Creating secrets.json...
   What is your API key? (will be stored in gitignored secrets.json)
@@ -390,6 +424,7 @@ Step 5: Creating test runner...
   Created tests/test_functional.py
 
 Step 6: Running scaffold (recording HTTP interactions)...
+  uv run python -m keboola.datadirtest scaffold --secrets secrets.json
   Recording 01_testConnection... OK
   Recording 02_list_bases... OK
   ...
