@@ -197,7 +197,7 @@ Formats control how fields are rendered in the UI.
 | Format | Description | Example |
 |--------|-------------|---------|
 | `ssh-editor` | SSH tunnel/key pair form | `"format": "ssh-editor"` |
-| `grid` | Grid layout — groups object properties into a collapsible section with a header | `"format": "grid"` |
+| `grid` | Groups object properties into a visually separated section with a header | `"format": "grid"` |
 
 ### Special Formats
 
@@ -336,7 +336,7 @@ Options control field behavior and appearance.
 |--------|------|-------------|
 | `propertyOrder` | integer | Field display order (lower = higher) |
 | `hidden` | boolean | Hide field from UI |
-| `collapsed` | boolean | Collapse object by default |
+| `collapsed` | boolean | **Not supported in Keboola UI.** Use `options.dependencies` for conditional visibility instead. |
 | `compact` | boolean | Use compact display mode |
 | `grid_columns` | integer | Number of grid columns (1-12) |
 | `object_layout` | string | Object layout style (`"grid"`, `"table"`) |
@@ -482,22 +482,23 @@ Options control field behavior and appearance.
 }
 ```
 
-**Collapsed Object:**
+**Grouped Section (using `format: "grid"`):**
 ```json
 {
   "advanced_settings": {
     "type": "object",
     "title": "Advanced Settings",
-    "options": {
-      "collapsed": true
-    },
+    "format": "grid",
+    "propertyOrder": 500,
     "properties": {
-      "timeout": { "type": "integer" },
-      "retries": { "type": "integer" }
+      "timeout": { "type": "integer", "title": "Timeout" },
+      "retries": { "type": "integer", "title": "Retries" }
     }
   }
 }
 ```
+
+> **Note:** Keboola UI does not support collapsible objects. Use `options.dependencies` for conditional field visibility, or the `maxItems: 1` array pattern for optional sections.
 
 **Grid Layout:**
 ```json
