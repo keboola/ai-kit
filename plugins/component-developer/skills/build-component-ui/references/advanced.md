@@ -279,9 +279,6 @@ Standard block for SSH key pair authentication:
   "ssh": {
     "type": "object",
     "title": "SSH Key Pair",
-    "options": {
-      "collapsed": true
-    },
     "properties": {
       "enabled": {
         "type": "boolean",
@@ -364,9 +361,6 @@ Standard block for SSH tunnel configuration:
   "ssh_tunnel": {
     "type": "object",
     "title": "SSH Tunnel",
-    "options": {
-      "collapsed": true
-    },
     "properties": {
       "enabled": {
         "type": "boolean",
