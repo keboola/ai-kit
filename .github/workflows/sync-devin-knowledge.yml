@@ -1,0 +1,20 @@
+name: Sync AI Kit Skills to Devin Knowledge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/**/SKILL.md'
+      - 'plugins/**/references/**'
+  workflow_dispatch:
+
+jobs:
+  sync-knowledge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync skills to Devin Knowledge
+        run: bash .github/scripts/sync-devin-knowledge.sh
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
