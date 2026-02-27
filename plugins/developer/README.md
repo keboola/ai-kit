@@ -139,7 +139,7 @@ Analyzes your changes and creates a pull request with AI-generated title and des
 ### Worktree
 **Command**: `/worktree <subcommand> [args]`
 
-Manage git worktrees using the bundled [git-wt](https://github.com/vojtabiberle/git-wt) helper script.
+Manage git worktrees using the [git-wt](https://github.com/vojtabiberle/git-wt) helper script, fetched from upstream at runtime.
 
 **Subcommands:**
 - `add <branch> [source]` — Create a worktree for a branch
