@@ -136,6 +136,31 @@ Analyzes your changes and creates a pull request with AI-generated title and des
 
 ---
 
+### Worktree
+**Command**: `/worktree <subcommand> [args]`
+
+Manage git worktrees using the bundled [git-wt](https://github.com/vojtabiberle/git-wt) helper script.
+
+**Subcommands:**
+- `add <branch> [source]` — Create a worktree for a branch
+- `rm [branch]` — Remove a worktree
+- `ls` — List all worktrees
+- `help` — Show help
+
+**Usage:**
+```bash
+# Create worktree for a feature branch from master
+/worktree add feature/login master
+
+# List all worktrees
+/worktree ls
+
+# Remove a worktree
+/worktree rm feature/login
+```
+
+---
+
 ### Handle Conflicts
 **Command**: `/handle-conflicts`
 
@@ -375,14 +400,19 @@ plugins/developer/
 ├── commands/
 │   ├── add-task.md          # Slash command for quick task creation
 │   ├── create-pr.md         # Slash command for PR creation
-│   └── handle-conflicts.md  # Slash command for merge conflicts
+│   ├── handle-conflicts.md  # Slash command for merge conflicts
+│   └── worktree.md          # Slash command for git worktree management
 ├── scripts/
 │   └── context-progressbar.sh # Composable context window progress bar
 ├── skills/
-│   └── gh-process-review/   # GitHub PR review processing skill
+│   ├── gh-process-review/   # GitHub PR review processing skill
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   │       └── review.sh    # Single CLI entry point (fetch/list/get/reply/mark)
+│   └── git-worktree/        # Git worktree management skill (git-wt)
 │       ├── SKILL.md
 │       └── scripts/
-│           └── review.sh    # Single CLI entry point (fetch/list/get/reply/mark)
+│           └── git-wt       # Bundled git-wt script from vojtabiberle/git-wt
 └── README.md                # This file
 ```
 
@@ -427,6 +457,6 @@ To add or improve agents:
 
 ---
 
-**Version**: 1.6.0
+**Version**: 1.8.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT

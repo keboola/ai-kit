@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "metadata": {
     "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
   },
@@ -20,7 +20,7 @@
     {
       "name": "developer",
       "description": "Developer toolkit with specialized agents for code review, security analysis, and GitHub PR review processing",
-      "version": "1.7.1",
+      "version": "1.8.0",
       "source": "./plugins/developer",
       "category": "development"
     },

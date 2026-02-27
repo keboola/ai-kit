@@ -1,0 +1,556 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# git-wt: Git worktree helper
+# Add this directory to PATH, or: git config --global alias.wt '!git-wt'
+# For cd support, source git-wt.sh in your .zshrc / .bashrc
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly VERSION_FILE="$SCRIPT_DIR/VERSION"
+if [[ -f "$VERSION_FILE" ]]; then
+    readonly VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+else
+    readonly VERSION="unknown"
+    echo "Warning: Could not read version from $VERSION_FILE" >&2
+fi
+
+readonly UPDATE_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/git-wt/update-check"
+readonly UPDATE_CHECK_INTERVAL=86400 # 24 hours
+readonly VERSION_URL="https://raw.githubusercontent.com/vojtabiberle/git-wt/master/VERSION"
+
+# Colors (stderr only)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# Global flags
+NON_INTERACTIVE=false
+YES=false
+
+info()  { echo -e "${GREEN}[wt]${NC} $*" >&2; }
+warn()  { echo -e "${YELLOW}[wt]${NC} $*" >&2; }
+error() { echo -e "${RED}[wt]${NC} $*" >&2; }
+
+confirm_default_yes() {
+    local prompt="$1"
+    if [[ "$NON_INTERACTIVE" == true ]]; then
+        return 0
+    else
+        read -rp "$prompt [Y/n] " answer
+        [[ "$answer" != [nN] ]]
+    fi
+}
+
+confirm_default_no() {
+    local prompt="$1"
+    if [[ "$NON_INTERACTIVE" == true ]]; then
+        return 1
+    else
+        read -rp "$prompt [y/N] " answer
+        [[ "$answer" == [yY] ]]
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Resolve repo root (works from worktrees too)
+# ---------------------------------------------------------------------------
+repo_root() {
+    git rev-parse --show-toplevel 2>/dev/null \
+        || { error "Not inside a git repository"; exit 1; }
+}
+
+main_repo_root() {
+    local common_dir
+    common_dir="$(git rev-parse --git-common-dir 2>/dev/null)"
+    if [[ "$common_dir" == ".git" ]]; then
+        repo_root
+    else
+        dirname "$common_dir"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+load_config() {
+    local root
+    root="$(main_repo_root)"
+
+    # Defaults
+    WORKTREE_DIR=".."
+    WORKTREE_PREFIX=""
+    WORKTREE_SETUP=()
+    WORKTREE_TEARDOWN=()
+
+    # Auto-detect prefix from repo directory name
+    local repo_name
+    repo_name="$(basename "$root")"
+    WORKTREE_PREFIX="$repo_name"
+
+    # Source committed config
+    if [[ -f "$root/worktree.conf" ]]; then
+        # shellcheck disable=SC1091
+        source "$root/worktree.conf"
+    fi
+
+    # Source local overrides
+    if [[ -f "$root/worktree.conf.local" ]]; then
+        # shellcheck disable=SC1091
+        source "$root/worktree.conf.local"
+    fi
+
+    # Resolve WORKTREE_DIR relative to main repo root
+    if [[ "$WORKTREE_DIR" != /* ]]; then
+        WORKTREE_DIR="$(cd "$root" && cd "$WORKTREE_DIR" && pwd)"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+sanitize_branch() {
+    local branch="$1"
+    echo "$branch" | tr '/' '-' | tr '[:upper:]' '[:lower:]'
+}
+
+worktree_path_for() {
+    local branch="$1"
+    local sanitized
+    sanitized="$(sanitize_branch "$branch")"
+
+    local dirname
+    if [[ -n "$WORKTREE_PREFIX" ]]; then
+        dirname="${WORKTREE_PREFIX}-${sanitized}"
+    else
+        dirname="$sanitized"
+    fi
+
+    echo "${WORKTREE_DIR}/${dirname}"
+}
+
+branch_exists() {
+    git show-ref --verify --quiet "refs/heads/$1" 2>/dev/null
+}
+
+find_worktree_path() {
+    local branch="$1"
+    git worktree list --porcelain | awk -v branch="$branch" '
+        /^worktree / { path = substr($0, 10) }
+        /^branch refs\/heads\// {
+            sub(/^branch refs\/heads\//, "")
+            if ($0 == branch) { print path; exit }
+        }
+    '
+}
+
+current_worktree_branch() {
+    local git_dir
+    git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+    if [[ "$git_dir" != *".git/worktrees/"* ]]; then
+        return 1
+    fi
+    git rev-parse --abbrev-ref HEAD 2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# Subcommands
+# ---------------------------------------------------------------------------
+cmd_add() {
+    if [[ $# -lt 1 ]]; then
+        error "Usage: git wt add <branch> [source-branch]"
+        exit 1
+    fi
+
+    local branch="$1"
+    local source="${2:-}"
+
+    load_config
+
+    local wt_path
+    wt_path="$(worktree_path_for "$branch")"
+
+    # Already exists?
+    # Use git worktree list to verify it's actually a registered worktree
+    local existing_path
+    existing_path="$(find_worktree_path "$branch")"
+    if [[ -n "$existing_path" ]]; then
+        info "Worktree already exists at: $existing_path"
+        echo "$existing_path"
+        return 0
+    fi
+
+    # Check if directory exists but is not a worktree
+    if [[ -d "$wt_path" ]]; then
+        error "Directory '$wt_path' exists but is not a registered worktree."
+        error "You may want to remove it manually or use 'git wt rm' to clean up."
+        exit 1
+    fi
+
+    # Create worktree
+    if branch_exists "$branch"; then
+        info "Branch '$branch' exists, checking out into worktree..."
+        git worktree add "$wt_path" "$branch"
+    else
+        # Check if branch exists on origin when no source was specified
+        if [[ -z "$source" ]] && git show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
+            warn "Branch '$branch' not found locally, but exists on ${CYAN}origin${NC}."
+            if ! confirm_default_yes "Use origin/$branch?"; then
+                source=""
+            else
+                source="origin/$branch"
+            fi
+        fi
+
+        if [[ -n "$source" ]]; then
+            info "Creating branch '$branch' from '$source'..."
+            git worktree add -b "$branch" "$wt_path" "$source"
+        else
+            info "Creating branch '$branch' from HEAD..."
+            git worktree add -b "$branch" "$wt_path"
+        fi
+    fi
+
+    # Run setup commands
+    if [[ ${#WORKTREE_SETUP[@]} -gt 0 ]]; then
+        info "Running setup commands..."
+        for cmd in "${WORKTREE_SETUP[@]}"; do
+            info "  -> $cmd"
+            (cd "$wt_path" && eval "$cmd")
+        done
+    fi
+
+    info "Worktree ready at: $wt_path"
+    # Print path as last line to stdout (for shell wrapper to capture)
+    echo "$wt_path"
+}
+
+cmd_rm() {
+    local branch=""
+    local force=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force|-f) force=true; shift ;;
+            *) branch="$1"; shift ;;
+        esac
+    done
+
+    if [[ -z "$branch" ]]; then
+        # Try to auto-detect from current worktree
+        branch="$(current_worktree_branch)" \
+            || { error "Not in a worktree. Usage: git wt rm <branch>"; exit 1; }
+        info "Auto-detected current worktree branch: $branch"
+    fi
+
+    local wt_path
+    wt_path="$(find_worktree_path "$branch")"
+
+    if [[ -z "$wt_path" ]]; then
+        error "No worktree found for branch '$branch'"
+        exit 1
+    fi
+
+    load_config
+
+    if [[ ${#WORKTREE_TEARDOWN[@]} -gt 0 ]]; then
+        info "Running teardown commands..."
+        for cmd in "${WORKTREE_TEARDOWN[@]}"; do
+            info "  -> $cmd"
+            (cd "$wt_path" && eval "$cmd")
+        done
+    fi
+
+    info "Removing worktree at: $wt_path"
+    if $force; then
+        git worktree remove --force "$wt_path"
+    else
+        git worktree remove "$wt_path"
+    fi
+    info "Worktree removed"
+}
+
+cmd_cd() {
+    if [[ $# -lt 1 ]]; then
+        error "Usage: git wt cd <branch>"
+        exit 1
+    fi
+
+    local branch="$1"
+    local wt_path
+    wt_path="$(find_worktree_path "$branch")"
+
+    if [[ -z "$wt_path" ]]; then
+        error "No worktree found for branch '$branch'"
+        exit 1
+    fi
+
+    # Print only the path — shell wrapper does the actual cd
+    echo "$wt_path"
+}
+
+cmd_ls() {
+    git worktree list
+}
+
+cmd_init() {
+    local root
+    root="$(main_repo_root)"
+    local conf_local="$root/worktree.conf.local"
+
+    load_config
+
+    if [[ -f "$conf_local" ]]; then
+        warn "Existing worktree.conf.local:"
+        cat "$conf_local" >&2
+        echo >&2
+        if ! confirm_default_no "Overwrite?"; then
+            info "Aborted"
+            return 0
+        fi
+    fi
+
+    local default_dir="$WORKTREE_DIR"
+    if ! confirm_default_yes "Use default directory for worktrees [$default_dir]?"; then
+        read -rp "Base directory for worktrees [$default_dir]: " input_dir
+        input_dir="${input_dir:-$default_dir}"
+    else
+        input_dir="$default_dir"
+    fi
+
+    echo >&2
+    info "Enter extra setup commands (one per line, empty line to finish)."
+    info "Default setup: ${WORKTREE_SETUP[*]:-<none>}"
+    local extra_cmds=()
+    while true; do
+        if ! confirm_default_no "Add command?"; then
+            break
+        fi
+        read -rp "  command> " cmd
+        [[ -z "$cmd" ]] && break
+        extra_cmds+=("$cmd")
+    done
+
+    # Build setup array
+    local all_setup=()
+    if [[ ${#WORKTREE_SETUP[@]} -gt 0 ]]; then
+        all_setup=("${WORKTREE_SETUP[@]}")
+    fi
+    for cmd in "${extra_cmds[@]}"; do
+        all_setup+=("$cmd")
+    done
+
+    echo >&2
+    info "Enter teardown commands to run before worktree removal (empty line to finish)."
+    info "Default teardown: ${WORKTREE_TEARDOWN[*]:-<none>}"
+    local extra_teardown_cmds=()
+    while true; do
+        if ! confirm_default_no "Add command?"; then
+            break
+        fi
+        read -rp "  command> " cmd
+        [[ -z "$cmd" ]] && break
+        extra_teardown_cmds+=("$cmd")
+    done
+
+    # Build teardown array
+    local all_teardown=()
+    if [[ ${#WORKTREE_TEARDOWN[@]} -gt 0 ]]; then
+        all_teardown=("${WORKTREE_TEARDOWN[@]}")
+    fi
+    for cmd in "${extra_teardown_cmds[@]}"; do
+        all_teardown+=("$cmd")
+    done
+
+    # Write config
+    {
+        echo "# worktree.conf.local — personal overrides (gitignored)"
+        echo "# Generated by: git wt init"
+        echo ""
+        if [[ "$input_dir" != "$default_dir" ]]; then
+            echo "WORKTREE_DIR=\"$input_dir\""
+        else
+            echo "# WORKTREE_DIR=\"$input_dir\""
+        fi
+        echo ""
+        if [[ ${#all_setup[@]} -gt 0 ]]; then
+            echo "WORKTREE_SETUP=("
+            for cmd in "${all_setup[@]}"; do
+                echo "    \"$cmd\""
+            done
+            echo ")"
+        fi
+        if [[ ${#all_teardown[@]} -gt 0 ]]; then
+            echo ""
+            echo "WORKTREE_TEARDOWN=("
+            for cmd in "${all_teardown[@]}"; do
+                echo "    \"$cmd\""
+            done
+            echo ")"
+        fi
+    } > "$conf_local"
+
+    info "Written: $conf_local"
+    cat "$conf_local" >&2
+}
+
+cmd_help() {
+    cat >&2 <<'HELP'
+git-wt — Git worktree helper
+
+USAGE
+    git wt <command> [args...]
+
+COMMANDS
+    add <branch> [source]   Create a worktree for <branch>.
+                             If [source] is given, the new branch starts there.
+    rm  [branch]            Remove a worktree. Without args, removes the
+                             current worktree (auto-detected).
+    cd  <branch>            Print the worktree path (use shell wrapper for cd).
+    ls                      List all worktrees (git worktree list).
+    init                    Interactively create worktree.conf.local.
+    help, --help            Show this help.
+
+CONFIGURATION
+    Per-project config files (in repo root):
+        worktree.conf           Committed project defaults.
+        worktree.conf.local     Personal overrides, gitignored.
+
+    Variables (set in config files):
+        WORKTREE_DIR="..."          Base directory (default: "..")
+        WORKTREE_PREFIX="..."       Directory name prefix (default: repo name)
+        WORKTREE_SETUP=(...)        Commands to run after creating a worktree
+        WORKTREE_TEARDOWN=(...)    Commands to run before removing a worktree
+
+    Directory naming: <base>/<prefix>-<sanitized-branch>
+    Example: ../myapp-feature-login
+
+    Sanitization: / becomes -, everything lowercased.
+
+INSTALLATION
+    # Add to PATH:
+    export PATH="$HOME/Projects/git-wt:$PATH"
+
+    # Source shell wrapper for cd support:
+    source ~/Projects/git-wt/git-wt.sh
+
+    # Or use a git alias (no cd support):
+    git config --global alias.wt '!git-wt'
+
+SHELL WRAPPER (for cd support)
+    Add to .zshrc or .bashrc:
+        source ~/Projects/git-wt/git-wt.sh
+
+    This defines the wt function that wraps git wt and adds cd support.
+
+AUTOMATION
+    --non-interactive or --yes: Suppress prompts, use default behavior.
+    --force: Force overwrite or removal without confirmation.
+
+EXAMPLES
+    git wt add feature/login master
+    git wt ls
+    git wt rm feature/login
+    git wt init
+
+    # With shell wrapper:
+    wt add feature/login master   # creates + cd's into worktree
+    wt cd feature/login           # cd into existing worktree
+HELP
+}
+
+# ---------------------------------------------------------------------------
+# Update check
+# ---------------------------------------------------------------------------
+version_gt() {
+    [[ "$(printf '%s\n' "$1" "$2" | sort -V | tail -n1)" == "$1" && "$1" != "$2" ]]
+}
+
+check_for_update() {
+    mkdir -p "$(dirname "$UPDATE_CACHE")"
+
+    # Skip if checked recently
+    if [[ -f "$UPDATE_CACHE" ]]; then
+        local last_check now
+        last_check="$(stat -c %Y "$UPDATE_CACHE" 2>/dev/null || stat -f %m "$UPDATE_CACHE" 2>/dev/null || echo 0)"
+        now="$(date +%s)"
+        if (( now - last_check < UPDATE_CHECK_INTERVAL )); then
+            return
+        fi
+    fi
+
+    # Fetch remote version in background, update cache
+    (
+        remote_version="$(curl -fsSL --max-time 5 "$VERSION_URL" 2>/dev/null | tr -d '[:space:]')" || exit 0
+        if [[ -n "$remote_version" ]]; then
+            echo "$remote_version" > "$UPDATE_CACHE"
+        fi
+    ) &>/dev/null &
+    disown 2>/dev/null
+}
+
+show_update_notice() {
+    if [[ -f "$UPDATE_CACHE" ]]; then
+        local remote_version
+        remote_version="$(tr -d '[:space:]' < "$UPDATE_CACHE")"
+        if version_gt "$remote_version" "$VERSION"; then
+            warn "Update available: ${BOLD}${VERSION}${NC} → ${GREEN}${remote_version}${NC}  (${CYAN}${VERSION_URL%/VERSION}${NC})"
+        fi
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Main dispatch
+# ---------------------------------------------------------------------------
+main() {
+    show_update_notice
+    check_for_update
+
+    local cmd=""
+    local args=()
+
+    # Parse all arguments, extracting global flags from any position
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --non-interactive|--yes)
+                NON_INTERACTIVE=true
+                YES=true
+                ;;
+            --help|-h)
+                cmd="help"
+                ;;
+            -*)
+                # Pass unknown flags through to subcommand
+                args+=("$1")
+                ;;
+            *)
+                if [[ -z "$cmd" ]]; then
+                    cmd="$1"
+                else
+                    args+=("$1")
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    cmd="${cmd:-help}"
+
+    case "$cmd" in
+        add)    cmd_add ${args[@]+"${args[@]}"} ;;
+        rm)     cmd_rm ${args[@]+"${args[@]}"} ;;
+        cd)     cmd_cd ${args[@]+"${args[@]}"} ;;
+        ls)     cmd_ls ${args[@]+"${args[@]}"} ;;
+        init)   cmd_init ${args[@]+"${args[@]}"} ;;
+        help)   cmd_help ;;
+        *)
+            error "Unknown command: $cmd"
+            cmd_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
