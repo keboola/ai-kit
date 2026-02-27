@@ -6,7 +6,7 @@ allowed-tools: Bash, Read, Write
 
 # Git Worktree Management
 
-Manage git worktrees using the bundled git-wt script.
+Manage git worktrees using the [git-wt](https://github.com/vojtabiberle/git-wt) script, fetched from upstream.
 
 ## Instructions
 
@@ -15,11 +15,15 @@ Manage git worktrees using the bundled git-wt script.
    git rev-parse --is-inside-work-tree
    ```
 
-2. Determine the skill script path. The git-wt script is located at:
+2. Fetch or update the git-wt script. The setup script is located at:
    ```
-   <plugin-dir>/skills/git-worktree/scripts/git-wt
+   <plugin-dir>/skills/git-worktree/scripts/ensure-git-wt.sh
    ```
-   Find it relative to this command file's plugin directory.
+   Run it to clone/pull the repo and get the executable path:
+   ```bash
+   GIT_WT="$("$SKILL_DIR/scripts/ensure-git-wt.sh")"
+   ```
+   Where `$SKILL_DIR` is the `skills/git-worktree` directory within this plugin.
 
 3. Parse the user's arguments from `$ARGUMENTS`:
    - `add <branch> [source]` — create a worktree
@@ -29,8 +33,7 @@ Manage git worktrees using the bundled git-wt script.
 
 4. Run the git-wt script with `--non-interactive` flag to avoid interactive prompts:
    ```bash
-   "$SKILL_DIR/scripts/git-wt" --non-interactive $ARGUMENTS
+   "$GIT_WT" --non-interactive $ARGUMENTS
    ```
-   Where `$SKILL_DIR` is the `skills/git-worktree` directory within this plugin.
 
 5. Report the result to the user. For `add`, highlight the worktree path (last line of output).

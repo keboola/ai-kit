@@ -5,39 +5,36 @@ description: Manage git worktrees using the git-wt helper script. Use when user 
 
 # Git Worktree Management (git-wt)
 
-Manage git worktrees using the [git-wt](https://github.com/vojtabiberle/git-wt) helper script, bundled in this skill.
+Manage git worktrees using the [git-wt](https://github.com/vojtabiberle/git-wt) helper script, fetched from upstream on each use.
 
 ## Working Directory Context
 
 **CRITICAL: All commands MUST be run from the user's project root directory, NOT from the skill directory.**
 
 - The user will be in THEIR project directory when invoking this skill
-- All script calls use `$SKILL_DIR/scripts/git-wt` as the executable
-- The script auto-detects the repo root from the current directory
+- The setup script clones/pulls git-wt to `~/.local/share/git-wt` and prints the executable path
 - **DO NOT `cd` into the skill directory**
 
 `SKILL_DIR` = directory containing this SKILL.md (automatically resolved by Claude)
 
-## Setup
+## Setup (run once per session)
 
-The `git-wt` script is bundled in this skill. To use it, call it directly:
-
-```bash
-"$SKILL_DIR/scripts/git-wt" <command> [args...]
-```
-
-For non-interactive (CI/automated) use, pass `--non-interactive` or `--yes` to suppress prompts:
+Before using git-wt, fetch or update it:
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" --non-interactive <command> [args...]
+GIT_WT="$("$SKILL_DIR/scripts/ensure-git-wt.sh")"
 ```
+
+This clones `vojtabiberle/git-wt` to `~/.local/share/git-wt` (or pulls latest if already cloned). The script prints the path to the `git-wt` executable on stdout.
+
+All subsequent commands use `$GIT_WT`. Always pass `--non-interactive` to suppress prompts.
 
 ## Commands
 
 ### Create a Worktree
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" --non-interactive add <branch> [source-branch]
+"$GIT_WT" --non-interactive add <branch> [source-branch]
 ```
 
 - Creates a worktree for `<branch>`, optionally from `[source-branch]`
@@ -49,19 +46,19 @@ For non-interactive (CI/automated) use, pass `--non-interactive` or `--yes` to s
 **Examples:**
 ```bash
 # Create worktree for existing branch
-"$SKILL_DIR/scripts/git-wt" --non-interactive add feature/login
+"$GIT_WT" --non-interactive add feature/login
 
 # Create worktree for new branch from master
-"$SKILL_DIR/scripts/git-wt" --non-interactive add feature/new-feature master
+"$GIT_WT" --non-interactive add feature/new-feature master
 
 # Create worktree for new branch from specific base
-"$SKILL_DIR/scripts/git-wt" --non-interactive add bugfix/fix-123 release/v2
+"$GIT_WT" --non-interactive add bugfix/fix-123 release/v2
 ```
 
 ### List Worktrees
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" ls
+"$GIT_WT" ls
 ```
 
 Lists all worktrees (`git worktree list`).
@@ -69,9 +66,9 @@ Lists all worktrees (`git worktree list`).
 ### Remove a Worktree
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" --non-interactive rm <branch>
-"$SKILL_DIR/scripts/git-wt" --non-interactive rm          # Removes current worktree (auto-detected)
-"$SKILL_DIR/scripts/git-wt" --non-interactive rm --force <branch>  # Force removal
+"$GIT_WT" --non-interactive rm <branch>
+"$GIT_WT" --non-interactive rm          # Removes current worktree (auto-detected)
+"$GIT_WT" --non-interactive rm --force <branch>  # Force removal
 ```
 
 - Runs any configured teardown commands before removal
@@ -80,7 +77,7 @@ Lists all worktrees (`git worktree list`).
 ### Show Worktree Path
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" cd <branch>
+"$GIT_WT" cd <branch>
 ```
 
 Prints the filesystem path of the worktree for `<branch>`. Useful for scripting.
@@ -88,7 +85,7 @@ Prints the filesystem path of the worktree for `<branch>`. Useful for scripting.
 ### Initialize Configuration
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" init
+"$GIT_WT" init
 ```
 
 Interactively creates `worktree.conf.local` in the repo root.
@@ -96,7 +93,7 @@ Interactively creates `worktree.conf.local` in the repo root.
 ### Help
 
 ```bash
-"$SKILL_DIR/scripts/git-wt" help
+"$GIT_WT" help
 ```
 
 ## Configuration
@@ -140,20 +137,24 @@ Sanitization: `/` becomes `-`, everything lowercased.
 
 ## Typical Workflow
 
-1. **Create worktree** for a feature branch:
+1. **Fetch git-wt** (once per session):
    ```bash
-   "$SKILL_DIR/scripts/git-wt" --non-interactive add feature/my-branch master
+   GIT_WT="$("$SKILL_DIR/scripts/ensure-git-wt.sh")"
    ```
-2. **Work in the worktree** directory (printed as the last line of output)
-3. **List worktrees** to see all active ones:
+2. **Create worktree** for a feature branch:
    ```bash
-   "$SKILL_DIR/scripts/git-wt" ls
+   "$GIT_WT" --non-interactive add feature/my-branch master
    ```
-4. **Clean up** when done:
+3. **Work in the worktree** directory (printed as the last line of output)
+4. **List worktrees** to see all active ones:
    ```bash
-   "$SKILL_DIR/scripts/git-wt" --non-interactive rm feature/my-branch
+   "$GIT_WT" ls
+   ```
+5. **Clean up** when done:
+   ```bash
+   "$GIT_WT" --non-interactive rm feature/my-branch
    ```
 
 ## Source
 
-Bundled from [vojtabiberle/git-wt](https://github.com/vojtabiberle/git-wt) (v1.0.0).
+Fetched from [vojtabiberle/git-wt](https://github.com/vojtabiberle/git-wt) (MIT License).

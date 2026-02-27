@@ -412,7 +412,7 @@ plugins/developer/
 │   └── git-worktree/        # Git worktree management skill (git-wt)
 │       ├── SKILL.md
 │       └── scripts/
-│           └── git-wt       # Bundled git-wt script from vojtabiberle/git-wt
+│           └── ensure-git-wt.sh  # Clones/pulls vojtabiberle/git-wt before use
 └── README.md                # This file
 ```
 
