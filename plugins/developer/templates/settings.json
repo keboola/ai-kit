@@ -15,7 +15,6 @@
         "Bash(git remote:*)",
         "Bash(git tag:*)",
         "Bash(git worktree:*)",
-        "Bash(git wt:*)",
         "Bash(find:*)",
         "Bash(cat:*)",
         "Bash(ls:*)",

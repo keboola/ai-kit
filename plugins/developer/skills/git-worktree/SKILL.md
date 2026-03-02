@@ -17,7 +17,7 @@ Manage git worktrees using the [git-wt](https://github.com/vojtabiberle/git-wt) 
 
 `SKILL_DIR` = directory containing this SKILL.md (automatically resolved by Claude)
 
-## Setup (run once per session)
+## Setup
 
 Before using git-wt, fetch or update it:
 
@@ -25,9 +25,9 @@ Before using git-wt, fetch or update it:
 GIT_WT="$("$SKILL_DIR/scripts/ensure-git-wt.sh")"
 ```
 
-This clones `vojtabiberle/git-wt` to `~/.local/share/git-wt` (or pulls latest if already cloned). The script prints the path to the `git-wt` executable on stdout.
+This clones `vojtabiberle/git-wt` to `~/.local/share/git-wt` (pinned to a known-good commit) or updates the existing clone. The script prints the path to the `git-wt` executable on stdout. If the network is unavailable, it falls back to the existing local version.
 
-All subsequent commands use `$GIT_WT`. Always pass `--non-interactive` to suppress prompts.
+All subsequent commands use `$GIT_WT`. Pass `--non-interactive` to suppress prompts for commands that may prompt (e.g. `add`, `rm`). Do **not** use `--non-interactive` with `init`, which requires interactive input.
 
 ## Commands
 
@@ -88,7 +88,7 @@ Prints the filesystem path of the worktree for `<branch>`. Useful for scripting.
 "$GIT_WT" init
 ```
 
-Interactively creates `worktree.conf.local` in the repo root.
+Interactively creates `worktree.conf.local` in the repo root. **Note:** Do not use `--non-interactive` with this command — it requires user input to configure directories and setup commands.
 
 ### Help
 
@@ -137,7 +137,7 @@ Sanitization: `/` becomes `-`, everything lowercased.
 
 ## Typical Workflow
 
-1. **Fetch git-wt** (once per session):
+1. **Fetch git-wt**:
    ```bash
    GIT_WT="$("$SKILL_DIR/scripts/ensure-git-wt.sh")"
    ```

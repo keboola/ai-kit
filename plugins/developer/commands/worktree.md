@@ -15,25 +15,39 @@ Manage git worktrees using the [git-wt](https://github.com/vojtabiberle/git-wt) 
    git rev-parse --is-inside-work-tree
    ```
 
-2. Fetch or update the git-wt script. The setup script is located at:
-   ```
-   <plugin-dir>/skills/git-worktree/scripts/ensure-git-wt.sh
-   ```
-   Run it to clone/pull the repo and get the executable path:
+2. Fetch or update the git-wt script directly from upstream:
    ```bash
-   GIT_WT="$("$SKILL_DIR/scripts/ensure-git-wt.sh")"
+   GIT_WT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/git-wt"
+   if [[ -d "$GIT_WT_DIR/.git" ]]; then
+       git -C "$GIT_WT_DIR" fetch --quiet 2>/dev/null || true
+   else
+       git clone --quiet https://github.com/vojtabiberle/git-wt.git "$GIT_WT_DIR"
+   fi
+   GIT_WT="$GIT_WT_DIR/git-wt"
    ```
-   Where `$SKILL_DIR` is the `skills/git-worktree` directory within this plugin.
 
-3. Parse the user's arguments from `$ARGUMENTS`:
+3. Parse the user's arguments from `$ARGUMENTS`. Only accept known subcommands:
    - `add <branch> [source]` — create a worktree
    - `rm [branch]` — remove a worktree
    - `ls` — list worktrees
    - `help` — show help
 
-4. Run the git-wt script with `--non-interactive` flag to avoid interactive prompts:
+4. Run the git-wt script with `--non-interactive` flag, validating and safely passing arguments:
    ```bash
-   "$GIT_WT" --non-interactive $ARGUMENTS
+   # Parse arguments into positional parameters
+   set -- $ARGUMENTS
+   subcommand="$1"
+   shift || true
+
+   case "$subcommand" in
+       add|rm|ls|help)
+           "$GIT_WT" --non-interactive "$subcommand" "$@"
+           ;;
+       *)
+           echo "Error: unknown subcommand: $subcommand" >&2
+           echo "Usage: /worktree <add|rm|ls|help> [args...]" >&2
+           ;;
+   esac
    ```
 
 5. Report the result to the user. For `add`, highlight the worktree path (last line of output).
