@@ -156,6 +156,39 @@ Use `options.dependencies` (NOT JSON Schema `dependencies` or `oneOf`):
 }
 ```
 
+### DON'T: Use `anyOf` for conditional options
+
+```json
+// ❌ WRONG - anyOf creates a confusing switcher dropdown and loses field values on switch
+{
+  "query": {
+    "anyOf": [
+      {
+        "title": "Customers",
+        "additionalProperties": false,
+        "properties": {
+          "endpoint": { "type": "string", "enum": ["customers"], "options": { "hidden": true } }
+        },
+        "type": "object",
+        "options": { "keep_oneof_values": false }
+      },
+      {
+        "title": "Orders",
+        "additionalProperties": false,
+        "properties": {
+          "endpoint": { "type": "string", "enum": ["orders"], "options": { "hidden": true } },
+          "date_from": { "type": "string", "title": "Date From" }
+        },
+        "type": "object",
+        "options": { "keep_oneof_values": false }
+      }
+    ]
+  }
+}
+```
+
+`anyOf` renders as a switcher dropdown — users lose entered values when switching between options. Always prefer `options.dependencies` for show/hide.
+
 ### DO: Use flat structure with `options.dependencies`
 
 ```json
