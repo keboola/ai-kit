@@ -137,7 +137,7 @@ Create `tests/setup/configs.json` (the default location for the scaffold CLI) us
 **Guidelines for configs.json:**
 - Use **dummy credentials** (e.g., `"DUMMY_KEY"`) — real ones go in `secrets.json`
 - Cover **every sync action** (testConnection, list_*, etc.) — two test per action, one working config, one not working
-- Cover **every run mode** (full sync, incremental sync, field selection, etc.)
+- Cover **every run mode** (full sync, incremental sync, field selection, etc.) - Make a matrix from them and implement all valid cases.
 - Test **edge cases** (empty table name for auto-resolution, complex field types, etc.)
 - Use the `{name, description, config}` wrapped format — never the raw format
 - Prefix names with numbers for ordering: `01_`, `02_`, etc.
