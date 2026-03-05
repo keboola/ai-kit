@@ -305,6 +305,229 @@ docker build -t mycomponent:test .
 docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
 ```
 
+## Quick Local Debug from stage_output.zip
+
+When given a `stage_output.zip` from a Keboola debug job, the fastest way to reproduce the issue locally is to run the component directly against the cassette — no datadirtest setup needed.
+
+`ComponentBase.execute_action()` auto-detects `{KBC_DATADIR}/cassettes/requests.json` and switches to VCR replay mode automatically. No code changes required.
+
+### Steps
+
+```bash
+# 1. Unzip into data/
+unzip path/to/40176890.stage_output.zip -d data/
+
+# 2. Move the cassette to the expected location
+mkdir -p data/cassettes
+mv data/out/files/vcr_debug_*.json data/cassettes/requests.json
+
+# 3. Fix [hidden] in config.json — the #data field is bare unquoted JSON-invalid
+python3 - <<'EOF'
+import re, json
+
+with open("data/config.json") as f:
+    content = f.read()
+
+content = re.sub(r'(?<!")\[hidden\](?!")', '"FAKE_REDACTED_VALUE"', content)
+config = json.loads(content)
+config["authorization"]["oauth_api"]["credentials"]["#data"] = \
+    '{"access_token": "FAKE_ACCESS_TOKEN_FOR_VCR_REPLAY"}'
+
+with open("data/config.json", "w") as f:
+    json.dump(config, f, indent=2)
+print("config.json fixed")
+EOF
+
+# 4. Run the component — it auto-detects the cassette and replays
+KBC_DATADIR=$(pwd)/data uv run python src/component.py
+```
+
+Output tables are written to `data/out/tables/` as usual. Time is frozen automatically to the cassette's `_metadata.freeze_time`.
+
+> **Note:** The `data/` directory is gitignored. This is for local debugging only — use the datadirtest workflow below to create a permanent regression test.
+
+---
+
+## Permanent Test: Create datadirtest from Keboola Platform Debug Job Output
+
+When a user reports a bug or unexpected behavior from a real production run, the fastest way to create a test is from a **debug job** output — no live API access needed. This workflow produces a fully self-contained test that replays the exact HTTP interactions from the original job.
+
+### Prerequisites
+
+The component must already use `VCRRecorder.record_debug_run()` in its `component.py` (or equivalent). This causes the component to write a VCR cassette to `out/files/vcr_debug_*.json` when run as a debug job on the Keboola platform. If the component doesn't have this, add it first.
+
+### What's in the stage_output.zip
+
+The user will give you a file like `40176890.stage_output.zip`. It contains:
+
+```
+config.json                        ← Keboola job config (may have [hidden] placeholders)
+out/
+  tables/
+    accounts.csv                   ← All output tables and manifests
+    accounts.csv.manifest
+    query_1_insights.csv
+    ...
+  files/
+    vcr_debug_{component}_{id}_{timestamp}.json   ← THE VCR CASSETTE
+in/
+  state.json                       ← Input state (usually empty/minimal)
+```
+
+### Naming Convention
+
+Test names follow `{component_type}_{description}` in snake_case:
+- `{component_type}` — one of `facebook_pages`, `facebook_ads`, `instagram`
+- `{description}` — describes the account, scenario, or feature being tested
+
+Examples: `facebook_pages_keboola_accounts`, `facebook_ads_eu_campaign`, `instagram_business_profile`
+
+### Step-by-step
+
+#### 1. Choose a test name
+
+Pick a descriptive name following the naming convention, e.g. `facebook_pages_keboola_accounts`.
+
+#### 2. Create the directory structure
+
+```bash
+mkdir -p tests/functional/{TEST_NAME}/source/data/cassettes
+mkdir -p tests/functional/{TEST_NAME}/expected/data/out/tables
+```
+
+#### 3. Extract and fix config.json
+
+The `config.json` in the zip has `[hidden]` placeholder values (not valid JSON) for secret fields. Extract and fix:
+
+```python
+import re, json, zipfile
+
+with zipfile.ZipFile("path/to/stage_output.zip") as z:
+    content = z.read("config.json").decode()
+
+# Fix bare [hidden] values (not quoted in JSON) → valid JSON string
+content = re.sub(r'(?<!")\[hidden\](?!")', '"FAKE_REDACTED_VALUE"', content)
+config = json.loads(content)
+
+# For OAuth components: #data must be a JSON-encoded string
+# (parsed with json.loads by keboola-component)
+config["authorization"]["oauth_api"]["credentials"]["#data"] = \
+    '{"access_token": "FAKE_ACCESS_TOKEN_FOR_VCR_REPLAY"}'
+
+# CRITICAL: Set explicit bucket-id to match expected manifest destinations.
+# Without this, the component generates a timestamp-based bucket name locally
+# (e.g., in.c-keboola-ex-meta-20260305183932) that won't match the expected
+# manifests from the platform (e.g., in.c-keboola-ex-facebook-pages-{config_id}).
+# Read the expected bucket from one of the manifest files in out/tables/*.manifest
+config["parameters"]["bucket-id"] = "in.c-{component-id-dashes}-{config-id}"
+
+with open(f"tests/functional/{TEST_NAME}/source/data/config.json", "w") as f:
+    json.dump(config, f, indent=2)
+```
+
+**Finding the correct `bucket-id`**: look inside any `.manifest` file from `out/tables/` — the `"destination"` field contains `"in.c-{bucket-id}.{table}"`. Strip the table suffix to get the bucket.
+
+**Note on `[hidden]` fields**: Only the `#data` field is typically bare unquoted `[hidden]`. Fields like `#appSecret` are already quoted strings `"[hidden]"` and are valid JSON — leave them as-is (they won't be used during VCR replay).
+
+#### 4. Copy the VCR cassette
+
+```python
+import zipfile, os
+
+with zipfile.ZipFile("path/to/stage_output.zip") as z:
+    # Find the vcr_debug file in out/files/
+    vcr_files = [n for n in z.namelist() if "vcr_debug" in n]
+    with z.open(vcr_files[0]) as src:
+        with open(f"tests/functional/{TEST_NAME}/source/data/cassettes/requests.json", "wb") as dst:
+            dst.write(src.read())
+```
+
+The cassette already contains `_metadata.freeze_time` — `VCRDataDirTester` reads this automatically and freezes time to the correct value during replay.
+
+#### 5. Extract expected outputs
+
+```python
+import zipfile, os
+
+with zipfile.ZipFile("path/to/stage_output.zip") as z:
+    for name in z.namelist():
+        if name.startswith("out/tables/") and not name.endswith("/"):
+            filename = os.path.basename(name)
+            dest = f"tests/functional/{TEST_NAME}/expected/data/out/tables/{filename}"
+            with z.open(name) as src, open(dest, "wb") as dst:
+                dst.write(src.read())
+```
+
+#### 6. Update tests/setup/configs.json
+
+Always add the new test to `tests/setup/configs.json` (create the file and `tests/setup/` dir if they don't exist). This keeps a record of all test configurations and makes it easy to re-record from the live API in the future using the scaffold CLI.
+
+Use the wrapped format. Include the full `parameters` block from the extracted config, but:
+- **Remove** `bucket-id` from parameters (it's VCR-test-specific; the scaffolder should use the project's real bucket)
+- **Use dummy values** for auth (`"#data": "{\"access_token\": \"DUMMY_ACCESS_TOKEN\"}"`, `"#appSecret": "DUMMY_APP_SECRET"`) — real credentials go in a gitignored `secrets.json`
+
+```json
+[
+  {
+    "name": "facebook_pages_keboola_accounts",
+    "config": {
+      "parameters": { "...": "full parameters block without bucket-id" },
+      "authorization": {
+        "oauth_api": {
+          "credentials": {
+            "#data": "{\"access_token\": \"DUMMY_ACCESS_TOKEN\"}",
+            "appKey": "178012768920721",
+            "#appSecret": "DUMMY_APP_SECRET"
+          }
+        }
+      }
+    }
+  }
+]
+```
+
+#### 7. Run the test
+
+```bash
+uv run pytest tests/test_functional.py -k "{TEST_NAME}" -v
+```
+
+The test will replay all HTTP interactions from the cassette and compare output to the expected files.
+
+### Troubleshooting debug-job tests
+
+**Bucket name mismatch in manifests**
+The most common failure. The expected manifests use the platform bucket name, but locally the component generates a different one. Fix: add `bucket-id` to `config["parameters"]` as described in step 3.
+
+**`[hidden]` JSON parse error**
+The zip's `config.json` has `"#data": [hidden]` (no quotes around `[hidden]`). Use `re.sub(r'(?<!")\[hidden\](?!")', '"FAKE"', content)` before parsing.
+
+**"No match for request" during replay**
+The cassette was recorded at a specific point in time. If the component is making date-range requests and the cassette doesn't have them, you may need a custom `query_without_dates` matcher. See `test_functional.py` in this project for an example with `since`/`until` date parameters.
+
+**Some queries missing from expected output**
+This is expected when some API calls returned errors (4xx) during the original job. The component logs these as errors but continues. The cassette contains the error responses — they will be replayed, and the component will skip those outputs.
+
+### Running locally
+
+Once the test structure is in place, run it with:
+
+```bash
+# Run single test by name
+uv run pytest tests/test_functional.py -k "my_test_name" -v
+
+# Run all functional tests
+uv run pytest tests/test_functional.py -v
+
+# Run in Docker (same as CI)
+docker build -t mycomponent:test . && \
+docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
+```
+
+The cassette's `_metadata.freeze_time` is used automatically — you don't need to set any date-related env vars.
+
+---
+
 ## Re-recording Tests
 
 When the API changes or you need fresh data:
