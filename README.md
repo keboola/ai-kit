@@ -49,7 +49,6 @@ A comprehensive toolkit for developers including specialized agents for code rev
 - ⚡ **Commands**: Task management, PR creation, merge conflict resolution, GitHub PR review processing
 - 📊 **Scripts**: Context window progress bar for statusline
 - 🔌 **MCP Server**: Linear integration
-- 🔐 **Auto-install Settings**: SessionStart hook that installs team-wide permissions automatically
 
 **[→ View Developer Plugin Documentation](./plugins/developer/README.md)**
 
@@ -60,7 +59,7 @@ A comprehensive toolkit for developers including specialized agents for code rev
 A specialized toolkit for building production-ready Keboola Python components following best practices and architectural patterns.
 
 **Features:**
-- 🎯 **Skills**: Build component, build UI, debug, test, VCR test, review, migrate to UV, getting started
+- 🎯 **Skills**: Build component, build UI, debug, test, VCR test, review, backward compatibility review, migrate to UV, getting started
 - ⚡ **Commands**: Init, run, fix, review, migrate-repo, schema-test
 - 🔌 **MCP Server**: Keboola integration
 - 📋 **Configuration Schemas**: JSON Schema with UI elements

@@ -69,6 +69,26 @@ Expert skill for writing comprehensive tests including datadir tests and unit te
 
 Expert skill for code review with actionable feedback grouped by severity.
 
+### Review Backward Compatibility
+**Command**: `@review-backward-compatibility` (alias: `@backward-compatibility-reviewer`)
+**Color**: 🔴 Red
+
+Expert agent for reviewing component PRs with focus on **backward compatibility** — ensuring existing user configurations, sync actions, and output tables are not broken by changes. This is NOT a code quality review.
+
+**Key capabilities:**
+- Identifies all component IDs from `push.yml` (supports single, multiple env vars, and matrix strategies)
+- Analyzes diffs for breaking change vectors (configSchema, Pydantic models, sync actions, output tables, state files)
+- Queries telemetry data (Keboola MCP) for real-world impact assessment (active configs, job stats, error rates)
+- Posts structured review with severity levels (HIGH/MEDIUM/LOW/SAFE) and verdict (APPROVE/REQUEST CHANGES/WARN)
+- All telemetry results are anonymized — never exposes client names, project names, or stack URLs
+
+**Use cases:**
+- Review PRs in `component-*` repositories for backward compatibility
+- Assess real-world impact of breaking changes using telemetry data
+- Verify sync actions are preserved and return correct formats
+- Check that output table structures remain stable for downstream consumers
+- Validate that state file changes include backward-compatible fallbacks
+
 ### Get Started
 **Command**: `@get-started`
 **Color**: 🟢 Green
@@ -583,6 +603,11 @@ plugins/component-developer/
 │   │   ├── SKILL.md
 │   │   └── references/
 │   │       └── vcr-quickstart.md
+│   ├── review-backward-compatibility/  # Backward compatibility review
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── breaking-changes.md
+│   │       └── telemetry-analysis.md
 │   └── get-started/                   # Getting started
 │       ├── SKILL.md
 │       ├── references/
@@ -618,17 +643,23 @@ To improve this plugin:
 
 ---
 
-**Version**: 3.1.0
+**Version**: 3.2.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
 
-### 3.1.0 (2026-02-11)
+### 3.2.0 (2026-03-05)
 - **NEW**: Added `test-component-vcr` skill for VCR-based functional testing
 - Records real HTTP interactions as cassettes and replays them in CI without credentials
 - Supports OAuth token chaining, time freezing, and automatic credential sanitization
 - Includes quick reference guide and step-by-step setup instructions
+- **NEW**: Added `review-backward-compatibility` skill and `@backward-compatibility-reviewer` agent
+- Backward compatibility review for component PRs (configSchema, Pydantic models, sync actions, output tables, state files)
+- Telemetry-powered impact analysis via Keboola MCP (active configs, job stats, error rates)
+- Structured review output with severity levels (HIGH/MEDIUM/LOW/SAFE) and verdicts
+- Anonymized telemetry — never exposes client names, project names, or stack URLs in public repos
+- Breaking changes reference and telemetry analysis reference documentation
 
 ### 3.0.0 (2025-12-19)
 - **BREAKING**: Migrated to Agent Skills format

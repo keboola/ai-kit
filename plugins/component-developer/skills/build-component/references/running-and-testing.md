@@ -718,6 +718,30 @@ for chunk in pd.read_csv(input_file, chunksize=10000):
 
 ---
 
+## Testing Branch Builds via runtime.tag
+
+When making changes in a branch, you can test the branch version of a component in Keboola without affecting the production version:
+
+1. Push changes to the branch and wait for the GitHub Actions build to complete
+2. Navigate to the GitHub Actions workflow run for that branch
+3. Find the "Push to ECR" step (or similar step that pushes the Docker image)
+4. In the step logs, locate the image tag that was pushed (typically the branch name or a commit SHA like `dev-abc123`)
+5. Share the tag with the user and instruct them to add this to their component configuration:
+
+```json
+{
+  "runtime": {
+    "tag": "the-tag-from-ecr-push-step"
+  }
+}
+```
+
+The `runtime.tag` configuration can be added via the API or in the UI's raw JSON configuration editor (navigate to `.../components/COMPONENT_ID/CONFIG_ID/raw`).
+
+This allows testing the branch version of the component without affecting the production version registered in the Developer Portal.
+
+---
+
 ## Quick Reference
 
 ### Environment Variables
@@ -728,6 +752,8 @@ KBC_PROJECTID      # Keboola project ID
 KBC_STACKID        # Keboola stack (e.g., connection.keboola.com)
 KBC_CONFIGID       # Configuration ID
 KBC_RUNID          # Job run ID
+KBC_BRANCHID       # Branch ID
+KBC_COMPONENTID    # Component ID
 ```
 
 ### Common Commands

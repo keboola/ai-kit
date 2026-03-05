@@ -255,24 +255,6 @@ Then point your statusline config at your script in `.claude/settings.local.json
 
 ---
 
-## 🔐 Auto-installed Settings
-
-Plugin automatically installs team-wide permissions via SessionStart hook:
-- **Allow**: Safe git operations, read-only commands (grep, cat, ls, tree)
-- **Ask**: Dangerous operations (rm, force push, package installs, docker)
-- **Deny**: Access to secrets (.env, credentials, SSH keys, certificates)
-
-**How it works:**
-- Hook runs once per project on first session
-- Creates `.claude/settings.json` if it doesn't exist
-- Skips installation if settings already exist
-
-**Customization:**
-- Commit `.claude/settings.json` to share team permissions
-- Use `.claude/settings.local.json` for personal overrides (gitignored)
-
----
-
 ## 📖 Workflows
 
 ### Code Quality Cleanup Workflow
@@ -395,7 +377,6 @@ plugins/developer/
 │   ├── create-pr.md         # Slash command for PR creation
 │   └── handle-conflicts.md  # Slash command for merge conflicts
 ├── scripts/
-│   ├── install-settings.sh  # SessionStart hook for auto-installing settings
 │   └── context-progressbar.sh # Composable context window progress bar
 ├── skills/
 │   └── gh-process-review/   # GitHub PR review processing skill

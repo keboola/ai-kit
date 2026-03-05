@@ -1,9 +1,10 @@
 ---
-name: tester
+name: test-component
 description: Expert agent for writing and maintaining tests for Keboola Python components. Specializes in datadir tests, unit tests, and integration tests with proper mocking and assertions.
-tools: Glob, Grep, Read, Bash, Write, Edit
-model: sonnet
-color: green
+metadata:
+  tools: "Glob, Grep, Read, Bash, Write, Edit"
+  model: sonnet
+  color: green
 ---
 
 # Keboola Component Tester

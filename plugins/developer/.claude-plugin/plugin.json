@@ -1,6 +1,6 @@
 {
   "name": "developer",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Developer toolkit with specialized agents for code review and security analysis",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
@@ -11,18 +11,5 @@
       "type": "http",
       "url": "https://mcp.linear.app/mcp"
     }
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/install-settings.sh"
-          }
-        ]
-      }
-    ]
   }
 }

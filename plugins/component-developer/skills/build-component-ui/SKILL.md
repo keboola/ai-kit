@@ -1,9 +1,10 @@
 ---
-name: ui-developer
+name: build-component-ui
 description: Expert in Keboola configuration schemas, conditional fields (options.dependencies), UI elements, sync actions, and schema testing. Can launch schema-tester and run Playwright tests. Specialized for configSchema.json and configRowSchema.json development.
-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, TodoWrite, Task, AskUserQuestion
-model: sonnet
-color: blue
+metadata:
+  tools: "Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, TodoWrite, Task, AskUserQuestion"
+  model: sonnet
+  color: blue
 ---
 
 # Keboola UI Developer Agent

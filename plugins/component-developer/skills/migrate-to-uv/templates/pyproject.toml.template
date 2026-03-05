@@ -68,9 +68,8 @@ Repository = "https://github.com/keboola/YOUR-REPO"
 [dependency-groups]
 dev = [
     # Standard Keboola dev dependencies
-    "flake8>=5.0.4",
+    "ruff>=0.15.0",
     "pytest>=8.3.5",
-    "ruff>=0.13.2",
     
     # Add pdoc3 if package generates HTML docs with pdoc
     # Check: Does .github/workflows/push_main.yml exist with pdoc?
@@ -97,14 +96,11 @@ explicit = true
 # Or explicitly list packages:
 # packages = ["YOUR_PACKAGE"]
 
-# Optional: Ruff configuration
-# [tool.ruff]
-# line-length = 120
-# target-version = "py38"
-# 
-# [tool.ruff.lint]
-# select = ["E", "F", "W", "I"]
-# ignore = ["E501"]  # Line too long (handled by formatter)
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I"]  # Add isort to default ruff rules
 
 # Optional: Pytest configuration
 # [tool.pytest.ini_options]

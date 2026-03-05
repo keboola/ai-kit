@@ -36,6 +36,56 @@ Validate specific fields or configurations.
 ### 4. Custom Actions
 Perform any server-side operation and return results.
 
+## Critical: Async Load Button Rendering Requirements
+
+For a field to render with an async "Load" button in the Keboola UI, it **MUST** have both `"format": "select"` AND `"enum"` (even if empty). Without these, a plain `type: "string"` field with `options.async` will **silently ignore** the async options and render as a plain text input — no load button will appear.
+
+**Correct — renders load button:**
+```json
+{
+  "type": "string",
+  "format": "select",
+  "enum": [],
+  "options": {
+    "async": {
+      "label": "Load Services",
+      "action": "loadServices"
+    }
+  }
+}
+```
+
+**Wrong — async options silently ignored:**
+```json
+{
+  "type": "string",
+  "options": {
+    "async": {
+      "label": "Load Services",
+      "action": "loadServices"
+    }
+  }
+}
+```
+
+To allow both async loading AND freeform manual input (creatable dropdown), add `"tags": true`:
+```json
+{
+  "type": "string",
+  "format": "select",
+  "enum": [],
+  "options": {
+    "tags": true,
+    "async": {
+      "label": "Load Services",
+      "action": "loadServices"
+    }
+  }
+}
+```
+
+This applies to both `configurationSchema` and `configurationRowSchema`. For multi-select, use `"type": "array"` with `"format": "select"`.
+
 ## Dynamic Dropdowns
 
 Dynamic dropdowns load their options from the component backend.

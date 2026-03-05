@@ -1,0 +1,19 @@
+[project]
+name = "COMPONENT_NAME"
+dynamic = ["version"]
+requires-python = "~=3.N.0"
+dependencies = [
+    "keboola-component>=1.6.13",
+    # Add other dependencies from requirements.txt with >= instead of ==
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.0",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I"]  # Add isort to default ruff rules

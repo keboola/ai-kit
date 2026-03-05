@@ -593,6 +593,34 @@ logging.error("Failed to fetch data")
 logging.exception("Critical error with stack trace")
 ```
 
+## Environment Variables & Credential Access
+
+### Available KBC_* Environment Variables
+
+These environment variables are available in the component runtime:
+- `KBC_DATADIR` — Path to data folder (required)
+- `KBC_PROJECTID`, `KBC_COMPONENTID`, `KBC_CONFIGID`, `KBC_CONFIGVERSION`
+- `KBC_RUNID`, `KBC_BRANCHID`, `KBC_STACKID`
+- `KBC_DATA_TYPE_SUPPORT`, `KBC_COMPONENT_RUN_MODE`, `KBC_PROJECT_FEATURE_GATES`
+- `KBC_STAGING_FILE_PROVIDER`
+
+### Credential Access via CommonInterface
+
+**IMPORTANT**: Do NOT try to access credentials via `os.environ` with `KBC_TOKEN` or `KBC_URL` — these environment variables are not directly exposed. The `CommonInterface` abstracts access to credentials:
+
+```python
+# CORRECT — use CommonInterface
+ci = CommonInterface()
+token = ci.environment_variables.token        # Storage API token
+url = ci.environment_variables.url            # Storage API URL
+
+# WRONG — these are NOT available via os.environ
+token = os.environ.get("KBC_TOKEN")           # None!
+url = os.environ.get("KBC_STORAGEAPI_URL")    # None!
+```
+
+Always use `CommonInterface` methods for credentials. The `KBC_*` environment variables listed above are metadata-only (project ID, config ID, etc.).
+
 ## Developer Portal Registration
 
 ### Prerequisites

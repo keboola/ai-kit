@@ -185,16 +185,19 @@ Formats control how fields are rendered in the UI.
 
 ### Button Formats
 
+> **Note:** Button fields require `"type": "button"` — this is not a standard JSON Schema type, it is specific to Keboola UI.
+
 | Format | Description | Example |
 |--------|-------------|---------|
-| `test-connection` | Test connection button | `"format": "test-connection"` |
-| `sync-action` | Generic sync action button | `"format": "sync-action"` |
+| `test-connection` | Test connection button (triggers `testConnection` sync action) | `"format": "test-connection"` |
+| `sync-action` | Generic sync action button with Markdown output | `"format": "sync-action"` |
 
 ### Object Formats
 
 | Format | Description | Example |
 |--------|-------------|---------|
 | `ssh-editor` | SSH tunnel/key pair form | `"format": "ssh-editor"` |
+| `grid` | Groups object properties into a visually separated section with a header | `"format": "grid"` |
 
 ### Special Formats
 
@@ -333,10 +336,15 @@ Options control field behavior and appearance.
 |--------|------|-------------|
 | `propertyOrder` | integer | Field display order (lower = higher) |
 | `hidden` | boolean | Hide field from UI |
-| `collapsed` | boolean | Collapse object by default |
+| `collapsed` | boolean | **Not supported in Keboola UI.** Use `options.dependencies` for conditional visibility instead. |
 | `compact` | boolean | Use compact display mode |
 | `grid_columns` | integer | Number of grid columns (1-12) |
 | `object_layout` | string | Object layout style (`"grid"`, `"table"`) |
+| `tooltip` | string | Text shown in info icon tooltip on the field label |
+| `documentation` | object | Documentation link with tooltip icon on the section header |
+| `documentation.link` | string | Absolute URL for the documentation link |
+| `documentation.tooltip` | string | Tooltip text for the link icon (default: "Open documentation") |
+| `enum_titles` | array | Display labels for enum values (same order as `enum` array) |
 
 ### Input Options
 
@@ -346,6 +354,7 @@ Options control field behavior and appearance.
 | `inputAttributes.placeholder` | string | Placeholder text |
 | `inputAttributes.readonly` | boolean | Make field read-only |
 | `input_width` | string | Input width (`"100px"`, `"50%"`) |
+| `input_height` | string | Textarea height (`"100px"`, `"200px"`) |
 | `expand_height` | boolean | Expand textarea height |
 
 ### Editor Options
@@ -394,8 +403,8 @@ Options control field behavior and appearance.
 | `async` | object | Async action configuration |
 | `async.label` | string | Button label |
 | `async.action` | string | Action name |
-| `async.autoload` | boolean | Auto-load on form open |
-| `async.cache` | boolean | Cache results |
+| `async.autoload` | boolean | Auto-load on form open and re-trigger when a watched/dependent field changes |
+| `async.cache` | boolean | Cache results (default: `true`) |
 
 ### Options Examples
 
@@ -410,6 +419,50 @@ Options control field behavior and appearance.
         "placeholder": "Enter your API key here"
       }
     }
+  }
+}
+```
+
+**Field Tooltip (info icon on label):**
+```json
+{
+  "api_key": {
+    "type": "string",
+    "title": "API Key",
+    "options": {
+      "tooltip": "Your API key from Settings > API Tokens"
+    },
+    "description": "Used to authenticate all requests."
+  }
+}
+```
+
+**Documentation Link (on section header):**
+```json
+{
+  "type": "object",
+  "title": "Authorization",
+  "options": {
+    "documentation": {
+      "link": "https://docs.example.com/auth",
+      "tooltip": "Open authentication documentation"
+    }
+  },
+  "properties": {}
+}
+```
+
+**Enum with Custom Display Labels:**
+```json
+{
+  "load_type": {
+    "type": "number",
+    "title": "Load Type",
+    "enum": [0, 1],
+    "options": {
+      "enum_titles": ["Full Load", "Incremental Update"]
+    },
+    "default": 1
   }
 }
 ```
@@ -429,22 +482,23 @@ Options control field behavior and appearance.
 }
 ```
 
-**Collapsed Object:**
+**Grouped Section (using `format: "grid"`):**
 ```json
 {
   "advanced_settings": {
     "type": "object",
     "title": "Advanced Settings",
-    "options": {
-      "collapsed": true
-    },
+    "format": "grid",
+    "propertyOrder": 500,
     "properties": {
-      "timeout": { "type": "integer" },
-      "retries": { "type": "integer" }
+      "timeout": { "type": "integer", "title": "Timeout" },
+      "retries": { "type": "integer", "title": "Retries" }
     }
   }
 }
 ```
+
+> **Note:** Keboola UI does not support collapsible objects. Use `options.dependencies` for conditional field visibility, or the `maxItems: 1` array pattern for optional sections.
 
 **Grid Layout:**
 ```json
@@ -503,19 +557,103 @@ Options control field behavior and appearance.
 }
 ```
 
+## Schema Validation Keywords
+
+Standard JSON Schema validation keywords supported by the Keboola UI (JSON Editor).
+
+| Keyword | Type | Description |
+|---------|------|-------------|
+| `minLength` | integer | Minimum string length |
+| `minimum` | number | Minimum numeric value (inclusive) |
+| `maximum` | number | Maximum numeric value (inclusive) |
+| `uniqueItems` | boolean | Enforce unique items in an array |
+| `items` | object | Schema for array items (required for `type: "array"`) |
+| `links` | array | Clickable links displayed below a field label in the UI |
+
+### Validation Examples
+
+**Minimum string length:**
+```json
+{
+  "name": {
+    "type": "string",
+    "title": "Name",
+    "minLength": 1,
+    "propertyOrder": 1
+  }
+}
+```
+
+**Numeric range:**
+```json
+{
+  "port": {
+    "type": "integer",
+    "title": "Port",
+    "minimum": 1,
+    "maximum": 65535,
+    "default": 5432,
+    "propertyOrder": 2
+  }
+}
+```
+
+**Unique items array:**
+```json
+{
+  "tags": {
+    "type": "array",
+    "title": "Tags",
+    "format": "select",
+    "uniqueItems": true,
+    "items": {
+      "type": "string",
+      "enum": ["important", "urgent", "review"]
+    },
+    "propertyOrder": 3
+  }
+}
+```
+
+**Clickable links in field description (`links`):**
+```json
+{
+  "endpoint": {
+    "type": "string",
+    "title": "API Endpoint",
+    "description": "Base URL for API requests.",
+    "links": [
+      {
+        "href": "https://docs.example.com/api",
+        "rel": "describedby",
+        "mediaType": "text/html"
+      }
+    ],
+    "propertyOrder": 4
+  }
+}
+```
+
 ## Code Editor Modes
 
 Use with `format: "editor"` and `options.editor.mode`.
+
+> **Defaults and notes:**
+> - Default mode is `application/json` when `options.editor.mode` is not specified
+> - JSON mode (`application/json`) supports field encryption — use `"type": "object"` (not `"string"`) so the UI can store an encrypted JSON object
+> - All other modes use `"type": "string"`
 
 ### Available Modes
 
 | Mode | Language | Example |
 |------|----------|---------|
 | `text/x-sql` | SQL | Database queries |
+| `text/x-sfsql` | Salesforce SOQL | Salesforce queries |
+| `text/x-plsql` | PL/SQL | Oracle/PL SQL stored procedures |
 | `text/x-python` | Python | Python scripts |
 | `text/x-rsrc` | R | R scripts |
 | `text/x-julia` | Julia | Julia scripts |
-| `application/json` | JSON | JSON configuration |
+| `application/json` | JSON | JSON configuration (supports encryption) |
 | `application/xml` | XML | XML documents |
 | `text/x-toml` | TOML | TOML configuration |
 | `text/x-yaml` | YAML | YAML configuration |

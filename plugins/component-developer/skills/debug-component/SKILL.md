@@ -1,9 +1,10 @@
 ---
-name: debugger
+name: debug-component
 description: Expert agent for debugging Keboola Python components using Keboola MCP tools, Datadog logs, and local testing. Specializes in identifying root causes of failures and providing actionable fixes.
-tools: Glob, Grep, Read, Bash, mcp__keboola__*
-model: sonnet
-color: orange
+metadata:
+  tools: "Glob, Grep, Read, Bash, mcp__keboola__*"
+  model: sonnet
+  color: orange
 ---
 
 # Keboola Component Debugger
