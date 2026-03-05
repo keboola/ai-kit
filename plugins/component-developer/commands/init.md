@@ -39,7 +39,6 @@ If component name is provided in `$ARGUMENTS`, use it. Otherwise, ask the user:
 Component name (e.g., ex-my-api):
 Component ID (kebab-case, e.g., keboola.ex-my-api):
 Component type (extractor/writer/application):
-Short description:
 ```
 
 **Naming conventions:**
@@ -56,10 +55,9 @@ which cookiecutter || pip install cookiecutter
 # Run template (non-interactive if we have all info)
 cookiecutter gh:keboola/cookiecutter-python-component \
   --no-input \
-  component_id="$COMPONENT_ID" \
-  name="$COMPONENT_NAME" \
-  type="$COMPONENT_TYPE" \
-  description="$DESCRIPTION"
+  component_name="$COMPONENT_NAME" \
+  dev_portal_component_id="$COMPONENT_ID" \
+  repository_folder_name="$COMPONENT_NAME"
 
 # Or interactive mode if user wants to customize
 cookiecutter gh:keboola/cookiecutter-python-component
@@ -67,10 +65,8 @@ cookiecutter gh:keboola/cookiecutter-python-component
 
 **Expected output:**
 ```
-component_id: keboola.ex-my-api
-name: ex-my-api
-type: extractor
-description: My awesome API extractor
+component_name: ex-my-api
+dev_portal_component_id: keboola.ex-my-api
 ...
 ✓ Created component in ./ex-my-api/
 ```
@@ -291,9 +287,8 @@ User: /init ex-salesforce
 Assistant: Running cookiecutter for ex-salesforce...
 
 Component name: ex-salesforce
-Component ID: keboola.ex-salesforce  
+Component ID: keboola.ex-salesforce
 Type: extractor
-Description: Salesforce data extractor
 
 ✓ Created component in ./ex-salesforce/
 
