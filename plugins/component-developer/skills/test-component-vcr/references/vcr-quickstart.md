@@ -17,7 +17,7 @@ dev = [
 ```
 
 ```bash
-uv lock --upgrade && uv sync
+uv sync -U
 ```
 
 ### requirements.txt + pip (legacy projects)

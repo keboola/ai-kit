@@ -68,7 +68,7 @@ dev = [
 
 Then sync:
 ```bash
-uv lock --upgrade && uv sync
+uv sync -U
 ```
 
 **For requirements.txt + pip:**
@@ -369,7 +369,7 @@ The scaffolder expects the wrapped format: `{"name": "...", "config": {...}}`. M
 The CI pipeline uses `python -m unittest discover` which can't find pytest-parametrized functions. **Fix:** Change to `python -m pytest` (Step 9).
 
 ### uv.lock out of date
-After adding keboola.datadirtest, run `uv lock` before `uv sync`. If keboola.datadirtest was updated upstream, run `uv lock --upgrade-package keboola-datadirtest`.
+After adding keboola.datadirtest, run `uv sync -U`. If keboola.datadirtest was updated upstream, run `uv lock --upgrade-package keboola-datadirtest`.
 
 ### Permission denied writing secrets.json
 Some security configurations block writing files matching `**/secrets*`. **Fix:** Ask the user to create `secrets.json` manually.

@@ -58,7 +58,7 @@ dev = [
 
 Then run:
 ```bash
-uv lock --upgrade && uv sync
+uv sync -U
 ```
 
 #### Option B: requirements.txt + pip (legacy projects)
