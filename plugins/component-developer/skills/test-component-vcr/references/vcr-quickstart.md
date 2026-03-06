@@ -224,11 +224,11 @@ Public API (no auth): **No secrets.json needed** — put real values directly in
 
 ```bash
 # Locally
-pytest tests/test_functional.py --tb=short -q
+pytest
 
 # Docker (same as CI)
 docker build -t mycomponent:test . && \
-docker run mycomponent:test pytest tests/test_functional.py --tb=short -q
+docker run --rm mycomponent:test pytest
 ```
 
 ## Update keboola.datadirtest

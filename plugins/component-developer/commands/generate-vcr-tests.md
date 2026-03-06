@@ -315,7 +315,7 @@ docker run ${{ env.APP_IMAGE }}:latest python -m unittest discover
 
 **After:**
 ```yaml
-docker run ${{ env.APP_IMAGE }}:latest python -m pytest tests/ --tb=short -q
+docker run --rm ${{ env.APP_IMAGE }}:latest python -m pytest
 ```
 
 **Why:** `python -m unittest discover` only finds `unittest.TestCase` subclasses. Our parametrized pytest tests won't be discovered by unittest.
@@ -329,7 +329,7 @@ python -m unittest discover
 
 **After:**
 ```bash
-python -m pytest tests/ --tb=short -q
+python -m pytest
 ```
 
 ### Step 10: Verify Tests Pass
@@ -338,7 +338,7 @@ Run the tests locally to confirm everything works:
 
 ```bash
 # Run with pytest
-python -m pytest tests/test_functional.py --tb=short -q
+python -m pytest
 ```
 
 All tests should pass. If any fail, investigate:
@@ -351,7 +351,7 @@ python -m pytest tests/test_functional.py -k "test_name" -v --tb=long
 Optionally verify in Docker (matches CI exactly):
 ```bash
 docker build -t mycomponent:test .
-docker run mycomponent:test python -m pytest tests/ --tb=short -q
+docker run --rm mycomponent:test python -m pytest
 ```
 
 ## Known Pitfalls and Solutions
@@ -366,7 +366,7 @@ Using IDs from the wrong resource (e.g., wrong table ID) causes API errors durin
 The scaffolder expects the wrapped format: `{"name": "...", "config": {...}}`. Missing the `config` wrapper causes `ScaffolderError: Test 'X' missing required 'config' field`. The default file location is `tests/setup/configs.json` — no path argument needed if you use the standard layout.
 
 ### CI shows "Ran 0 tests"
-The CI pipeline uses `python -m unittest discover` which can't find pytest-parametrized functions. **Fix:** Change to `python -m pytest tests/ --tb=short -q` (Step 9).
+The CI pipeline uses `python -m unittest discover` which can't find pytest-parametrized functions. **Fix:** Change to `python -m pytest` (Step 9).
 
 ### uv.lock out of date
 After adding keboola.datadirtest, run `uv lock` before `uv sync`. If keboola.datadirtest was updated upstream, run `uv lock --upgrade-package keboola-datadirtest`.
@@ -392,7 +392,7 @@ rm -rf tests/functional/01_testConnection
 uv run python -m keboola.datadirtest scaffold --secrets secrets.json
 
 # 3. Verify tests pass
-python -m pytest tests/test_functional.py --tb=short -q
+python -m pytest
 
 # 4. Commit updated cassettes and expected output
 ```
@@ -440,6 +440,7 @@ Step 7-9: Updating project files...
   Updated scripts/build_n_test.sh
 
 Step 10: Verifying...
+  python -m pytest
   10 passed in 0.51s
 
 VCR tests are ready! All 10 test cases pass.
