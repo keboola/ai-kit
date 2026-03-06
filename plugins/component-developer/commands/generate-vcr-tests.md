@@ -38,6 +38,8 @@ if [ -f pyproject.toml ]; then
 elif [ -f requirements.txt ]; then
   echo "Detected: requirements.txt (pip)"
   DEP_SYSTEM="pip"
+  # Suggest modernizing — VCR tests work best with uv
+  echo "Note: This project uses requirements.txt. Consider running /migrate-to-uv to modernize before proceeding."
 else
   echo "Error: No pyproject.toml or requirements.txt found"
   exit 1
