@@ -1,8 +1,24 @@
 # Data App Developer Plugin
 
-A specialized toolkit for building production-ready Streamlit data apps for Keboola deployment. Features a systematic **validate → build → verify** workflow that ensures features work correctly the first time.
+A toolkit for building and deploying data apps to Keboola. Includes a Streamlit development skill with a systematic **validate → build → verify** workflow, plus a deployment skill covering Nginx, Supervisord, and Docker configuration for any web framework (Node.js, Python, etc.).
 
 ## 🎯 Available Skills
+
+### Data App Deployment Skill
+**Skill name**: `dataapp-deployment`
+**Activation**: Automatic when deploying any web app to Keboola Data Apps
+
+Covers the Docker infrastructure for Keboola Data Apps: Nginx reverse proxy config, Supervisord process management, environment variable mapping, and common deployment pitfalls. Works with Node.js, Python (Flask, FastAPI, Streamlit, Gunicorn), or any language.
+
+**Use cases:**
+- Set up `keboola-config/` directory for a new data app
+- Configure Nginx for SSE/WebSocket streaming
+- Map `dataApp.secrets` to environment variables
+- Debug "Cannot POST /", 500 errors, or buffered streams
+- Adapt a Vercel/serverless app for Keboola deployment
+- Deploy Flask, Express, Streamlit, or any web framework
+
+---
 
 ### Data App Development Skill
 **Skill name**: `dataapp-dev`
@@ -379,8 +395,10 @@ plugins/dataapp-developer/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin config with MCP servers
 ├── skills/
+│   ├── dataapp-deployment/
+│   │   └── SKILL.md         # Keboola Data App deployment guide
 │   └── dataapp-dev/
-│       ├── SKILL.md         # Main skill definition
+│       ├── SKILL.md         # Streamlit development skill
 │       ├── QUICKSTART.md    # 5-minute guide
 │       ├── workflow-guide.md    # Detailed examples
 │       ├── best-practices.md    # Architecture guide
@@ -412,6 +430,6 @@ To improve this plugin:
 
 ---
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT

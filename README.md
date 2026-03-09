@@ -29,7 +29,7 @@ claude-kit/
 ├── plugins/
 │   ├── developer/           # Developer toolkit plugin
 │   ├── component-developer/ # Keboola Python component development
-│   ├── dataapp-developer/   # Streamlit data apps for Keboola
+│   ├── dataapp-developer/   # Data app development & deployment for Keboola
 │   ├── incident-commander/  # Post-mortem creation from Slack
 │   └── keboola-cli/         # Keboola project management and review
 ├── README.md                # This file
@@ -71,15 +71,15 @@ A specialized toolkit for building production-ready Keboola Python components fo
 
 **Location**: [`./plugins/dataapp-developer`](./plugins/dataapp-developer)
 
-A specialized toolkit for building production-ready Streamlit data apps for Keboola deployment with a systematic validate → build → verify workflow.
+A toolkit for building and deploying data apps to Keboola — Streamlit development with validate/build/verify workflow, plus deployment guides for Node.js, Python, and any web framework.
 
 **Features:**
-- 🎯 **Skills**: Data app development with validate → build → verify workflow
+- 🎯 **Skills**: Streamlit development (validate → build → verify) + data app deployment (Nginx, Supervisord, Docker)
+- 🚀 **Deployment**: keboola-config directory setup, SSE/WebSocket streaming through Nginx, env var mapping, common error solutions
 - 🔍 **Data Validation**: Automatic schema checking using Keboola MCP
 - 🎨 **Visual Verification**: Browser testing with Playwright MCP
-- 🏗️ **SQL-First Architecture**: Best practices for scalable data apps
-- 📚 **Comprehensive Docs**: Quickstart, workflows, templates, and checklists
-- 🛡️ **Bug Prevention**: Catches common issues before they become problems
+- 🏗️ **Multi-Framework**: Node.js (Express), Python (Flask, FastAPI, Streamlit, Gunicorn), or any web framework
+- 📚 **Comprehensive Docs**: Quickstart, workflows, templates, checklists, and deployment guides
 - 🔌 **MCP Servers**: Keboola (remote HTTP) and Playwright (browser automation)
 
 **[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
