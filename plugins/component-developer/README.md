@@ -95,6 +95,19 @@ Expert agent for reviewing component PRs with focus on **backward compatibility*
 
 Guide for initializing new Keboola components using cookiecutter template.
 
+### VCR Tester
+**Command**: `@vcr-tester` (alias: `@test-component-vcr`)
+**Color**: 🔵 Cyan
+
+Expert skill for setting up VCR (Video Cassette Recording) functional tests for Keboola Python components. Records real HTTP interactions as cassettes and replays them deterministically in CI without credentials.
+
+**Use cases:**
+- Add functional tests to extractors/writers that call external APIs
+- Set up datadirtest with VCR replay
+- Scaffold test cases from configs
+- Migrate from mock-based tests to VCR replay tests
+- Handle OAuth token chaining across test runs
+
 ### Migrate Component to UV
 **Command**: `@migrate-component-to-uv`
 **Color**: 🟣 Purple
@@ -152,6 +165,13 @@ Apply fixes from code review incrementally with proper commits.
 Migrate Keboola component repository from Bitbucket to GitHub with full history.
 ```bash
 /migrate-repo git@bitbucket.org:workspace/repo.git
+```
+
+### `/generate-vcr-tests` - Generate VCR Functional Tests
+Set up VCR-based functional tests — records real HTTP interactions and replays them in CI without credentials.
+```bash
+/generate-vcr-tests                          # Interactive setup
+/generate-vcr-tests --secrets secrets.json   # With pre-existing secrets
 ```
 
 ---
@@ -579,6 +599,10 @@ plugins/component-developer/
 │   │   │   ├── review-principles.md
 │   │   │   └── review-style-guide.md
 │   │   └── scripts/
+│   ├── test-component-vcr/            # VCR functional testing
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── vcr-quickstart.md
 │   ├── review-backward-compatibility/  # Backward compatibility review
 │   │   ├── SKILL.md
 │   │   └── references/
@@ -591,6 +615,7 @@ plugins/component-developer/
 │       └── scripts/
 ├── commands/                           # Slash commands
 │   ├── fix.md                         # Apply review fixes
+│   ├── generate-vcr-tests.md         # Generate VCR functional tests
 │   ├── init.md                        # Initialize new component
 │   ├── migrate-repo.md                # Migrate from Bitbucket
 │   ├── review.md                      # Code review
@@ -618,13 +643,17 @@ To improve this plugin:
 
 ---
 
-**Version**: 3.1.0
+**Version**: 3.2.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
 
-### 3.1.0 (2026-02-21)
+### 3.2.0 (2026-03-05)
+- **NEW**: Added `test-component-vcr` skill for VCR-based functional testing
+- Records real HTTP interactions as cassettes and replays them in CI without credentials
+- Supports OAuth token chaining, time freezing, and automatic credential sanitization
+- Includes quick reference guide and step-by-step setup instructions
 - **NEW**: Added `review-backward-compatibility` skill and `@backward-compatibility-reviewer` agent
 - Backward compatibility review for component PRs (configSchema, Pydantic models, sync actions, output tables, state files)
 - Telemetry-powered impact analysis via Keboola MCP (active configs, job stats, error rates)
