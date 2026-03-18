@@ -18,8 +18,6 @@ After installation, enable the plugins you need:
 /plugin install developer
 ```
 
-> **Keboola team members:** For internal/proprietary plugins (incident-commander, ui-video, etc.), see [keboola/ai-kit-internal](https://github.com/keboola/ai-kit-internal).
-
 ## Repository Structure
 
 The repository is organized into a plugin-based architecture to make prompts and agents easy to discover and use:
