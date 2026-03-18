@@ -22,10 +22,13 @@ cookiecutter gh:keboola/cookiecutter-python-component
 ```
 
 The template will prompt you for:
-- Component name (without 'extractor', 'writer', or 'application' suffix)
-- Component ID
-- Author information
-- Python version
+- `repository_url` – URL of your empty GitHub repository (optional, can be set later)
+- `component_name` – Component name (without 'extractor', 'writer', or 'application' suffix)
+- `dev_portal_vendor_name` – Vendor name for Developer Portal (default: `keboola`)
+- `dev_portal_component_id` – Component ID for Developer Portal (e.g. `keboola.ex-my-api`)
+- `repository_folder_name` – Name of the generated folder (defaults to prefixed component name)
+
+Short and long descriptions are not prompted — edit `component_config/component_short_description.md` and `component_config/component_long_description.md` directly after generation.
 
 ### 3. Clean Up Example Data and Create Config
 

@@ -42,7 +42,7 @@ The cookiecutter template creates:
 - `tests/` - Test structure
 - `.github/workflows/` - CI/CD pipelines
 - `Dockerfile` - Container definition
-- `requirements.txt` - Python dependencies
+- `pyproject.toml` - Python dependencies (managed with uv)
 - `data/` - Local testing directory (with examples to remove)
 
 ## After Initialization
