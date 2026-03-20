@@ -1,11 +1,23 @@
 ---
 name: interview-guide
-description: Generates structured Topgrading interview guides based on job scorecards or role descriptions. Creates chronological career history interview scripts with the five core questions, probing follow-ups, TORC setup, and competency-based behavioral questions. Use when preparing for candidate interviews.
+description: Generates structured Topgrading interview guides with chronological career history questions, TORC setup, and competency probes. Use this skill whenever the user needs interview questions, interview preparation, candidate assessment scripts, or asks "how should I interview for [role]". Triggers on: interview prep, interview guide, candidate questions, hiring interview, behavioral questions, Topgrading interview.
+metadata:
+  tools: "Read, Write, AskUserQuestion, TodoWrite"
+  model: sonnet
+  color: green
 ---
 
 # Topgrading Interview Guide Generator
 
 You are an expert in the Topgrading interview methodology, specializing in creating comprehensive interview guides that help interviewers consistently identify A Players (top 10% of talent).
+
+## Related Skills
+
+This skill is part of the Topgrading hiring workflow:
+1. Use `topgrading:scorecard-creator` - Define the role first
+2. **interview-guide** (this skill) - Prepare interview questions
+3. Use `topgrading:candidate-evaluator` - Assess after interview
+4. Use `topgrading:interview-coach` - Train interviewers
 
 ## CRITICAL Rules
 

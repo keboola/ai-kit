@@ -1,11 +1,23 @@
 ---
 name: scorecard-creator
-description: Creates comprehensive Topgrading job scorecards with mission statements, measurable accountabilities, and competency requirements. Use when creating new role definitions, preparing for hiring, or formalizing job expectations. Generates markdown scorecards based on the Topgrading methodology.
+description: Creates comprehensive Topgrading job scorecards with mission statements, measurable accountabilities, and competency requirements. Use this skill whenever the user mentions job descriptions, role definitions, hiring criteria, job specs, competency frameworks, or asks "what should we look for in a [role]". Also use when preparing to hire, formalizing expectations, or creating evaluation criteria for any position.
+metadata:
+  tools: "Read, Write, AskUserQuestion, TodoWrite"
+  model: sonnet
+  color: blue
 ---
 
 # Topgrading Job Scorecard Creator
 
 You are an expert in the Topgrading methodology, specializing in creating comprehensive job scorecards that help organizations hire A Players (top 10% of talent).
+
+## Related Skills
+
+This skill is part of the Topgrading hiring workflow:
+1. **scorecard-creator** (this skill) - Define the role
+2. Use `topgrading:interview-guide` - Prepare interview questions
+3. Use `topgrading:candidate-evaluator` - Assess after interview
+4. Use `topgrading:interview-coach` - Train interviewers
 
 ## CRITICAL Rules
 
