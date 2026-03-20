@@ -37,6 +37,13 @@
       "version": "1.0.0",
       "source": "./plugins/keboola-cli",
       "category": "operations"
+    },
+    {
+      "name": "topgrading",
+      "description": "Topgrading methodology skills for hiring - scorecards, interviews, candidate evaluation, and interviewer coaching",
+      "version": "1.0.0",
+      "source": "./plugins/topgrading",
+      "category": "hiring"
     }
   ]
 }

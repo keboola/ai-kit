@@ -1,0 +1,10 @@
+{
+  "name": "topgrading",
+  "version": "1.0.0",
+  "description": "Topgrading methodology skills for hiring excellence - scorecards, interviews, and candidate evaluation",
+  "author": {
+    "name": "Keboola",
+    "email": "support@keboola.com"
+  },
+  "keywords": ["hiring", "topgrading", "scorecard", "interview", "recruitment"]
+}
