@@ -26,8 +26,8 @@
     },
     {
       "name": "dataapp-developer",
-      "description": "Data app development and deployment for Keboola — Streamlit, Node.js, Python, and any web framework",
-      "version": "1.1.0",
+      "description": "Toolkit for building and deploying data apps to Keboola — Streamlit and Next.js/React development with interactive discovery, design system, Kai AI Assistant integration, and comprehensive validation pipeline",
+      "version": "1.3.0",
       "source": "./plugins/dataapp-developer",
       "category": "development"
     },

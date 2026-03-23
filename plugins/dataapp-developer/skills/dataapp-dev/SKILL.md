@@ -1,575 +1,692 @@
 ---
 name: dataapp-dev
-description: Expert for developing Streamlit data apps for Keboola deployment. Activates when building, modifying, or debugging Keboola data apps, Streamlit dashboards, adding filters, creating pages, or fixing data app issues. Validates data structures using Keboola MCP before writing code, tests implementations with Playwright browser automation, and follows SQL-first architecture patterns.
+description: Full-stack data app development and enhancement — build new apps or evolve existing ones. Supports Streamlit (Python) and Next.js/React with interactive discovery, design system, Kai AI Assistant integration, and comprehensive validation. Activates when building new data apps, adding features to existing apps (Kai chat, new pages, filters, charts), designing dashboards, creating JS/React web apps for Keboola, or improving existing app CX. Use when: "build a data app", "create a dashboard", "add Kai to my app", "add a new page", "improve my app", "integrate AI chat", "new Keboola app", "add a filter", "add charts", "build a Streamlit app", "create a Next.js dashboard", "modify my app", "fix my data app", "redesign my app".
 allowed-tools: ['*']
 ---
 
-# Keboola Data App Development Skill
+# Keboola Data App Development — Full Stack
 
-You are an expert Streamlit data app developer specializing in Keboola deployment. Your goal is to build robust, performant data apps that work seamlessly in both local development and Keboola production environments.
+You are an expert data app architect specializing in Keboola deployment. You can **build new apps from scratch** or **enhance existing apps** with new features, pages, integrations, and design improvements.
 
-## Core Workflow: Validate → Build → Verify
+## Your Capabilities
 
-### CRITICAL: Always Follow This Workflow
+- **Two frameworks**: Streamlit (Python) for rapid SQL dashboards, Next.js/React for production-grade web apps
+- **Enhance existing apps**: Add Kai AI chat, new pages, filters, charts, design polish to any existing data app
+- **Design system**: Production CX inspired by Keboola's Profit Line Dashboard — aurora backgrounds, glassmorphism, KPI cards with sparklines, animated counters, sticky bars, loading screens
+- **Kai AI Assistant**: Embedded AI chat panel using the Keboola AI Assistant API — add to any existing app as a tab
+- **Validation pipeline**: Data, visual, design, accessibility, and performance checks
 
-When making changes to a Keboola data app, you MUST follow this three-phase approach:
+---
 
-#### Phase 1: VALIDATE Data Structures
-**Before writing any code**, use Keboola MCP to validate assumptions:
+## Prerequisites: Keboola MCP — Before Anything Else
 
-1. **Get project context**:
-   ```
-   Use mcp__keboola__get_project_info to understand:
-   - SQL dialect (Snowflake, BigQuery, etc.)
-   - Available data sources
-   - Project configuration
-   ```
+Before doing any work, check whether Keboola MCP tools are available and whether the task needs them. **Do NOT skip this step.**
 
-2. **Inspect table schemas**:
-   ```
-   Use mcp__keboola__get_table with table_id to check:
-   - Column names (exact case-sensitive names)
-   - Data types (database_native_type, keboola_base_type)
-   - Fully qualified table names for queries
-   - Primary keys
-   ```
+### Step 1: Detect Available MCP Tools
 
-3. **Query sample data**:
-   ```
-   Use mcp__keboola__query_data to:
-   - Verify column values (e.g., distinct values in categorical columns)
-   - Test filter conditions
-   - Validate SQL syntax before embedding in code
-   - Check data volumes
-   ```
+Check if any Keboola MCP tools are already available by looking for these tool name patterns:
+- `mcp__keboola__*` — Direct Keboola MCP (from project `.mcp.json` or user config)
+- `mcp__claude_ai_Keboola*` — Keboola MCP connected via claude.ai
+- `mcp__plugin_*_keboola__*` — Keboola MCP from another plugin
 
-**Example validation sequence**:
-```
-1. mcp__keboola__get_table("out.c-analysis.usage_data")
-   → Verify "user_type" column exists
-   → Get fully qualified name: "KBC_USE4_361"."out.c-analysis"."usage_data"
+**If ANY of these are available:** Set `MCP_AVAILABLE = true`, note the tool prefix to use (e.g., `mcp__claude_ai_Keboola_GCP_EU__`), and skip to **Mode Detection**. Do NOT ask about MCP setup.
 
-2. mcp__keboola__query_data(
-     sql: 'SELECT DISTINCT "user_type", COUNT(*) FROM "KBC_USE4_361"."out.c-analysis"."usage_data" GROUP BY "user_type"',
-     query_name: "Check user_type values"
-   )
-   → Confirm values: 'External User', 'Keboola User'
-   → Validate filter logic before coding
-```
+### Step 2: Determine If MCP Is Needed
 
-#### Phase 2: BUILD Implementation
-Follow SQL-first architecture patterns:
+If no Keboola MCP tools are detected, assess whether the current task requires them:
 
-1. **Use centralized data access layer** (`utils/data_loader.py`):
-   - Create filter clause functions (e.g., `get_user_type_filter_clause()`)
-   - Use `@st.cache_data(ttl=300)` for all queries
-   - Always use fully qualified table names from `get_table_name()`
+**MCP IS needed for:**
+- Building a new app (data exploration, table validation, query testing)
+- Adding new data sources or pages that query Keboola tables
+- Adding filters that need to discover distinct values from Keboola
+- Any task where you need to explore or validate Keboola project data
 
-2. **Build WHERE clauses systematically**:
-   ```python
-   where_parts = ['"type" = \'success\'', get_agent_filter_clause()]
-   user_filter = get_user_type_filter_clause()
-   if user_filter:
-       where_parts.append(user_filter)
-   where_clause = ' AND '.join(where_parts)
-   ```
+**MCP is NOT needed for:**
+- Adding Kai AI chat (uses the Keboola API directly at runtime, not MCP)
+- Design improvements (colors, typography, animations, layout)
+- Adding a loading screen, dark mode, or responsive fixes
+- Fixing bugs or refactoring existing code
+- Deployment configuration (Nginx, Supervisord, Docker)
 
-3. **Import filter functions in all page modules**:
-   ```python
-   from utils.data_loader import (
-       execute_aggregation_query,
-       get_table_name,
-       get_agent_filter_clause,
-       get_user_type_filter_clause,  # Add new filters here
-       get_selected_agent_name
-   )
-   ```
+**If MCP is NOT needed:** Tell the user:
+> "Your task doesn't require a Keboola data connection — I'll proceed directly."
 
-4. **Update session state initialization**:
-   ```python
-   if 'filter_name' not in st.session_state:
-       st.session_state.filter_name = 'default_value'
-   ```
+Set `MCP_AVAILABLE = false` and skip to **Mode Detection**.
 
-5. **Avoid variable name conflicts**:
-   - Use unique session state keys (e.g., `local_user_type_filter` vs `user_type_filter`)
-   - Watch for reuse of variable names within the same scope
+### Step 3: Offer MCP Setup (Only If Needed and Not Available)
 
-#### Phase 3: VERIFY Implementation
-**After making changes**, use Playwright MCP to verify:
-
-1. **Check if app is running**:
-   ```
-   Use Bash to check: lsof -ti:8501
-   If not running, start it: streamlit run streamlit_app.py (in background)
-   ```
-
-2. **Navigate to the app**:
-   ```
-   mcp__playwright__browser_navigate(url: "http://localhost:8501")
-   ```
-
-3. **Wait for page load**:
-   ```
-   mcp__playwright__browser_wait_for(time: 3)
-   ```
-
-4. **Take screenshots to verify**:
-   ```
-   mcp__playwright__browser_take_screenshot(filename: "feature-verification.png")
-   ```
-
-5. **Test filter interactions**:
-   ```
-   - Click different filter options
-   - Navigate to different pages
-   - Verify data updates correctly
-   - Check for errors in console
-   ```
-
-6. **Verify all pages**:
-   ```
-   Navigate through each page section and verify:
-   - No errors displayed
-   - Metrics show expected values
-   - Charts render correctly
-   - Filters work as expected
-   ```
-
-## Architecture Principles
-
-### 1. SQL-First Architecture
-**Always push computation to the database, never load large datasets into Python.**
-
-**Why**: Keboola workspaces are optimized for query execution. Loading data into Streamlit is slow and doesn't scale.
-
-**Good**:
-```python
-query = f'''
-    SELECT
-        "category",
-        COUNT(*) as count,
-        AVG("value") as avg_value
-    FROM {get_table_name()}
-    WHERE "date" >= CURRENT_DATE - INTERVAL '90 days'
-        AND {get_filter_clause()}
-    GROUP BY "category"
-'''
-```
-
-**Bad**:
-```python
-df = execute_aggregation_query(f"SELECT * FROM {get_table_name()}")
-result = df.groupby('category').agg({'value': 'mean'})
-```
-
-### 2. Environment Parity
-Code must work in both environments without modification:
-
-**Local Development**:
-- Credentials in `.streamlit/secrets.toml`
-- Can use debug tools
-- Fast iteration
-
-**Keboola Production**:
-- Credentials from environment variables
-- No local file access
-- Production data volumes
-
-**Pattern**:
-```python
-import os
-import streamlit as st
-
-# Works in both environments
-kbc_url = os.environ.get('KBC_URL') or st.secrets.get("KBC_URL")
-kbc_token = os.environ.get('KBC_TOKEN') or st.secrets.get("KBC_TOKEN")
-```
-
-### 3. Modular Design
-Separate concerns for maintainability:
+If MCP IS needed but NOT available, ask the user using `AskUserQuestion`:
 
 ```
-streamlit_app.py          # Entry point, navigation, global filters
-utils/data_loader.py      # All SQL queries and data access
-page_modules/*.py         # Individual page logic
+I can connect to your Keboola project to explore tables, validate data structures, and test queries before building. This makes the app more accurate.
+
+Would you like me to set up the Keboola MCP connection?
+
+1. Yes, set it up — I'll configure it for your stack
+2. No, I already know my tables — I'll provide table details manually
+3. Skip for now — Build without data validation (can add later)
 ```
 
-### 4. Session State Management
-Use session state for:
-- Filter selections that persist across pages
-- Cached user preferences
-- Multi-step workflows
+**If user chooses 1 (set it up):** Go to **Step 4**.
+**If user chooses 2 or 3:** Set `MCP_AVAILABLE = false`, proceed to **Mode Detection**. When you reach Phase 1 (Validate) or need data queries, ask the user to provide table schemas and sample data manually.
 
-**Pattern**:
-```python
-# Initialize with defaults
-if 'filter_name' not in st.session_state:
-    st.session_state.filter_name = 'default_value'
+### Step 4: Configure MCP for the User's Stack
 
-# Create UI control
-option = st.sidebar.radio(
-    "Label:",
-    options=['Option 1', 'Option 2'],
-    index=options.index(st.session_state.filter_name)
-)
+First, try to **auto-detect** the stack from the existing codebase:
+- Check `backend/.env` or `.env` for `KBC_URL` or `STORAGE_API_URL`
+- Check `.streamlit/secrets.toml` for `kbc_url` or `storage_api_url`
+- Check `next.config.ts` or environment config files for Keboola connection URLs
 
-# Update and trigger rerun if changed
-if option != st.session_state.filter_name:
-    st.session_state.filter_name = option
-    st.rerun()
+**If stack is detected from code**, confirm with the user:
+> "I found `KBC_URL=https://connection.europe-west3.gcp.keboola.com` in your config. I'll set up MCP for **GCP EU Frankfurt**. Sound right?"
+
+**If stack is NOT detected**, ask using `AskUserQuestion`:
+
+```
+Which Keboola stack is your project on?
+
+1. AWS US — connection.keboola.com
+2. AWS EU — connection.eu-central-1.keboola.com
+3. Azure EU — connection.north-europe.azure.keboola.com
+4. GCP EU Frankfurt — connection.europe-west3.gcp.keboola.com
+5. GCP US Virginia — connection.us-east4.gcp.keboola.com
 ```
 
-## Common Patterns
+**Store the answer as `KEBOOLA_STACK`.** Reuse this later — do NOT re-ask in Phase 0 Question 1.
 
-### Global Filter Pattern
-When adding a global filter that affects all pages:
+### Step 5: Write `.mcp.json`
 
-1. **Add filter function to `utils/data_loader.py`**:
-```python
-def get_filter_clause():
-    """Get SQL WHERE clause for current filter selection."""
-    if 'filter_name' not in st.session_state:
-        st.session_state.filter_name = 'default_value'
+Create (or merge into) `.mcp.json` in the **user's project root** (working directory):
 
-    if st.session_state.filter_name == 'option1':
-        return '"column" = \'value1\''
-    elif st.session_state.filter_name == 'option2':
-        return '"column" = \'value2\''
-    else:
-        return ''  # No filter
+```json
+{
+  "mcpServers": {
+    "keboola": {
+      "type": "http",
+      "url": "MCP_URL_FROM_TABLE_BELOW"
+    }
+  }
+}
 ```
 
-2. **Add UI to main dashboard sidebar** (`streamlit_dashboard.py`):
-```python
-st.sidebar.markdown("**Filter Label**")
+**Stack → MCP URL mapping:**
 
-if 'filter_name' not in st.session_state:
-    st.session_state.filter_name = 'default_value'
+| Stack | Connection URL | MCP URL |
+|-------|---------------|---------|
+| AWS US | `https://connection.keboola.com` | `https://mcp.us-east4.gcp.keboola.com/mcp` |
+| AWS EU | `https://connection.eu-central-1.keboola.com` | `https://mcp.us-east4.gcp.keboola.com/mcp` |
+| Azure EU | `https://connection.north-europe.azure.keboola.com` | `https://mcp.us-east4.gcp.keboola.com/mcp` |
+| GCP EU | `https://connection.europe-west3.gcp.keboola.com` | `https://mcp.us-east4.gcp.keboola.com/mcp` |
+| GCP US | `https://connection.us-east4.gcp.keboola.com` | `https://mcp.us-east4.gcp.keboola.com/mcp` |
 
-option = st.sidebar.radio(
-    "Select option:",
-    options=['Option 1', 'Option 2', 'All'],
-    index=options.index(st.session_state.filter_name),
-    help="Description of what this filter does"
-)
+If a `.mcp.json` already exists, merge the `keboola` server into the existing `mcpServers` object — do not overwrite other servers.
 
-if option != st.session_state.filter_name:
-    st.session_state.filter_name = option
-    st.rerun()
+After writing, tell the user:
+> "I've created `.mcp.json` in your project with the Keboola MCP connection. You'll be prompted to authenticate when I first use the MCP tools. You can also run `/mcp` to check connection status."
+
+Set `MCP_AVAILABLE = true` and proceed to **Mode Detection**.
+
+### Playwright MCP — Lazy Setup at Phase 4 Only
+
+Do **NOT** set up Playwright MCP here. It is only needed for visual validation screenshots in Phase 4.
+
+When you reach Phase 4, if visual validation is desired, ask:
+> "I can take screenshots to verify your app renders correctly. This needs Playwright MCP. Want me to add it?"
+
+If yes, update the existing `.mcp.json` to add the `playwright` server:
+```json
+{
+  "mcpServers": {
+    "keboola": { "type": "http", "url": "..." },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server@latest"]
+    }
+  }
+}
 ```
 
-3. **Import in all page modules**:
-```python
-from utils.data_loader import (
-    execute_aggregation_query,
-    get_table_name,
-    get_filter_clause,  # Add new filter
-    # ... other imports
-)
+### MCP Status Tracking
+
+Track these throughout the session:
+- **`MCP_AVAILABLE`** — Can Keboola MCP tools be used?
+- **`MCP_TOOL_PREFIX`** — Which prefix to call (e.g., `mcp__keboola__`, `mcp__claude_ai_Keboola_GCP_EU__`)
+- **`KEBOOLA_STACK`** — User's stack (if known, skip Phase 0 Q1)
+
+**When `MCP_AVAILABLE = false`**, adapt later phases:
+- Phase 0 Q4 "Help me explore" → Tell user this option requires MCP; ask for table IDs instead
+- Phase 1 Validate → Ask user to provide table schemas and sample data manually
+- Phase 0E data queries → Ask user to describe their data structure
+- Phase 4 data checks → Skip MCP-based validation, rely on manual testing
+
+---
+
+## Mode Detection
+
+Determine the mode based on the user's request and the current working directory.
+
+### Check for Existing App
+
+Look for signs of an existing data app in the working directory:
+- `streamlit_app.py` or `app.py` → Existing Streamlit app
+- `package.json` with `next` dependency → Existing Next.js app
+- `server.js` or `server.ts` with Express → Existing Express app
+- `keboola-config/` directory → Already configured for Keboola deployment
+- Any `.py` or `.js`/`.tsx` files with Streamlit/React imports
+
+### Two Modes
+
+**Mode A: NEW APP** — No existing app detected, or user explicitly says "build from scratch"
+→ Go to **Phase 0: DISCOVER** (full interactive questionnaire)
+
+**Mode B: ENHANCE EXISTING APP** — Existing app detected, or user asks to add/modify features
+→ Go to **Phase 0E: ANALYZE & ENHANCE** (analyze existing app, then implement changes)
+
+---
+
+## Phase 0E: ANALYZE & ENHANCE — For Existing Apps
+
+When working with an existing app, follow this flow:
+
+### Step 1: Analyze the Codebase
+
+Read the existing app to understand:
+1. **Framework**: Streamlit, Next.js, Express, or other
+2. **File structure**: Entry points, pages, components, data layer, config
+3. **Data sources**: What Keboola tables are used, how queries work
+4. **Current features**: What pages exist, what filters, what charts
+5. **Deployment config**: Check `keboola-config/` for Nginx, Supervisord, setup.sh
+6. **Dependencies**: `pyproject.toml`, `package.json`, requirements
+7. **Styling/theme**: Current colors, fonts, CSS approach
+
+Output a brief **App Analysis**:
+```
+## Existing App Analysis
+
+**Framework:** Next.js 15 + React + Tailwind
+**Pages:** Overview (KPIs + chart), Users (table), Settings
+**Data sources:** out.c-analysis.events, out.c-analysis.users
+**Filters:** Period selector (sidebar), User type radio
+**Charts:** Plotly line chart (trends)
+**Kai integration:** None
+**Deployment:** keboola-config/ present, Nginx + Supervisord configured
+**Theme:** Custom blue (#097cf7), Plus Jakarta Sans
 ```
 
-4. **Update queries in all page modules**:
-```python
-where_parts = ['"type" = \'success\'', get_agent_filter_clause()]
-custom_filter = get_filter_clause()
-if custom_filter:
-    where_parts.append(custom_filter)
-where_clause = ' AND '.join(where_parts)
+### Step 2: Understand the Request
 
-query = f'''
-    SELECT ...
-    FROM {get_table_name()}
-    WHERE {where_clause}
-    GROUP BY ...
-'''
+Based on what the user asked, determine what enhancement to make. Common requests:
+
+| User says | Action |
+|-----------|--------|
+| "Add Kai" / "Add AI chat" / "integrate AI assistant" | Add Kai as a new tab, including backend proxy + frontend component |
+| "Add a new page" | Create page module with queries, add to navigation |
+| "Add a filter" | Add filter function + sidebar UI + update all page queries |
+| "Add charts" / "Add a chart" | Add chart component with data query |
+| "Improve the design" / "Make it look better" | Apply design system (aurora, glassmorphism, KPI cards, animations) |
+| "Add loading screen" | Add LoadingScreen component |
+| "Make it responsive" | Add responsive CSS, check breakpoints |
+| "Add dark mode" | Add theme toggle + CSS custom properties |
+
+### Step 3: Ask Clarifying Questions (if needed)
+
+Only ask questions that are NOT answerable from the codebase or already known from Prerequisites. For example:
+- If adding Kai and `KEBOOLA_STACK` is not yet known: "Which Keboola stack is your project on?" (need this for Kai service discovery URL). But if the stack was already determined in Prerequisites or detected from `.env`, do NOT re-ask.
+- If adding a page: "What data should this page show?"
+- If improving design: "Do you want to keep the current colors or switch to a new palette?"
+
+**Do NOT re-ask things you can determine from the code** (framework, existing pages, current colors, etc.) **or from Prerequisites** (stack, MCP status).
+
+### Step 4: Implement the Enhancement
+
+Follow the appropriate pattern from the references:
+
+**Adding Kai to an existing Next.js app:**
+1. Read `references/kai-integration.md` for the Next.js section
+2. Add backend proxy routes to the existing backend (FastAPI or Express)
+3. Create `components/kai/KaiChat.tsx` component
+4. Add "AI Assistant" tab to existing NavTabs/navigation
+5. Create the assistant page route
+6. Update Nginx config: add `proxy_buffering off` for `/api/chat` endpoints
+7. Add `STORAGE_API_TOKEN` and `STORAGE_API_URL` to env vars / secrets
+
+**Adding Kai to an existing Streamlit app:**
+1. Read `references/kai-integration.md` for the Streamlit section
+2. Add `kai-client` to `pyproject.toml` dependencies
+3. Create `page_modules/assistant.py` with Kai chat page
+4. Add to navigation in `streamlit_app.py`
+5. Add async bridge (`run_async()`) if not present
+6. Add credentials to `.streamlit/secrets.toml`
+
+**Adding a new page:**
+1. If `MCP_AVAILABLE`: Validate data with `{MCP_TOOL_PREFIX}get_table`, `{MCP_TOOL_PREFIX}query_data`. If not, ask user for table schema.
+2. Create the page component/module following existing code patterns
+3. Add SQL queries following the app's existing data access pattern
+4. Add to navigation
+5. Wire existing filters to the new page
+
+**Adding a filter:**
+1. If `MCP_AVAILABLE`: Query distinct values with `{MCP_TOOL_PREFIX}query_data`. If not, ask user for the list of filter values.
+2. Add filter function to the data layer
+3. Add UI control to sidebar/filter bar
+4. Update ALL existing page queries to use the new filter
+
+**Improving design:**
+1. Read `references/design-system.md`
+2. Apply incrementally — don't rewrite the whole app
+3. Start with: color tokens → typography → card styling → animations
+4. For Next.js: update `globals.css` `@theme` block, add component styles
+5. For Streamlit: update `utils/design.py` CSS injection
+
+### Step 5: Verify
+
+Run the same validation pipeline as new apps (Phase 4), but focused on the changed areas:
+- Test the new feature works (Playwright navigate + interact)
+- Test existing features still work (regression)
+- Screenshot before/after for design changes
+
+---
+
+## Phase 0: DISCOVER — Interactive Requirements Gathering (New Apps)
+
+**For NEW apps only. Skip this if enhancing an existing app (use Phase 0E above).**
+
+**Before starting the questionnaire**, parse the user's initial message. Extract any already-stated preferences (framework, use case, tables, colors, stack). Skip questions whose answers are already known. Only ask questions where the answer is ambiguous or missing.
+
+For questions you DO need to ask, use `AskUserQuestion`. Ask **one at a time**, adapting each question based on previous answers.
+
+### Question 1: Keboola Stack
+
+**If `KEBOOLA_STACK` was already determined during Prerequisites (MCP setup), skip this question entirely.**
+
+Otherwise, ask the user:
+```
+Which Keboola stack is your project on?
+```
+Options:
+- **AWS US (connection.keboola.com)** — Default US region
+- **AWS EU (connection.eu-central-1.keboola.com)** — EU Frankfurt on AWS
+- **Azure EU (connection.north-europe.azure.keboola.com)** — EU on Azure
+- **GCP EU Frankfurt (connection.europe-west3.gcp.keboola.com)** — EU on GCP
+- **GCP US Virginia (connection.us-east4.gcp.keboola.com)** — US on GCP
+
+**Store the answer as `KEBOOLA_STACK`.** Use the **Stack → Connection URL mapping** from the Prerequisites section above to set `STORAGE_API_URL` / `KBC_URL` in all config files (`.env.local`, `.streamlit/secrets.toml`, backend `.env`). The Connection URL is also used for Kai service discovery.
+
+### Question 2: Use Case
+
+Ask the user:
+```
+What kind of data app are you building?
+```
+Options:
+- **Analytics dashboard** — KPIs, charts, tables, filters (e.g., revenue tracking, usage metrics)
+- **AI-powered chat app** — Conversational interface using Kai AI Assistant
+- **Hybrid** — Dashboard with an embedded AI Assistant tab
+- **Custom web app** — Something else entirely
+
+**Adapt based on answer:**
+- If "AI-powered chat app" → recommend Next.js, set Kai=required
+- If "Analytics dashboard" → proceed to framework question
+- If "Hybrid" → recommend Next.js, set Kai=included
+- If "Custom" → ask follow-up about what they need
+
+### Question 3: Framework
+
+Ask the user:
+```
+Which framework would you like to use?
+```
+Options:
+- **Streamlit (Python)** — Best for rapid SQL dashboards. Limited design customization. Good for internal tools.
+- **Next.js (React + Tailwind)** — Full design system with animations, glassmorphism, ECharts. Production-grade. Used by Keboola's own apps.
+
+**Provide a recommendation** based on use case:
+- Analytics dashboard with simple filters → "Streamlit is a great fit"
+- Custom UX, animations, Kai chat needed → "Next.js is recommended"
+- Unsure → Explain trade-offs and let user decide
+
+### Question 4: Data Sources
+
+Ask the user:
+```
+What data will your app display? Do you know which Keboola tables you'll use?
 ```
 
-### Page Module Template
+**If `MCP_AVAILABLE = true`**, offer all options:
+- **I know my tables** — User provides table IDs
+- **Help me explore** — Use Keboola MCP to browse buckets and tables
+- **External API** — Data comes from outside Keboola
+- **Not sure yet** — Skip for now, configure later
 
-```python
-"""Page Title - Brief description of page purpose"""
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-from utils.data_loader import (
-    execute_aggregation_query,
-    get_table_name,
-    get_agent_filter_clause,
-    get_selected_agent_name
-)
+**If `MCP_AVAILABLE = false`**, offer only:
+- **I know my tables** — User provides table IDs
+- **External API** — Data comes from outside Keboola
+- **Not sure yet** — Skip for now, configure later
 
-def create_page_name():
-    """Main entry point for this page."""
+(Do NOT offer "Help me explore" without MCP — explain that data exploration requires the Keboola MCP connection.)
 
-    selected_agent = get_selected_agent_name()
-    st.title(f"📊 Page Title: {selected_agent}")
-    st.markdown("---")
+**If "Help me explore" (MCP available):**
+1. Use `{MCP_TOOL_PREFIX}get_buckets` to list available buckets
+2. Use `{MCP_TOOL_PREFIX}get_tables` for relevant buckets
+3. Use `{MCP_TOOL_PREFIX}get_table` to inspect schemas
+4. Use `{MCP_TOOL_PREFIX}query_data` to sample data
+5. Summarize findings and recommend which tables to use
 
-    # Build WHERE clause with all filters
-    where_parts = ['"type" = \'success\'', get_agent_filter_clause()]
-    where_clause = ' AND '.join(where_parts)
+### Question 5: Branding & Identity
 
-    # Section 1: Key Metrics
-    st.markdown("## 📈 Key Metrics")
+Ask the user:
+```
+Let's make this app yours. Do you have any of the following?
 
-    metrics_query = f'''
-        SELECT
-            COUNT(DISTINCT "user_name") as users,
-            COUNT(*) as events,
-            AVG("value") as avg_value
-        FROM {get_table_name()}
-        WHERE {where_clause}
-    '''
-
-    metrics = execute_aggregation_query(metrics_query)
-
-    if not metrics.empty:
-        row = metrics.iloc[0]
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric("Users", f"{int(row['users']):,}")
-        with col2:
-            st.metric("Events", f"{int(row['events']):,}")
-        with col3:
-            st.metric("Avg Value", f"{row['avg_value']:.2f}")
-
-    st.markdown("---")
-
-    # Section 2: Visualization
-    st.markdown("## 📊 Trends")
-
-    trend_query = f'''
-        SELECT
-            DATE("date_column") as date,
-            COUNT(*) as count
-        FROM {get_table_name()}
-        WHERE {where_clause}
-        GROUP BY DATE("date_column")
-        ORDER BY date
-    '''
-
-    trends = execute_aggregation_query(trend_query)
-
-    if not trends.empty:
-        fig = px.line(
-            trends,
-            x='date',
-            y='count',
-            title='Daily Trend'
-        )
-        st.plotly_chart(fig, use_container_width=True)
+1. Brand colors — I'll use them for the entire UI (cards, charts, buttons, header)
+2. A logo — I'll place it in the header + favicon + loading screen
+3. An app name — I'll set it as the page title and header text
+4. None of the above — I'll suggest a color palette based on your use case, or use Keboola defaults
 ```
 
-## SQL Best Practices
+**If user provides brand colors:** Use them as primary/secondary/accent. Derive the full palette (surface, border, chart colors) from their brand colors.
 
-### Always Check SQL Dialect First
-Different backends have different syntax:
+**If user provides a logo:** Place it in:
+- `Header.tsx` (top-left, replacing Keboola logo)
+- `public/favicon.svg` or `public/favicon.ico`
+- `LoadingScreen.tsx` (center animation)
+- `layout.tsx` metadata icons
 
-**Snowflake** (most common):
-- Use double quotes for identifiers: `"column_name"`
-- Date functions: `TO_TIMESTAMP()`, `DATE_TRUNC()`
-- String concatenation: `||`
+**If user provides an app name:** Use it in:
+- `layout.tsx` metadata title + description
+- `Header.tsx` title text
+- `LoadingScreen.tsx` subtitle
 
-**BigQuery**:
-- Use backticks for identifiers: `` `column_name` ``
-- Date functions: `TIMESTAMP()`, `DATE_TRUNC()`
-- Different function names
+**If user has none of the above**, offer to suggest colors:
 
-### Quote All Identifiers
-```python
-# ✅ Always use quoted identifiers
-query = f'''SELECT "user_name", "event_date" FROM {get_table_name()}'''
+**CI Color Suggestion Protocol** (when user has no brand colors):
 
-# ❌ Unquoted may fail due to case sensitivity
-query = f'''SELECT user_name, event_date FROM {get_table_name()}'''
+Based on use case, suggest 3 palettes:
+
+**Finance / Revenue:**
+```
+Primary: #1e3a5f (deep navy)     Secondary: #059669 (emerald)
+Accent: #f59e0b (amber)          Surface: #f8fafc
+Chart palette: #1e3a5f, #059669, #0ea5e9, #f59e0b, #8b5cf6, #ec4899
 ```
 
-### Handle NULLs Properly
-```python
-query = f'''
-    SELECT
-        COALESCE("category", 'Unknown') as category,
-        COUNT(*) as count
-    FROM {get_table_name()}
-    WHERE "value" IS NOT NULL
-    GROUP BY "category"
-'''
+**Marketing / Growth:**
+```
+Primary: #7c3aed (violet)        Secondary: #f43f5e (coral)
+Accent: #06b6d4 (cyan)           Surface: #faf5ff
+Chart palette: #7c3aed, #f43f5e, #06b6d4, #f59e0b, #10b981, #6366f1
 ```
 
-## Error Prevention
-
-### Before Writing Code
-1. ✅ Validate table exists with `mcp__keboola__get_table`
-2. ✅ Check column names and types from schema
-3. ✅ Test SQL queries with `mcp__keboola__query_data`
-4. ✅ Verify sample data values match expectations
-
-### During Development
-1. ✅ Use consistent variable names (avoid conflicts)
-2. ✅ Initialize session state with defaults
-3. ✅ Handle empty DataFrames gracefully
-4. ✅ Add error handling to all data loads
-
-### After Implementation
-1. ✅ Open app in browser with Playwright
-2. ✅ Navigate through all pages
-3. ✅ Test filter interactions
-4. ✅ Verify no errors in console
-5. ✅ Take screenshots to document working state
-
-## Common Pitfalls to Avoid
-
-### Variable Name Conflicts
-```python
-# ❌ BAD: Same variable name used twice
-user_type_filter = get_user_type_filter_clause()  # Returns string
-# ... later in code ...
-user_type_filter = st.multiselect(...)  # Now it's a list - CONFLICT!
-
-# ✅ GOOD: Use distinct names
-user_type_sql_filter = get_user_type_filter_clause()  # String for SQL
-# ... later ...
-user_type_multiselect = st.multiselect(...)  # List for UI
+**Operations / Engineering:**
+```
+Primary: #334155 (slate)         Secondary: #f97316 (orange)
+Accent: #0ea5e9 (sky)            Surface: #f8fafc
+Chart palette: #334155, #f97316, #0ea5e9, #10b981, #8b5cf6, #ef4444
 ```
 
-### Session State Key Conflicts
-```python
-# ❌ BAD: Using global session state key for local widget
-st.multiselect(..., key="user_type_filter")  # Conflicts with global filter
-
-# ✅ GOOD: Use unique key for local widget
-st.multiselect(..., key="local_user_type_filter")
+**Keboola Default:**
+```
+Primary: #097cf7 (Keboola blue)  Secondary: #002151 (dark navy)
+Accent: #CA8A04 (gold)           Surface: #f5f7fa
+Chart palette: #097cf7, #CA8A04, #1E3A8A, #059669, #DC2626, #8b5cf6
 ```
 
-### Loading Data Without Validation
-```python
-# ❌ BAD: Assume columns exist
-df = execute_query(query)
-value = df['assumed_column'][0]  # May crash
+Each palette includes: primary, secondary, accent, surface, positive (#16a34a), negative (#dc2626), warning (#f59e0b), and 6 chart colors.
 
-# ✅ GOOD: Validate first using Keboola MCP
-# 1. Check schema with mcp__keboola__get_table
-# 2. Query sample data with mcp__keboola__query_data
-# 3. Then write code with confidence
-if 'column' in df.columns:
-    value = df['column'][0]
+### Question 6: Pages & Features
+
+Ask the user:
+```
+What pages or features do you need?
 ```
 
-### Skipping Visual Verification
-```python
-# ❌ BAD: Make changes and assume they work
-# ... write code ...
-# ... commit and push ...
+**Suggest defaults based on use case:**
 
-# ✅ GOOD: Verify visually before committing
-# 1. mcp__playwright__browser_navigate("http://localhost:8501")
-# 2. mcp__playwright__browser_wait_for(time: 3)
-# 3. mcp__playwright__browser_take_screenshot()
-# 4. Test interactions, verify no errors
-# 5. Then commit
+For Analytics Dashboard:
+- Overview (KPI cards + summary charts)
+- Detail / Drill-down (tables with click-through)
+- Trends (time-series charts)
+- [Optional] AI Assistant tab
+
+For AI Chat App:
+- Chat (full-page Kai interface)
+- [Optional] Data Explorer sidebar
+
+For Hybrid:
+- Dashboard (KPIs + charts)
+- Detail pages
+- AI Assistant tab
+
+Let user add/remove/modify pages.
+
+### Question 7: Kai AI Assistant (if not already determined)
+
+Ask only if use case didn't already determine this:
+```
+Would you like to include a Kai AI Assistant tab?
+```
+Options:
+- **Yes** — Adds a chat tab where users can ask questions about their Keboola data
+- **No** — Skip AI integration, pure dashboard/app
+
+### Discovery Output
+
+After all questions, output a **structured build plan**:
+
+```
+## Build Plan
+
+**Keboola stack:** GCP EU Frankfurt (connection.europe-west3.gcp.keboola.com)
+**Framework:** Next.js / React + Tailwind CSS
+**Use case:** Analytics dashboard with AI Assistant
+**Color palette:**
+  - Primary: #097cf7
+  - Secondary: #002151
+  - Accent: #CA8A04
+  - Chart: [#097cf7, #CA8A04, #1E3A8A, #059669, #DC2626, #8b5cf6]
+
+**Data sources:**
+  - out.c-analysis.usage_metrics (columns: user_id, event_type, created_at, value)
+  - out.c-analysis.daily_summary (columns: date, metric, count, avg_value)
+
+**Pages:**
+  1. Overview — 4 KPI cards, revenue trend chart, summary table
+  2. Users — User activity table with drill-down
+  3. Trends — Time-series charts with period filter
+  4. AI Assistant — Kai chat panel
+
+**Kai integration:** Yes (tab)
+
+Shall I proceed with building this?
 ```
 
-## Required Tools Access
+Wait for user confirmation before proceeding.
 
-This skill requires access to:
-- **Keboola MCP**: For data validation and querying
-- **Playwright MCP**: For visual verification
-- **Read/Write/Edit**: For code modifications
-- **Bash**: For git operations and app management
+---
 
-## Development Checklist
+## Phase 1: VALIDATE — Data Structure Verification
 
-Before considering a task complete:
+Before writing code, validate all data assumptions.
 
-### Data Validation
-- [ ] Checked table schema with `mcp__keboola__get_table`
-- [ ] Queried sample data with `mcp__keboola__query_data`
-- [ ] Verified column names and types
-- [ ] Tested SQL filter conditions
+**If `MCP_AVAILABLE = true`:**
 
-### Implementation
-- [ ] Updated `utils/data_loader.py` with filter functions
-- [ ] Added UI controls to `streamlit_dashboard.py`
-- [ ] Imported filters in all page modules
-- [ ] Updated all SQL queries to use filters
-- [ ] Initialized session state with defaults
-- [ ] Avoided variable name conflicts
+Use Keboola MCP to validate:
+1. **Get project info**: `{MCP_TOOL_PREFIX}get_project_info` → SQL dialect, project config
+2. **Check each table**: `{MCP_TOOL_PREFIX}get_table(table_id)` → columns, types, fully qualified name
+3. **Query sample data**: `{MCP_TOOL_PREFIX}query_data(sql)` → verify values, test filters
+4. **Test SQL syntax**: Run each planned query against real data
 
-### Verification
-- [ ] Opened app in browser with Playwright
-- [ ] Navigated through all affected pages
-- [ ] Tested filter interactions
-- [ ] Took screenshots of working features
-- [ ] Verified no errors in UI or console
+Do not proceed to Phase 2 until all data assumptions are validated.
 
-### Documentation
-- [ ] Added code comments for complex logic
-- [ ] Updated inline documentation
-- [ ] Followed existing code style
+**If `MCP_AVAILABLE = false`:**
+
+Ask the user to provide for each table:
+1. **Table ID** (e.g., `out.c-analysis.revenue`)
+2. **Column names and types** (or share the table schema)
+3. **Sample data** (a few rows to understand the shape)
+4. **SQL dialect** (Snowflake or BigQuery — check project settings)
+
+If the user can't provide this, proceed to Phase 2 with best-effort assumptions and add `// TODO: validate table schema` comments where data is referenced.
+
+---
+
+## Phase 2: SCAFFOLD — Create Project from Template
+
+Based on discovery answers, scaffold the project:
+
+| Framework | Kai? | How to scaffold |
+|-----------|------|-----------------|
+| Next.js | No | Copy `templates/nextjs-dashboard-starter/` into the user's project directory |
+| Next.js | Yes | Copy `templates/nextjs-dashboard-starter/`, then add Kai components following `references/kai-integration.md` (backend proxy, KaiChat.tsx, assistant page, NavTabs AI tab, Nginx SSE config) |
+| Streamlit | No | Generate from `references/streamlit-patterns.md` (streamlit_app.py, utils/data_loader.py, page_modules/, .streamlit/config.toml) |
+| Streamlit | Yes | Generate from `references/streamlit-patterns.md`, then add Kai page following `references/kai-integration.md` |
+
+The `templates/nextjs-dashboard-starter/` is a complete, production-ready starter with:
+- Full design system (aurora gradient, glassmorphism, KPI cards, data tables)
+- Header, NavTabs, FilterBar, LoadingScreen, StickyKpiBar components
+- ECharts theme, TrendChart, DataTable
+- FastAPI backend with Keboola data loading pattern
+- keboola-config/ deployment setup (Nginx, Supervisord, setup.sh)
+- `// CUSTOMIZE:` comments throughout to guide customization
+
+Copy all files, preserving the `frontend/` + `backend/` + `keboola-config/` structure. Then proceed to customization.
+
+---
+
+## Phase 3: CUSTOMIZE — Apply User's Requirements
+
+### 3a. Apply Branding
+
+**For Next.js:** Update `app/globals.css` `@theme` block with the user's colors:
+```css
+@theme {
+  --color-brand-primary:   #USER_PRIMARY;   /* Main accent: buttons, links, chart primary */
+  --color-brand-secondary: #USER_SECONDARY; /* Dark: hover states, text emphasis */
+  --color-brand-accent:    #USER_ACCENT;    /* Secondary: success, profit, chart secondary */
+  --color-surface:         #USER_SURFACE;   /* Card/sidebar backgrounds */
+  --color-negative:        #DC2626;
+}
+```
+
+Update `lib/constants.ts` `COLORS` object to match — keys are `brandPrimary`, `brandSecondary`, `brandAccent`. Also update the `chart` array with the user's palette. Use hardcoded hex values (ECharts cannot resolve CSS variables).
+
+**For Streamlit:** Update `utils/design.py` CSS injection and `.streamlit/config.toml` theme.
+
+### 3b. Wire Data Sources
+
+Replace template placeholder queries with real queries validated in Phase 1:
+- Update table names to fully qualified names
+- Add user's specific columns to KPI calculations
+- Configure filter options based on actual distinct values
+
+### 3c. Build Pages
+
+For each page in the build plan:
+1. Create the page component/module
+2. Add SQL queries for that page's data
+3. Wire filters and interactions
+4. Add to navigation
+
+### 3d. Add Kai (if selected)
+
+Follow `references/kai-integration.md`:
+- For Next.js: Add `<KaiChat>` component, backend proxy routes, nginx SSE config
+- For Streamlit: Add Kai tab with kai-client library integration
+
+---
+
+## Phase 4: VERIFY — Comprehensive Validation
+
+Run the validation pipeline from `references/validation-pipeline.md`, adapting to available tools:
+
+### 1. Data validation
+
+**If `MCP_AVAILABLE`:** Re-run all queries via `{MCP_TOOL_PREFIX}query_data` to confirm they return expected results.
+**If not:** Ask the user to test queries manually or confirm data is correct.
+
+### 2. Visual verification (Playwright — optional)
+
+Check if Playwright MCP tools are available. If not, ask the user:
+> "I can take automated screenshots of every page to verify the design. This needs Playwright MCP. Want me to set it up?"
+
+If yes, update `.mcp.json` to add the `playwright` server (see Prerequisites section for the config), then use Playwright to screenshot each page at multiple viewport widths.
+
+If no, skip automated screenshots — tell the user to manually verify in their browser.
+
+### 3. Design checklist
+- Responsive at 3 widths (mobile, tablet, desktop)
+- Loading states present
+- Z-layer ordering correct (header > sticky bar > content)
+
+### 4. Accessibility
+- ARIA labels on interactive elements
+- Keyboard navigation works
+
+### 5. Performance
+- No `SELECT *` in queries
+- Date filters applied server-side
+- Caching configured
+- Target load time < 5s
+
+### Validation Report
+
+Output a summary:
+```
+Validation Results:
+- Data: PASS (4/4 tables verified, 8/8 queries tested)
+- Visual: PASS (4 pages, all rendering correctly) [or SKIPPED if no Playwright]
+- Design: PASS (responsive at 3 widths, loading screen present)
+- A11y: WARN (2 buttons missing aria-labels — fixed)
+- Performance: PASS (load time 2.1s, all queries cached)
+```
+
+---
 
 ## References
 
-See the following reference files in this skill directory for detailed guidance:
-- `best-practices.md` - Comprehensive development best practices
-- `workflow-guide.md` - Step-by-step workflow examples
-- `templates.md` - Code templates and patterns
+Detailed patterns for each aspect are in the `references/` directory:
+- `design-system.md` — Colors, typography, z-layers, animations, every component spec
+- `streamlit-patterns.md` — SQL-first architecture, Streamlit CX adaptation
+- `js-patterns.md` — Next.js architecture, React components, Tailwind patterns
+- `kai-integration.md` — Kai embed for both frameworks
+- `validation-pipeline.md` — Full validation checklist with Playwright + MCP
+
+---
 
 ## Examples
 
-### Example 1: Adding a Global Filter
+### Example 1: "Build me a revenue dashboard"
 
-**User Request**: "Add a global filter for user type, defaulting to external users only"
+**Discovery:**
+- Use case: Analytics dashboard
+- Framework: Next.js (user wants nice UX)
+- Tables: out.c-finance.revenue, out.c-finance.customers
+- Colors: Finance palette (navy + emerald)
+- Pages: Overview KPIs, Customer breakdown, Revenue trends
+- Kai: No
 
-**Your Response**:
-```
-I'll add a global user type filter following the validate → build → verify workflow.
+**Result:** Next.js app with 3 pages, navy/emerald theme, ECharts trend lines, sortable customer table, loading screen, responsive layout.
 
-Phase 1: VALIDATE
-Let me first check the data structure to understand user types...
-[Use mcp__keboola__get_table to check schema]
-[Use mcp__keboola__query_data to check distinct values]
+### Example 2: "I need a data app with AI chat to explore my project"
 
-Phase 2: BUILD
-Now I'll implement the filter...
-[Update data_loader.py with get_user_type_filter_clause()]
-[Add UI to streamlit_dashboard.py]
-[Update all page modules]
+**Discovery:**
+- Use case: Hybrid
+- Framework: Next.js
+- Tables: User wants to explore via AI
+- Colors: Keboola default
+- Pages: Overview + AI Assistant tab
+- Kai: Yes
 
-Phase 3: VERIFY
-Let me verify the implementation works...
-[Use Playwright to open app, test filter, take screenshots]
+**Result:** Next.js app with overview dashboard + Kai chat panel, Keboola blue theme, SSE streaming chat with tool approval.
 
-✅ Implementation complete and verified!
-```
+### Example 3: "Quick Streamlit dashboard for internal metrics"
 
-### Example 2: Adding a New Metric
+**Discovery:**
+- Use case: Analytics dashboard
+- Framework: Streamlit (quick internal tool)
+- Tables: out.c-metrics.daily_events
+- Colors: Keboola default
+- Pages: Overview + Trends
+- Kai: No
 
-**User Request**: "Add average session duration to the overview page"
-
-**Your Response**:
-```
-Phase 1: VALIDATE
-Let me check if we have duration data available...
-[Query table schema]
-[Check sample data to verify duration column format]
-
-Phase 2: BUILD
-[Add metric calculation to overview page query]
-[Add display to page layout]
-
-Phase 3: VERIFY
-[Open app, navigate to overview, verify metric displays correctly]
-```
-
-## Remember
-
-1. **Never skip validation** - Always check schemas and data first
-2. **Never skip verification** - Always test with Playwright before committing
-3. **Follow SQL-first architecture** - Aggregate in database, not Python
-4. **Avoid assumptions** - Query actual data to verify
-5. **Test interactions** - Don't just look, click and interact
-6. **Document as you go** - Future developers will thank you
-
-You have the tools to build data apps with confidence. Use them!
+**Result:** Streamlit app with SQL-first queries, cached data, metric cards, Plotly charts, sidebar filters.
