@@ -406,6 +406,57 @@ def _fetch_data(self, url: str) -> dict:
 
 ## Configuration Schema
 
+### ConfigRow Merging — Critical Behavior
+
+**IMPORTANT**: When a component uses `configRows`, the Keboola platform **automatically merges** the configRow parameters into the root configuration before the component runs. The component always receives a single, already-merged `self.configuration.parameters` dict — it never needs to read root config and row config separately.
+
+**How merging works:**
+- Root config parameters act as defaults / shared settings (e.g., credentials, global options)
+- ConfigRow parameters override / extend them with row-specific settings (e.g., endpoint, object type)
+- The merged result is available via `self.configuration.parameters` as usual
+
+```python
+# ✅ CORRECT — just read self.configuration.parameters, already merged
+class Component(CommonInterface):
+    def run(self):
+        params = self.configuration.parameters
+        api_key = params["api_key"]          # may come from root config
+        endpoint = params["endpoint"]        # may come from configRow
+        # No need to distinguish where each param came from
+
+# ❌ WRONG — do NOT try to read root config and row config separately
+class Component(CommonInterface):
+    def run(self):
+        root_params = self.configuration.parameters          # wrong assumption
+        row_params = self.configuration.config_data["rows"]  # unnecessary and incorrect
+```
+
+**Schema design for configRow components:**
+- `configSchema.json` — defines shared/root-level parameters (credentials, global settings)
+- `configRowSchema.json` — defines per-row parameters (what varies between rows)
+- At runtime the platform merges them; the component sees one flat `parameters` dict
+
+```json
+// configSchema.json (root) — shared across all rows
+{
+  "properties": {
+    "#api_key": { "type": "string", "title": "API Key" },
+    "base_url":  { "type": "string", "title": "Base URL" }
+  }
+}
+
+// configRowSchema.json (row) — per-row variation
+{
+  "properties": {
+    "endpoint":   { "type": "string", "title": "Endpoint" },
+    "object_type":{ "type": "string", "title": "Object Type" }
+  }
+}
+
+// What the component receives in self.configuration.parameters at runtime:
+// { "#api_key": "...", "base_url": "...", "endpoint": "...", "object_type": "..." }
+```
+
 Create robust configuration schemas with proper UI elements:
 
 ```json

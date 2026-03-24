@@ -16,6 +16,10 @@ Quick reference guide for common patterns and anti-patterns in Keboola component
 - Use service account credentials for CI/CD
 - Follow semantic versioning for releases
 
+### ConfigRow Components
+- **Read all parameters from `self.configuration.parameters` — the platform merges root config and configRow parameters before the component runs**
+- **Design `configSchema.json` for shared/root settings (credentials, global options) and `configRowSchema.json` for per-row settings**
+
 ### Data Directory Management
 - **Remove cookiecutter example files and create component-specific `data/config.json`**
 - **Include realistic example parameters in `data/config.json` for local testing**
@@ -47,6 +51,10 @@ Quick reference guide for common patterns and anti-patterns in Keboola component
 - Skip state file management for incremental loads
 - Forget to handle null characters in CSV files
 - Deploy without proper testing
+
+### ConfigRow Components
+- **Try to read root config and row config separately — `self.configuration.parameters` already contains the merged result**
+- **Create separate code paths for "root config" vs "row config" — there is only one merged `parameters` dict**
 
 ### Data Directory Management
 - **Leave cookiecutter example files (test.csv, order1.xml, .gitkeep) in `data/` directory**
