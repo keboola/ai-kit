@@ -37,4 +37,50 @@ CMD ["python", "-u", "src/component.py"]
 ## When to deviate
 
 - **Uncomment `build-essential`** when a dependency requires C/C++ compilation (e.g., `psycopg2`, `numpy` on some platforms). This is the most common change needed.
-- **Multi-stage builds** (separate `base`/`test`/`production` targets) reduce CI times by allowing the test stage to reuse the built base layer. Only add if build time is a real problem — it increases Dockerfile complexity.
+- **Multi-stage builds** when the component has a large test suite or heavy dev dependencies and CI build time matters. See below.
+
+## Multi-stage Dockerfile (for large test suites)
+
+Use when you want CI to reuse the production image layer for tests instead of reinstalling everything from scratch. The base stage installs only production deps; the test stage extends it with dev deps.
+
+```dockerfile
+FROM python:3.13-slim AS base
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /code/
+COPY pyproject.toml uv.lock ./
+
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+RUN uv sync --no-dev --frozen
+
+COPY src/ src/
+COPY scripts/ scripts/
+
+FROM base AS test
+RUN uv sync --all-groups --frozen
+COPY tests/ tests/
+RUN uv run ruff check
+CMD ["uv", "run", "pytest", "tests/", "-v"]
+
+FROM base AS production
+CMD ["python", "-u", "/code/src/component.py"]
+```
+
+Key differences from the default:
+- `uv sync --no-dev --frozen` in the base stage — production deps only, smaller image
+- `test` stage extends `base`, adds dev deps and test files
+- `production` stage extends `base`, just sets the CMD
+
+When using multi-stage, update `docker-compose.yml` to target the test stage:
+
+```yaml
+  test:
+    build:
+      context: .
+      target: test
+    volumes:
+      - ./:/code
+      - ./data:/data
+    environment:
+      - KBC_DATADIR=./data
+```
