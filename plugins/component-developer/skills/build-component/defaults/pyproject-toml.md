@@ -9,7 +9,7 @@
 name = "your-component-name"
 dynamic = ["version"]
 readme = "README.md"
-requires-python = "~=3.13"
+requires-python = "~=3.13.0"
 dependencies = [
     "freezegun>=1.5.1",
     "keboola-component>=1.9.0",
@@ -31,7 +31,7 @@ line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
-extend-select = ["I"]
+extend-select = ["I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -60,7 +60,7 @@ Add a dependency only when the component explicitly needs it. Common additions:
 
 ## What not to change
 
-- **Python version (`~=3.13`)**: do not downgrade without a concrete compatibility reason (e.g., a dependency that doesn't support 3.13 yet). Do not upgrade until the cookiecutter template does.
+- **Python version (`~=3.13.0`)**: do not downgrade without a concrete compatibility reason (e.g., a dependency that doesn't support 3.13 yet). Do not upgrade until the cookiecutter template does.
 - **`ruff` line-length (120)**: Keboola standard. Do not change to 88 or any other value.
 - **`extend-select = ["I"]`**: enables isort-compatible import sorting. Add `"UP"` if the codebase already uses it, but do not remove `"I"`.
 - **`dynamic = ["version"]`**: version is injected by CI/CD from the git tag. Do not hardcode it.

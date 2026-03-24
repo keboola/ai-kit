@@ -8,12 +8,7 @@
 
 **`configSchema.json`** — minimal working default for a component with no user-configurable parameters:
 ```json
-{
-  "type": "object",
-  "title": "Configuration",
-  "required": [],
-  "properties": {}
-}
+{}
 ```
 
 **`configRowSchema.json`** — when the component does not use rows:
