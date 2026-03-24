@@ -231,7 +231,7 @@ When you need additional information, reference:
 - [Code Quality](references/code-quality.md) - Ruff, type hints, @staticmethod
 - [Workflow Patterns](references/workflow-patterns.md) - Self-documenting code
 - [Best Practices](references/best-practices.md) - DO/DON'T reference
-- **Default files** (`defaults/`): canonical defaults and deviation rules for each standard component file — `pyproject.toml`, `Dockerfile`, `docker-compose.yml`, `push.yml`, `build_n_test.sh`, `.pre-commit-config.yaml`, `configSchema.json`
+- [Default Files](defaults/) - Canonical defaults and deviation rules for `pyproject.toml`, `Dockerfile`, `push.yml`, `configSchema.json`, and more
 - [Developer Portal](references/developer-portal.md) - Registration and deployment
 - [Schema Overview](../build-component-ui/references/overview.md) - Complete reference for configSchema.json and configRowSchema.json
 - [UI Elements](../build-component-ui/references/ui-elements.md) - Field formats, options, and editor modes
