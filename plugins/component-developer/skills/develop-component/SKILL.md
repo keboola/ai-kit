@@ -76,22 +76,15 @@ Task tool with:
 
 The reviewer will provide actionable TODOs grouped by severity (Blocking / Important / Nice-to-Have).
 
-### Debugging: @debugger
+### Debugging: @debug-component
 
-**When to delegate:**
+**When to hand off:**
 - Component is failing with errors
 - User reports a failed job ID
 - Need to investigate why component isn't working
-- Need to query Keboola API for job/config details
 
-**Use the Task tool:**
-```
-Task tool with:
-- subagent_type: "component-developer:debugger"
-- prompt: "Debug failed job [job_id] for component [component_id]"
-```
-
-The debugger has access to Keboola MCP tools and can identify root causes.
+Tell the user to invoke the `debug-component` skill, which uses all available tools
+(Keboola MCP, Datadog, Linear, Slack) without permission restrictions.
 
 ### Testing: @tester
 
