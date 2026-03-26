@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "metadata": {
     "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
   },
@@ -30,13 +30,6 @@
       "version": "1.1.0",
       "source": "./plugins/dataapp-developer",
       "category": "development"
-    },
-    {
-      "name": "incident-commander",
-      "description": "Incident response toolkit for creating post-mortem documents from Slack incident channels",
-      "version": "1.0.0",
-      "source": "./plugins/incident-commander",
-      "category": "operations"
     },
     {
       "name": "keboola-cli",
