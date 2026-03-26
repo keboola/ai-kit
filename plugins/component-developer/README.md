@@ -54,17 +54,17 @@ Expert skill for debugging Keboola components using Keboola MCP tools and local 
 
 Expert skill for writing comprehensive tests including datadir tests and unit tests.
 
-### Reviewer
-**Command**: `@reviewer`
+### Review
+**Command**: `/review` (or `@review`)
 **Color**: 🔴 Red
 
-Comprehensive read-only reviewer covering both code quality and backward compatibility in a single pass. Uses Opus for high-quality analysis. Cannot modify files.
+Single consolidated reviewer covering code quality and backward compatibility in one pass.
 
-**Code quality:** architecture patterns, Config/Client separation, typing, Pythonic idioms, Ruff compliance, documentation.
+**Code quality:** architecture patterns (Config/Client separation, `__init__` initialization, `run()` as orchestrator), typing, Pythonic best practices. Runs ruff automatically for formatting and lint.
 
-**Backward compatibility:** config schema breaking changes, Pydantic model changes, sync action preservation, output table stability, state file compatibility — with real-world impact via Keboola telemetry.
+**Backward compatibility:** configSchema field changes, Pydantic model changes, sync action preservation, output table stability, state file compatibility — with real-world impact via Keboola telemetry.
 
-**Note:** Invokes both `review-component` and `review-backward-compatibility` skills internally. All telemetry output is anonymized.
+All telemetry output is anonymized. Never writes client names, project names, or stack URLs to public repos.
 
 ### Get Started
 **Command**: `@get-started`
@@ -552,22 +552,16 @@ plugins/component-developer/
 │   │   ├── references/
 │   │   │   └── testing.md
 │   │   └── scripts/
-│   ├── review-component/              # Code review
+│   ├── review/                        # Code quality + backward compatibility review
 │   │   ├── SKILL.md
-│   │   ├── references/
-│   │   │   ├── review-checklist.md
-│   │   │   ├── review-principles.md
-│   │   │   └── review-style-guide.md
-│   │   └── scripts/
+│   │   └── references/
+│   │       ├── code-quality.md
+│   │       ├── breaking-changes.md
+│   │       └── telemetry.md
 │   ├── test-component-vcr/            # VCR functional testing
 │   │   ├── SKILL.md
 │   │   └── references/
 │   │       └── vcr-quickstart.md
-│   ├── review-backward-compatibility/  # Backward compatibility review
-│   │   ├── SKILL.md
-│   │   └── references/
-│   │       ├── breaking-changes.md
-│   │       └── telemetry-analysis.md
 │   └── get-started/                   # Getting started
 │       └── SKILL.md
 ├── commands/                           # Slash commands
@@ -596,11 +590,18 @@ To improve this plugin:
 
 ---
 
-**Version**: 3.3.1
+**Version**: 3.4.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
+
+### 3.4.0 (2026-03-26)
+- **CONSOLIDATED**: `review-component` and `review-backward-compatibility` skills merged into single `review` skill
+- **REMOVED**: `reviewer` agent (replaced by `review` skill + `/review` command)
+- **SIMPLIFIED**: `/review` command is now a lean entry point — all logic lives in the skill
+- **IMPROVED**: Review now runs `ruff format --check` and `ruff check` automatically; linting issues reported as "run ruff" rather than individual findings
+- **TRIMMED**: Removed checklist and style-guide reference files; code-quality.md consolidated and lean
 
 ### 3.3.1 (2026-03-26)
 - **RENAMED**: `build-component` skill → `develop-component` (better reflects ongoing development, not just greenfield)
