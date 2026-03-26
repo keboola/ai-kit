@@ -93,7 +93,7 @@ Expert agent for reviewing component PRs with focus on **backward compatibility*
 **Command**: `@get-started`
 **Color**: 🟢 Green
 
-Guide for initializing new Keboola components using cookiecutter template.
+Initializes new Keboola components from cookiecutter template. Auto-detects whether a repo is already set up and skips initialization if so. Triggers conversationally when you describe a new component you want to build.
 
 ### VCR Tester
 **Command**: `@vcr-tester` (alias: `@test-component-vcr`)
@@ -136,12 +136,6 @@ Loads the canonical template files for Keboola components into context. Invoked 
 ## ⚡ Available Commands
 
 Quick actions for common component development tasks:
-
-### `/init` - Initialize New Component
-Initialize a new Keboola component from cookiecutter template with automatic cleanup.
-```bash
-/init my-awesome-extractor
-```
 
 ### `/schema-test` - Test Configuration Schemas
 Launch interactive schema tester for testing and validating configSchema.json and configRowSchema.json.
@@ -599,13 +593,9 @@ plugins/component-developer/
 │   │       ├── breaking-changes.md
 │   │       └── telemetry-analysis.md
 │   └── get-started/                   # Getting started
-│       ├── SKILL.md
-│       ├── references/
-│       │   └── initialization.md
-│       └── scripts/
+│       └── SKILL.md
 ├── commands/                           # Slash commands
 │   ├── generate-vcr-tests.md         # Generate VCR functional tests
-│   ├── init.md                        # Initialize new component
 │   ├── review.md                      # Code review
 │   └── schema-test.md                 # Test configuration schemas
 └── README.md                          # This file
