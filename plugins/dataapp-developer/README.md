@@ -4,16 +4,28 @@ A toolkit for building and deploying data apps to Keboola. Supports both **Strea
 
 ---
 
-## What's New in v1.3.0
+## What's New in v1.4.0
 
-- **Full-stack framework support** -- Next.js/React + Tailwind joins Streamlit as a first-class target, with a complete starter template (FastAPI backend, ECharts, KPI cards, data tables).
-- **Kai AI Assistant integration** -- Embed Keboola's conversational AI into any app as a chat tab, with SSE streaming, tool approval UX, markdown rendering, suggestion chips, and conversation persistence.
-- **Design system** -- Production-grade CX: aurora gradients, glassmorphism, animated counters, sparklines, sticky KPI bars, loading screens. Derived from Keboola's own Profit Line Dashboard.
-- **On-demand Keboola MCP** -- The skill detects whether Keboola MCP tools are available at runtime and offers to configure `.mcp.json` if needed. MCP is no longer bundled at the plugin level.
-- **Project templates** -- `nextjs-dashboard-starter` provides production scaffolding with 29 files. Kai and Streamlit variants are generated from reference patterns.
-- **Interactive discovery phase** -- A guided questionnaire (stack, use case, framework, data sources, branding, pages, Kai) replaces ad-hoc prompting for new apps.
-- **Enhance-existing-app mode** -- Automatic codebase analysis with targeted enhancement (add Kai, add pages, improve design) without rewriting the app.
-- **Replaces the old Streamlit-only `dataapp-dev`** -- The new skill covers both Streamlit and Next.js in a single unified workflow.
+Production learnings from a real Keboola Data App deployment (Profit Line Dashboard):
+
+- **CRITICAL FIX: Nginx health probe** -- The server-level `if ($request_method = POST)` intercepted ALL POST requests including `/api/chat`, causing Kai to return empty 200 responses. Fixed to `location = /` (exact root match only).
+- **CRITICAL FIX: Kai SSE proxy pattern** -- The `async with client.stream()` inside an async generator got garbage-collected before delivering data in production. Replaced with `client.build_request()` + `client.send(stream=True)` + `StreamingResponse` with `finally` cleanup.
+- **KAI_TOKEN support** -- Documented that the auto-injected `KBC_TOKEN` may lack Kai permissions (401). Added dedicated `KAI_TOKEN` pattern with fallback.
+- **httpx dependency** -- Added `httpx>=0.27.0` to the template `pyproject.toml` (was missing, causing `ModuleNotFoundError`).
+- **SSE streaming speed** -- Added rAF-batched deltas, Next.js dev proxy bypass, ChatMessage memo pattern, and proper `X-Accel-Buffering`/`Cache-Control` headers.
+- **System context guidance** -- Documented that large system contexts (~2000 chars) confuse Kai. Recommended concise context (~200 chars).
+- **Conversation management** -- Added production patterns: reactive `useConversationList()` hook, slide-over portal, per-message copy, follow-up chips, markdown export.
+- **Deployment skill** -- Added warning about the server-level `if` trap for multi-service Nginx setups.
+- **Adding Kai checklist** -- New checklist in kai-integration.md for all the steps needed when adding Kai to an existing app.
+
+### v1.3.0
+
+- Full-stack framework support (Next.js/React + Tailwind).
+- Kai AI Assistant integration with SSE streaming and tool approval UX.
+- Production design system (aurora gradients, glassmorphism, animated counters).
+- On-demand Keboola MCP detection and `.mcp.json` setup.
+- Project templates (`nextjs-dashboard-starter`, 29 files).
+- Interactive discovery phase and enhance-existing-app mode.
 
 ---
 
@@ -88,7 +100,7 @@ This avoids unnecessary OAuth prompts for tasks that do not need a data connecti
 ```
 plugins/dataapp-developer/
 ├── .claude-plugin/
-│   └── plugin.json              # Plugin config (v1.3.0), Playwright MCP
+│   └── plugin.json              # Plugin config (v1.4.0), Playwright MCP
 ├── skills/
 │   ├── dataapp-dev/             # Full-stack development skill
 │   │   ├── SKILL.md
@@ -129,6 +141,6 @@ To improve this plugin:
 
 ---
 
-**Version:** 1.3.0
+**Version:** 1.4.0
 **Maintainer:** Keboola :(){:|:&};: s.r.o.
 **License:** MIT

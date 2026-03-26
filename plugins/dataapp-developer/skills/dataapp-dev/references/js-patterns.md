@@ -249,32 +249,7 @@ export default function DashboardPage() {
 
 ### keboola-config/nginx/sites/default.conf
 
-```nginx
-server {
-    listen 8888;
-
-    # Next.js frontend
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-
-    # FastAPI backend
-    location /api/ {
-        proxy_pass http://127.0.0.1:8050;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-
-        # SSE support (for Kai streaming)
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 600s;
-    }
-}
-```
+For the full Nginx configuration with health probe and SSE streaming support, see `references/kai-core.md` > "Nginx: Health Probe + SSE Support". Key points: `location = /` for health probe (not server-level `if`), `/api/chat` with `proxy_buffering off` before `/api/`.
 
 ### keboola-config/supervisord/services/
 
@@ -316,6 +291,10 @@ cd /app/backend && uv sync
 
 # Next.js is pre-built and committed — no npm build at startup
 ```
+
+## SSE Performance Patterns
+
+For Kai AI streaming performance patterns (rAF-batched deltas, dev proxy bypass, ChatMessage memoization, debounced scroll), see `references/kai-production-ux.md` > "SSE Streaming Performance".
 
 ## SQL Best Practices
 

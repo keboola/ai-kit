@@ -413,16 +413,16 @@ export function registerAppTheme(colors: typeof COLORS) {
     grid: { left: '3%', right: '4%', bottom: '3%', top: 60, containLabel: true },
     line: { smooth: true, symbolSize: 6, lineStyle: { width: 2 } },
     categoryAxis: {
-      axisLine: { lineStyle: { color: 'var(--color-border)' } },
-      splitLine: { lineStyle: { color: 'var(--color-surface)' } },
+      axisLine: { lineStyle: { color: colors.border } },
+      splitLine: { lineStyle: { color: colors.surface } },
     },
     valueAxis: {
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: 'var(--color-border)' } },
+      splitLine: { lineStyle: { color: colors.border } },
     },
     tooltip: {
       backgroundColor: '#fff',
-      borderColor: 'var(--color-border)',
+      borderColor: colors.border,
       textStyle: { fontFamily: 'Plus Jakarta Sans' },
     },
   })

@@ -1,6 +1,6 @@
 {
   "name": "dataapp-developer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Toolkit for building and deploying data apps to Keboola — Streamlit and Next.js/React development with interactive discovery, design system, Kai AI Assistant integration, and comprehensive validation pipeline",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",

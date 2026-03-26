@@ -19,47 +19,37 @@ Credentials (`x-storageapi-token`, `x-storageapi-url`) stay on the backend. The 
 
 ### Backend: Kai Proxy Routes (FastAPI)
 
+**Prerequisite:** `httpx>=0.27.0` must be in your `backend/pyproject.toml` dependencies.
+
 Add to your `backend/main.py`:
 
 ```python
 from fastapi import Request
-from fastapi.responses import StreamingResponse
-import json, uuid
+from fastapi.responses import StreamingResponse, Response
+from typing import AsyncIterator
+import httpx, json, os, uuid
 
-# ─── Persistent HTTP client ─────────────────────────────────────────────────
-# IMPORTANT: Reuse a single httpx.AsyncClient across requests.
-# Creating a new client per request adds 500-1500ms (TCP + TLS handshake).
-# A persistent client keeps connections alive and reuses them.
-from contextlib import asynccontextmanager
-
-_http_client: httpx.AsyncClient | None = None
-
-@asynccontextmanager
-async def lifespan(app):
-    global _http_client
-    _http_client = httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=30.0))
-    yield
-    await _http_client.aclose()
-
-# Add lifespan to your FastAPI app: app = FastAPI(lifespan=lifespan)
-
-def _get_http_client() -> httpx.AsyncClient:
-    assert _http_client is not None, "App not started — httpx client not initialized"
-    return _http_client
+# ─── Credentials ─────────────────────────────────────────────────────────────
+# KAI_TOKEN: A dedicated token with Kai permissions. Falls back to KBC_TOKEN.
+# The auto-injected KBC_TOKEN may NOT have Kai assistant permissions (→ 401).
+# Create a dedicated token in Keboola and add it as a Data App secret.
+KBC_URL = os.environ.get("KBC_URL", "").strip().rstrip("/")
+KBC_TOKEN = os.environ.get("KAI_TOKEN", "").strip() or os.environ.get("KBC_TOKEN", "").strip()
 
 # ─── Kai service discovery ───────────────────────────────────────────────────
-_kai_url = None
+_kai_url: str | None = None
 
-async def discover_kai_url():
+async def _discover_kai_url() -> str:
     global _kai_url
     if _kai_url:
         return _kai_url
-    client = _get_http_client()
-    resp = await client.get(
-        f"{KBC_URL}/v2/storage",
-        headers={"x-storageapi-token": KBC_TOKEN},
-    )
-    data = resp.json()
+    base = KBC_URL.split("/v2/")[0] if "/v2/" in KBC_URL else KBC_URL
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{base}/v2/storage",
+            headers={"x-storageapi-token": KBC_TOKEN},
+        )
+        data = resp.json()
     svc = next((s for s in data.get("services", []) if s["id"] == "kai-assistant"), None)
     if not svc:
         raise HTTPException(500, "kai-assistant service not found")
@@ -67,27 +57,58 @@ async def discover_kai_url():
     return _kai_url
 
 # ─── SSE proxy ───────────────────────────────────────────────────────────────
-async def proxy_sse(payload: dict):
-    kai_url = await discover_kai_url()
-    client = _get_http_client()
-    async with client.stream(
-        "POST",
-        f"{kai_url}/api/chat",
-        headers={
-            "Content-Type": "application/json",
-            "x-storageapi-token": KBC_TOKEN,
-            "x-storageapi-url": KBC_URL,
-        },
-        json=payload,
-    ) as resp:
-        async for chunk in resp.aiter_bytes():
-            yield chunk
+# IMPORTANT: Do NOT use `async with client.stream()` inside an async generator.
+# In Keboola's production environment, the async generator gets garbage-collected
+# before the httpx stream delivers data, resulting in content-length: 0 responses.
+# Instead, create the client in the endpoint handler and return a StreamingResponse
+# with a simple generator + finally cleanup.
+
+async def _stream_kai(payload: dict):
+    """Proxy a request to Kai and return a StreamingResponse."""
+    kai_url = await _discover_kai_url()
+    base = KBC_URL.split("/v2/")[0] if "/v2/" in KBC_URL else KBC_URL
+
+    client = httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=30.0))
+    try:
+        req = client.build_request(
+            "POST",
+            f"{kai_url}/api/chat",
+            headers={
+                "Content-Type": "application/json",
+                "x-storageapi-token": KBC_TOKEN,
+                "x-storageapi-url": base,
+            },
+            json=payload,
+        )
+        resp = await client.send(req, stream=True)
+
+        if resp.status_code != 200:
+            error_body = await resp.aread()
+            await resp.aclose()
+            await client.aclose()
+            return Response(content=error_body, status_code=resp.status_code)
+
+        async def stream_and_cleanup() -> AsyncIterator[bytes]:
+            try:
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+            finally:
+                await resp.aclose()
+                await client.aclose()
+
+        return StreamingResponse(
+            stream_and_cleanup(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache, no-store", "X-Accel-Buffering": "no"},
+        )
+    except Exception:
+        await client.aclose()
+        raise
 
 @app.post("/api/chat")
-async def chat(request: Request):
+async def kai_chat(request: Request):
     body = await request.json()
-    return StreamingResponse(proxy_sse(body), media_type="text/event-stream",
-                             headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
+    return await _stream_kai(body)
 
 @app.post("/api/chat/{chat_id}/{action}/{approval_id}")
 async def tool_approval(chat_id: str, action: str, approval_id: str):
@@ -107,8 +128,7 @@ async def tool_approval(chat_id: str, action: str, approval_id: str):
         "selectedChatModel": "chat-model",
         "selectedVisibilityType": "private",
     }
-    return StreamingResponse(proxy_sse(payload), media_type="text/event-stream",
-                             headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
+    return await _stream_kai(payload)
 ```
 
 ### Frontend: KaiChat React Component
@@ -354,14 +374,61 @@ export default function AssistantPage() {
 }
 ```
 
-### Nginx: SSE Support
+### Nginx: Health Probe + SSE Support
 
-In `keboola-config/nginx/sites/default.conf`, ensure the `/api/` location has:
+**CRITICAL:** The Keboola health probe (`POST /`) must be handled in `location = /` (exact root match only), NOT at the server level. A server-level `if ($request_method = POST) { return 200; }` intercepts ALL POST requests including `/api/chat`, causing Kai to return empty 200 responses.
+
+In `keboola-config/nginx/sites/default.conf`:
 ```nginx
-proxy_buffering off;
-proxy_cache off;
-proxy_read_timeout 600s;
+server {
+    listen 8888;
+    server_name _;
+
+    # Health probe: POST to exact root only
+    location = / {
+        if ($request_method = POST) { return 200; }
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # Kai SSE — MUST come BEFORE /api/ (more specific prefix first)
+    location /api/chat {
+        proxy_pass http://127.0.0.1:8050;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 600s;
+    }
+
+    # Other API routes
+    location /api/ {
+        proxy_pass http://127.0.0.1:8050;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Next.js frontend
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
 ```
+
+**Location ordering matters:** `/api/chat` must come before `/api/` — Nginx matches the most specific prefix first.
 
 ---
 
@@ -409,30 +476,20 @@ Add `kai-prose` CSS to `globals.css` for typographic styling:
 
 ### 2. Dynamic System Context
 
-Inject live app data into the first message so Kai knows the dashboard context:
+**Keep system context concise (~200 chars max).** Large system contexts (2000+ chars with lookup tables, URL templates, and detailed formatting instructions) confuse Kai — it focuses on formatting instead of querying project data.
 
 ```typescript
-function buildSystemContext(kpis: KpiResponse, me: UserMeResponse, platform: PlatformInfo) {
-  return `You are helping a user explore their Keboola data app.
-
-Current dashboard KPIs:
-- Total Revenue: ${formatCurrency(kpis.total_revenue)}
-- Gross Margin: ${formatPercent(kpis.gp_margin_pct)}
-- Revenue Delta YoY: ${formatDelta(kpis.delta_revenue_pct)}
-
-User: ${me.email} (role: ${me.role})
-Keboola stack: ${platform.connection_url}
-
-When linking to accounts, use markdown: [Account Name](/account/{id})
-When linking to groups, use: [Group Name](/group/{id})
-When linking to Keboola resources, use full URLs: [Flow Name](${platform.connection_url}/...)`
+function buildSystemContext(kpis: KpiResponse, me: UserMeResponse) {
+  return `[Context: Revenue: ${formatCurrency(kpis.total_revenue)} (${formatDelta(kpis.delta_revenue_pct)} YoY), GP Margin: ${formatPercent(kpis.gp_margin_pct)}, ${groups?.length ?? 0} customer groups. User: ${me.role}. Use your tools to query the Keboola project data.]`
 }
 ```
+
+**What NOT to include:** full account/group ID lookup tables, Keboola URL templates, multi-line link formatting instructions, detailed role descriptions. Keep link formatting to one line at most.
 
 Prepend this context to the first message's parts:
 ```typescript
 parts: [
-  { type: 'text', text: systemContext },  // hidden context
+  { type: 'text', text: systemContext },  // hidden context — ~200 chars
   { type: 'text', text: userMessage },    // visible message
 ]
 ```
@@ -535,7 +592,36 @@ requestAnimationFrame(() => {
 })
 ```
 
-### 5. rAF-Batched SSE Rendering
+#### Production Conversation UX
+
+For a production-grade conversation experience, add these patterns:
+
+**Reactive conversation list** — use a `useConversationList()` hook with `CustomEvent` sync so multiple components stay in sync (follows the same pattern as settings.ts):
+```typescript
+// Dispatch after save:
+window.dispatchEvent(new CustomEvent('kai-conversations-changed'))
+
+// In useConversationList():
+useEffect(() => {
+  const handler = () => setConversations(loadConversations())
+  window.addEventListener('kai-conversations-changed', handler)
+  return () => window.removeEventListener('kai-conversations-changed', handler)
+}, [])
+```
+
+**Conversation panel** — render as a slide-over portal (not a sidebar — the app likely has no sidebar pattern). Use `createPortal` to mount on `document.body` with a glass-style backdrop.
+
+**Per-message copy** — add a copy-to-clipboard button on each assistant message bubble (appears on hover).
+
+**Follow-up suggestion chips** — after each assistant response, show 2-3 contextual follow-ups based on the response content.
+
+**Export as Markdown** — add a download button per conversation that exports messages as a `.md` file with user/assistant labels.
+
+### 5. SSE Streaming Performance
+
+Three patterns that significantly improve perceived Kai response speed:
+
+#### a) rAF-Batched SSE Deltas
 
 The basic SSE reader calls `setMessages` on every chunk, causing 50+ React re-renders per second. Batch with `requestAnimationFrame`:
 
@@ -561,6 +647,10 @@ onDelta: (delta) => {
   pendingDelta += delta
   if (!rafId) rafId = requestAnimationFrame(flushDelta)
 }
+
+// After the SSE loop ends — flush any remaining delta:
+if (rafId) cancelAnimationFrame(rafId)
+if (pendingDelta) { accumulated += pendingDelta; /* final setMessages */ }
 ```
 
 This drops re-renders from 50+/sec to ~60/sec (once per frame).
@@ -576,6 +666,43 @@ function scheduleScroll() {
   })
 }
 ```
+
+#### b) Bypass Next.js Dev Proxy for SSE
+
+The Next.js `rewrites()` dev proxy buffers SSE responses — chunks arrive all at once after the stream completes. In dev mode, hit the backend directly:
+
+```typescript
+const CHAT_API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8050' : ''
+
+// In sendMessage:
+await readSSEStream(`${CHAT_API_BASE}/api/chat`, ...)
+```
+
+In production (Nginx), relative `/api/chat` works fine because Nginx proxies with `proxy_buffering off`.
+
+#### c) Memoize ChatMessage Component
+
+Prevents re-rendering old messages during streaming — only the actively streaming message updates:
+
+```typescript
+const ChatMessage = memo(ChatMessageInner, (prev, next) => {
+  if (prev.message.content !== next.message.content) return false
+  if (prev.isStreaming !== next.isStreaming) return false
+  if (prev.isWaiting !== next.isWaiting) return false
+  if (prev.isLastAssistant !== next.isLastAssistant) return false
+  return true
+})
+```
+
+#### d) Backend Streaming Headers
+
+Both chat endpoints must include these headers to prevent buffering at every layer:
+
+```python
+headers={"Cache-Control": "no-cache, no-store", "X-Accel-Buffering": "no"}
+```
+
+`X-Accel-Buffering: no` tells Nginx not to buffer. `Cache-Control: no-cache, no-store` prevents intermediate caches from holding the stream.
 
 ### 6. Backend: /api/platform Endpoint
 
@@ -753,10 +880,27 @@ def create_assistant_page():
 ## Credentials
 
 Both frameworks use the same env vars:
-- `STORAGE_API_TOKEN` / `KBC_TOKEN`
-- `STORAGE_API_URL` / `KBC_URL`
+- `STORAGE_API_TOKEN` / `KBC_TOKEN` — Storage API token
+- `STORAGE_API_URL` / `KBC_URL` — Keboola connection URL
+- `KAI_TOKEN` (optional but recommended) — Dedicated token with Kai permissions
 
-**IMPORTANT**: `STORAGE_API_URL` / `KBC_URL` must match the user's Keboola stack:
+### KAI_TOKEN — Dedicated Kai Token
+
+**IMPORTANT**: The auto-injected `KBC_TOKEN` in Keboola Data Apps is a Storage API token that may NOT have Kai assistant permissions. Sending it to the Kai service returns `401 Unauthorized`.
+
+**Fix:** Create a dedicated token with Kai permissions:
+1. In Keboola UI, go to Settings > API Tokens
+2. Create a new token with Kai assistant permissions enabled
+3. Add it as a Data App secret mapped to `KAI_TOKEN`
+4. Backend code checks `KAI_TOKEN` first, falls back to `KBC_TOKEN`:
+
+```python
+KBC_TOKEN = os.environ.get("KAI_TOKEN", "").strip() or os.environ.get("KBC_TOKEN", "").strip()
+```
+
+### Keboola Stack URLs
+
+`STORAGE_API_URL` / `KBC_URL` must match the user's Keboola stack:
 
 | Stack | URL |
 |-------|-----|
@@ -772,3 +916,13 @@ This URL is used for:
 - `KaiClient.from_storage_api(storage_api_url=...)` in Streamlit
 
 In Keboola production, these come from Data App secrets mapped to env vars. For local development, set them in `.env.local` or `.streamlit/secrets.toml`.
+
+### Adding Kai Checklist
+
+When adding Kai to an existing app, ensure:
+- [ ] `httpx>=0.27.0` in `backend/pyproject.toml`
+- [ ] `KAI_TOKEN` secret added to Data App (or confirmed `KBC_TOKEN` has Kai permissions)
+- [ ] `KBC_URL` secret added to Data App
+- [ ] Nginx `location = /` for health probe (not server-level `if`)
+- [ ] Nginx `/api/chat` location BEFORE `/api/` with `proxy_buffering off`
+- [ ] Backend uses `_stream_kai()` pattern (not async generator with nested context managers)
