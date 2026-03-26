@@ -1,13 +1,16 @@
 ---
 name: get-started
 description: >
-  Initializes a new Keboola Python component from the official cookiecutter template.
-  Invoke this skill whenever the user wants to build, create, or start a new Keboola
-  component — even if they just describe what it should do ("I need a component that
-  pulls data from X", "let's build an extractor for Y", "create a new writer for Z").
-  Also invoke when in a repo that looks uninitialized (no src/component.py or
-  component_config/ present). Do NOT invoke when a component is clearly already
-  set up and the user is asking about implementation.
+  Mandatory initialization workflow for new Keboola Python components — use this skill before
+  writing any code. Contains the exact cookiecutter command, Keboola-specific post-template
+  cleanup steps, KBC_DATADIR directory structure, data/config.json format, and first commit
+  format that are easy to get wrong without this reference. Invoke whenever the user is
+  starting from a fresh or empty repository, has never built a Keboola component before,
+  wants to run the cookiecutter template, or says things like "new extractor for X",
+  "build ex-something from scratch", "fresh repo", "empty git repo", "brand new component",
+  "never done this in keboola", "initialize a component", "scaffolding a new component",
+  "just initialized the git repo", "nothing set up yet". Not for existing components
+  that already have src/component.py.
 metadata:
   tools: "Bash, Read, Write, Edit, Glob, AskUserQuestion"
   model: sonnet
