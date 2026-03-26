@@ -1,0 +1,8 @@
+# Sync note: tracks cookiecutter-python-component — update when template changes
+# Keep both ruff and ruff-format hooks. Keep rev in sync with ruff version in pyproject.toml.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+      - id: ruff-format

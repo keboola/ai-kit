@@ -231,7 +231,7 @@ When you need additional information, reference:
 - [Code Quality](references/code-quality.md) - Ruff, type hints, @staticmethod
 - [Workflow Patterns](references/workflow-patterns.md) - Self-documenting code
 - [Best Practices](references/best-practices.md) - DO/DON'T reference
-- [Default Files](defaults/) - Canonical defaults and deviation rules for `pyproject.toml`, `Dockerfile`, `push.yml`, `configSchema.json`, and more
+- [Default Files](../component-defaults/assets/) - Canonical template files for `pyproject.toml`, `Dockerfile`, `push.yml`, `configSchema.json`, and more — use the `component-developer:component-defaults` skill to load them
 - [Developer Portal](references/developer-portal.md) - Registration and deployment
 - [Schema Overview](../build-component-ui/references/overview.md) - Complete reference for configSchema.json and configRowSchema.json
 - [UI Elements](../build-component-ui/references/ui-elements.md) - Field formats, options, and editor modes
@@ -273,14 +273,9 @@ After implementing any Python code:
 
 **CRITICAL REMINDERS:**
 
-- When creating or modifying standard component files, read the corresponding default file first and use the documented defaults. Any deviation must have an explicit reason:
-  - `pyproject.toml` → [defaults/pyproject-toml.md](defaults/pyproject-toml.md)
-  - `Dockerfile` → [defaults/dockerfile.md](defaults/dockerfile.md)
-  - `docker-compose.yml` → [defaults/docker-compose.md](defaults/docker-compose.md)
-  - `.github/workflows/push.yml` → [defaults/push-yml.md](defaults/push-yml.md)
-  - `scripts/build_n_test.sh` → [defaults/build-n-test.md](defaults/build-n-test.md)
-  - `.pre-commit-config.yaml` → [defaults/pre-commit.md](defaults/pre-commit.md)
-  - `configSchema.json` or `configRowSchema.json` → [defaults/config-schema.md](defaults/config-schema.md)
+- When creating or modifying standard component files, use the Task tool to invoke `component-developer:component-defaults` to load the canonical templates. Any deviation must have an explicit reason:
+  - `pyproject.toml`, `Dockerfile`, `docker-compose.yml`, `.github/workflows/push.yml`, `scripts/build_n_test.sh`, `.pre-commit-config.yaml` → from `component-defaults`
+  - `configSchema.json` or `configRowSchema.json` → read `../component-defaults/assets/config-schema.md` directly (not from component-defaults skill output)
 - Always check IDE warnings and fix them before committing
 - Type warnings often indicate real bugs
 - **"May be static" warnings MUST be fixed** - add `@staticmethod` decorator immediately
@@ -296,7 +291,7 @@ After implementing any Python code:
 - **Formatting and type safety?** → [references/code-quality.md](references/code-quality.md)
 - **Code organization unclear?** → [references/workflow-patterns.md](references/workflow-patterns.md)
 - **Quick DO/DON'T check?** → [references/best-practices.md](references/best-practices.md)
-- **Default for a specific file?** → `defaults/<filename>.md` (e.g., [defaults/pyproject-toml.md](defaults/pyproject-toml.md), [defaults/push-yml.md](defaults/push-yml.md), [defaults/config-schema.md](defaults/config-schema.md))
+- **Default for a specific file?** → invoke `component-developer:component-defaults` via Task tool
 - **Deploying to Developer Portal?** → [references/developer-portal.md](references/developer-portal.md)
 - **Designing configuration schemas?** → [../build-component-ui/references/overview.md](../build-component-ui/references/overview.md)
 - **Need UI field formats?** → [../build-component-ui/references/ui-elements.md](../build-component-ui/references/ui-elements.md)

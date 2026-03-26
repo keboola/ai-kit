@@ -1,0 +1,140 @@
+# Sync note: tracks cookiecutter-python-component — update when template changes
+# Only configure the env: block below. Do not modify job definitions, steps, or logic.
+# Deviate: add KBC_DEVELOPERPORTAL_APP_* vars for monorepos; add env vars to tests job for secrets.
+name: Keboola Component Build & Deploy Pipeline
+on:
+  push:  # skip the workflow on the main branch without tags
+    branches-ignore:
+      - main
+    tags:
+      - "*"
+
+concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
+env:
+  KBC_DEVELOPERPORTAL_APP: "vendor.component-id"   # full component ID from Developer Portal
+  KBC_DEVELOPERPORTAL_VENDOR: "vendor"              # your vendor name
+  KBC_TEST_PROJECT_CONFIGS: ""                      # space-separated config IDs for KBC integration tests (optional)
+  DOCKERHUB_USER: "keboolabot"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      app_image_tag: ${{ steps.tag.outputs.app_image_tag }}
+      is_semantic_tag: ${{ steps.tag.outputs.is_semantic_tag }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Set image tag
+        id: tag
+        run: |
+          REF="${GITHUB_REF##*/}"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="$REF"
+          else
+            TAG="$REF-${{ github.run_number }}"
+          fi
+          IS_SEMANTIC_TAG=$(echo "$REF" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+$' && echo true || echo false)
+          echo "is_semantic_tag=$IS_SEMANTIC_TAG" | tee -a $GITHUB_OUTPUT
+          echo "app_image_tag=$TAG" | tee -a $GITHUB_OUTPUT
+      - name: Build the Docker image
+        run: docker build -t ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest .
+      - name: Push the image to artifact storage
+        run: |
+          docker save ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest | gzip > /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          path: /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+
+  tests:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          path: /tmp/
+      - name: Load the Docker image
+        run: |
+          docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+          docker image ls -a
+          docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest ruff check .
+          echo "Running unit-tests..."
+          docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest python -m pytest tests/ -v
+
+  tests-kbc:
+    runs-on: ubuntu-latest
+    needs: tests
+    if: ${{ env.KBC_TEST_PROJECT_CONFIGS != '' && vars.KBC_STORAGE_TOKEN != '' }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          path: /tmp/
+      - name: Load the Docker image
+        run: docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+      - name: Run KBC test configs
+        uses: keboola/action-run-configs-parallel@master
+        with:
+          token: ${{ secrets.KBC_STORAGE_TOKEN }}
+          componentId: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          tag: ${{ needs.build.outputs.app_image_tag }}
+          configs: ${{ env.KBC_TEST_PROJECT_CONFIGS }}
+
+  push:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          path: /tmp/
+      - name: Load the Docker image
+        run: docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+      - name: Docker login
+        run: docker login --username "${{ env.DOCKERHUB_USER }}" --password "${{ secrets.DOCKERHUB_TOKEN }}"
+      - name: Push the image to ECR
+        uses: keboola/action-push-to-ecr@master
+        with:
+          vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR }}
+          app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          tag: ${{ needs.build.outputs.app_image_tag }}
+          push_latest: ${{ needs.build.outputs.is_semantic_tag }}
+          source_image: ${{ env.KBC_DEVELOPERPORTAL_APP}}:latest
+          login: ${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
+          password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - push
+      - build
+    if: ${{ needs.build.outputs.is_semantic_tag == 'true' }}
+    steps:
+      - name: Set tag in Developer Portal
+        uses: keboola/action-set-tag-developer-portal@master
+        with:
+          vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR }}
+          app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          login: ${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
+          password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+          tag: ${{ needs.build.outputs.app_image_tag }}
+
+  update_developer_portal_properties:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Update developer portal properties
+        uses: keboola/action-update-developer-portal-properties@master
+        with:
+          vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR }}
+          app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          login: ${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
+          password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}

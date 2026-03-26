@@ -112,14 +112,24 @@ Expert skill for setting up VCR (Video Cassette Recording) functional tests for 
 **Command**: `@migrate-component-to-uv`
 **Color**: 🟣 Purple
 
-Expert skill for migrating Keboola Python packages from legacy `setup.py` + pip to modern `pyproject.toml` + uv build system with deterministic dependencies.
+Expert skill for migrating Keboola Python components from `requirements.txt` + pip to `pyproject.toml` + uv with ruff linting.
 
 **Use cases:**
-- Migrate from `setup.py` to `pyproject.toml`
-- Modernize build system to use uv instead of pip
+- Migrate from `requirements.txt` to `pyproject.toml`
+- Upgrade Dockerfile to Python 3.13 + uv
 - Add deterministic dependency management with `uv.lock`
-- Update CI/CD workflows to use uv
-- Follow Keboola's python-http-client and python-component patterns
+- Update CI/CD workflows: `branches-ignore`, ruff, pytest
+- Align non-source files with cookiecutter template
+
+### Component Defaults
+**Command**: `@component-defaults`
+**Color**: 🟣 Purple
+
+Loads the canonical template files for Keboola components into context. Invoked automatically by other skills during alignment checks.
+
+**Use cases:**
+- Get the standard Dockerfile, push.yml, build_n_test.sh, docker-compose.yml, pre-commit-config.yaml, and pyproject.toml templates
+- Used internally by migrate-to-uv and build-component for cookiecutter alignment
 
 ---
 

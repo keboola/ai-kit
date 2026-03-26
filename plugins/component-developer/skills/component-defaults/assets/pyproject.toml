@@ -1,0 +1,34 @@
+# Sync note: tracks cookiecutter-python-component — update when template changes
+# Do not change: Python version (~=3.13.0), line-length (120), dynamic version, extend-select ["I"].
+# Remove unused default deps (keboola-http-client, pydantic, freezegun, mock) if component doesn't need them.
+# Add "UP" to extend-select if codebase already uses pyupgrade-style syntax.
+[project]
+name = "your-component-name"
+dynamic = ["version"]
+readme = "README.md"
+requires-python = "~=3.13.0"
+dependencies = [
+    "freezegun>=1.5.1",
+    "keboola-component>=1.9.0",
+    "keboola-http-client>=1.0.1",
+    "keboola-utils>=1.1.0",
+    "mock>=5.2.0",
+    "pydantic>=2.11.7",
+]
+
+[dependency-groups]
+dev = [
+    "keboola.datadirtest>=2.0.0",
+    "pytest>=9.0.2",
+    "ruff>=0.15.2",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+extend-select = ["I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

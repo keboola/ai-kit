@@ -1,6 +1,6 @@
 {
   "name": "component-developer",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Comprehensive toolkit for building Keboola Python components with Agent Skills format. Includes specialized skills for component development, UI/schema design, testing, debugging, code review, backward compatibility review, and VCR functional testing.",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
@@ -18,11 +18,5 @@
     "configuration",
     "conditional-fields",
     "testing"
-  ],
-  "mcpServers": {
-    "keboola": {
-      "type": "http",
-      "url": "https://mcp.us-east4.gcp.keboola.com/mcp"
-    }
-  }
+  ]
 }
