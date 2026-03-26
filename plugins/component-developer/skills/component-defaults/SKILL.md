@@ -1,7 +1,7 @@
 ---
 name: component-defaults
 description: Load canonical default files for Keboola Python components into context. Invoke this to get the standard templates for Dockerfile, push.yml, build_n_test.sh, docker-compose.yml, pre-commit-config.yaml, and pyproject.toml.
-tools: Read
+tools: Read, Glob
 model: haiku
 color: purple
 ---

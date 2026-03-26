@@ -73,7 +73,7 @@ All telemetry output is anonymized. Never writes client names, project names, or
 Initializes new Keboola components from cookiecutter template. Auto-detects whether a repo is already set up and skips initialization if so. Triggers conversationally when you describe a new component you want to build.
 
 ### VCR Tester
-**Command**: `@vcr-tester` (alias: `@test-component-vcr`)
+**Command**: `@vcr-tester`
 **Color**: 🔵 Cyan
 
 Expert skill for setting up VCR (Video Cassette Recording) functional tests for Keboola Python components. Records real HTTP interactions as cassettes and replays them deterministically in CI without credentials.
