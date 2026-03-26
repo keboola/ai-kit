@@ -83,8 +83,8 @@ my-component/
 | `default` | Default value for the field |
 | `required` | Array of required property names |
 | `propertyOrder` | Controls field display order (lower = higher) |
-| `format` | Special formatting/rendering (see [UI Elements](configuration-schema-ui-elements.md)) |
-| `options` | UI-specific options (see [UI Elements](configuration-schema-ui-elements.md)) |
+| `format` | Special formatting/rendering (see [UI Elements](ui-elements.md)) |
+| `options` | UI-specific options (see [UI Elements](ui-elements.md)) |
 | `enum` | Array of allowed values |
 | `enum_titles` | Human-readable labels for enum values |
 
@@ -543,9 +543,9 @@ Code pattern components require a special `supported_components` field:
 
 ## Related Documentation
 
-- [UI Elements](configuration-schema-ui-elements.md) - Field formats, options, and editor modes
-- [Sync Actions](configuration-schema-sync-actions.md) - Dynamic dropdowns and validation
-- [Advanced Patterns](configuration-schema-advanced.md) - Confluence best practices
-- [Examples](configuration-schema-examples.md) - Real production examples
-- [Initialization Guide](initialization-guide.md) - Setting up new components
-- [Architecture Guide](architecture.md) - Component structure and patterns
+- [UI Elements](ui-elements.md) - Field formats, options, and editor modes
+- [Sync Actions](sync-actions.md) - Dynamic dropdowns and validation
+- [Advanced Patterns](advanced.md) - Confluence best practices
+- [Examples](examples.md) - Real production examples
+- [Get Started](../../get-started/SKILL.md) - Setting up new components
+- [Architecture Guide](../../develop-component/references/architecture.md) - Component structure and patterns

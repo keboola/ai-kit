@@ -200,7 +200,7 @@ Before committing code, verify:
 
 ## Related Documentation
 
-- [Initialization Guide](initialization-guide.md) - Setting up new components
+- [Get Started](../../get-started/SKILL.md) - Setting up new components
 - [Architecture Guide](architecture.md) - Component structure and patterns
 - [Code Quality](code-quality.md) - Ruff, type hints, @staticmethod
 - [Workflow Patterns](workflow-patterns.md) - Self-documenting code

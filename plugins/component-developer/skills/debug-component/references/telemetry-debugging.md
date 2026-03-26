@@ -256,4 +256,4 @@ From project info, these are the database names for each stack:
 ## Related Guides
 
 - [Debugging Guide](debugging.md) - General component debugging with MCP and Datadog
-- [Architecture Guide](architecture.md) - Component structure and error handling
+- [Architecture Guide](../../develop-component/references/architecture.md) - Component structure and error handling

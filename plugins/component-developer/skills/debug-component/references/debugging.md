@@ -402,6 +402,6 @@ Example `data/config.json`:
 ## Related Guides
 
 - [Telemetry Debugging Guide](telemetry-debugging.md) - Query telemetry data for support ticket investigation
-- [Architecture Guide](architecture.md) - Component structure and error handling
-- [Code Quality Guide](code-quality.md) - Logging and debugging best practices
-- [Developer Portal Guide](developer-portal.md) - Registration and deployment
+- [Architecture Guide](../../develop-component/references/architecture.md) - Component structure and error handling
+- [Code Quality Guide](../../develop-component/references/code-quality.md) - Logging and debugging best practices
+- [Developer Portal Guide](../../develop-component/references/developer-portal.md) - Registration and deployment

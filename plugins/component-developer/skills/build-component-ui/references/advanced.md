@@ -1160,7 +1160,7 @@ These features together allow testing both:
 
 ## Related Documentation
 
-- [Overview](configuration-schema-overview.md) - Introduction and basics
-- [UI Elements](configuration-schema-ui-elements.md) - Field formats and options
-- [Sync Actions](configuration-schema-sync-actions.md) - Dynamic dropdowns and validation
-- [Examples](configuration-schema-examples.md) - Real production examples
+- [Overview](overview.md) - Introduction and basics
+- [UI Elements](ui-elements.md) - Field formats and options
+- [Sync Actions](sync-actions.md) - Dynamic dropdowns and validation
+- [Examples](examples.md) - Real production examples

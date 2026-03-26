@@ -611,6 +611,6 @@ def test_with_diff(self):
 
 ## Related Guides
 
-- [Debugging Guide](debugging.md) - Local testing and debugging techniques
-- [Architecture Guide](architecture.md) - Component structure and patterns
-- [Code Quality Guide](code-quality.md) - Testing and quality standards
+- [Debugging Guide](../../debug-component/references/debugging.md) - Local testing and debugging techniques
+- [Architecture Guide](../../develop-component/references/architecture.md) - Component structure and patterns
+- [Code Quality Guide](../../develop-component/references/code-quality.md) - Testing and quality standards

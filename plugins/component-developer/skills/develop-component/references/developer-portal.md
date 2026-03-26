@@ -174,6 +174,6 @@ Ensure the name doesn't contain restricted words ('extractor', 'writer', 'applic
 
 ## Related Guides
 
-- [Initialization Guide](initialization-guide.md) - Setting up component structure
+- [Get Started](../../get-started/SKILL.md) - Setting up component structure
 - [Architecture Guide](architecture.md) - Component patterns and best practices
-- [Debugging Guide](debugging.md) - Troubleshooting component issues
+- [Debugging Guide](../../debug-component/references/debugging.md) - Troubleshooting component issues
