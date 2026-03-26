@@ -26,7 +26,7 @@ Check for signs of an existing cookiecutter setup:
 ls src/component.py component_config/ pyproject.toml 2>/dev/null
 ```
 
-- If all present → skip initialization, hand off to `@build-component` immediately
+- If all present → skip initialization, hand off to `@develop-component` immediately
 - If missing or empty repo → proceed with initialization below
 
 ## Step 2: Gather component info
@@ -74,7 +74,7 @@ git commit -m "feat: initialize component from cookiecutter template"
 
 ## Step 6: Hand off
 
-Once initialized, pass to `@build-component` to start the implementation. Share what you know about the component's purpose so it has context.
+Once initialized, pass to `@develop-component` to start the implementation. Share what you know about the component's purpose so it has context.
 
 ---
 

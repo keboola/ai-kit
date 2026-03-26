@@ -118,7 +118,7 @@ For detailed review principles, patterns, and checklists, see:
 - [Review Style Guide](../references/review-style-guide.md) - Tone, phrasing, and output format details
 
 For Keboola component standards:
-- [Architecture Guide](../guides/component-builder/architecture.md)
-- [Best Practices](../guides/component-builder/best-practices.md)
-- [Code Quality](../guides/component-builder/code-quality.md)
-- [Workflow Patterns](../guides/component-builder/workflow-patterns.md)
+- [Architecture Guide](../develop-component/references/architecture.md)
+- [Best Practices](../develop-component/references/best-practices.md)
+- [Code Quality](../develop-component/references/code-quality.md)
+- [Workflow Patterns](../develop-component/references/workflow-patterns.md)

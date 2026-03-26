@@ -229,10 +229,10 @@ When providing debugging results:
 ## Related Documentation
 
 For detailed debugging techniques and tools:
-- [Debugging Guide](../references/debugging.md) - Complete debugging workflows and tool usage
-- [Telemetry Debugging](../references/telemetry-debugging.md) - Querying Keboola telemetry data
+- [Debugging Guide](references/debugging.md) - Complete debugging workflows and tool usage
+- [Telemetry Debugging](references/telemetry-debugging.md) - Querying Keboola telemetry data
 
 For component development best practices:
-- [Architecture Guide](../guides/component-builder/architecture.md)
-- [Best Practices](../guides/component-builder/best-practices.md)
-- [Error Handling](../guides/component-builder/best-practices.md#error-handling)
+- [Architecture Guide](../develop-component/references/architecture.md)
+- [Best Practices](../develop-component/references/best-practices.md)
+- [Error Handling](../develop-component/references/best-practices.md#error-handling)

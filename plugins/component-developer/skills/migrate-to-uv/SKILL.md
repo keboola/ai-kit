@@ -10,7 +10,7 @@ color: purple
 
 Migrate a Keboola component (Docker-based, ECR-deployed) from `requirements.txt` + pip to `pyproject.toml` + uv with ruff linting.
 
-**Execute all steps yourself using the tools available to you. Do NOT delegate to or invoke any other agent (component-builder, build-component, or similar) — except `component-developer:component-defaults` in Phase 6.**
+**Execute all steps yourself using the tools available to you. Do NOT delegate to or invoke any other agent (component-builder, develop-component, or similar) — except `component-developer:component-defaults` in Phase 6.**
 
 **You MUST complete every step below. Do not skip any step — if a file doesn't exist, move on silently.**
 
