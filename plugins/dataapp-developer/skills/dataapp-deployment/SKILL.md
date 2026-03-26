@@ -7,11 +7,15 @@ description: >-
   to environment variables, deploying Kai AI Assistant as a chat proxy service, or
   debugging Keboola Data App deployment issues such as POST-to-root failures, PEP 668
   pip errors, buffered streams, WebSocket upgrade failures, or Kai service discovery
-  errors. Trigger phrases: "deploy to Keboola", "set up keboola-config", "configure Nginx",
-  "fix deployment", "deploy Kai", "Kai proxy setup", "WebSocket not working",
-  "SSE buffering", "supervisord config", "setup.sh", "uv sync failing",
-  "data app won't start", "Cannot POST /", "Kai chat deployment",
-  "AI assistant data app".
+  errors. Also covers Kai chat UI patterns including floating chat widgets,
+  conversation history, table-to-chart visualization, tool approval UI, and
+  streaming message display. Trigger phrases: "deploy to Keboola",
+  "set up keboola-config", "configure Nginx", "fix deployment", "deploy Kai",
+  "Kai proxy setup", "WebSocket not working", "SSE buffering", "supervisord config",
+  "setup.sh", "uv sync failing", "data app won't start", "Cannot POST /",
+  "Kai chat deployment", "AI assistant data app", "Kai chat UI", "chat widget",
+  "table-to-chart", "conversation history", "tool approval UI",
+  "chat entry point", "streaming cursor".
 ---
 
 # Deploying Web Apps to Keboola Data Apps
@@ -237,6 +241,23 @@ Key infrastructure requirements:
 
 For the complete Kai deployment guide including backend proxy code, Nginx configuration, frontend WebSocket client, SSE event types, system context injection, environment variables, supervisord multi-server setup, and dev proxy configuration, see **`references/kai-deployment.md`**.
 
+## Kai Chat UI Patterns (Optional)
+
+The infrastructure above provides a working Kai chat proxy. The UI can be as simple as a text input and message list. For apps that need a richer chat experience, production-tested UI patterns are available covering:
+
+- **Chat entry points** — floating widget (bottom-right bubble) and/or full-page chat route
+- **Message display** — role-distinct bubbles, streaming cursor with stalling detection, markdown rendering with internal link handling
+- **Table-to-chart** — auto-detect chart type from markdown tables (bar, line, pie, scatter, waterfall), toggle between table/chart view, CSV export
+- **Conversation history** — sidebar panel with search, rename, delete, export; localStorage persistence (max 50 conversations)
+- **Context-aware suggestions** — initial suggestions from page context, follow-up pills parsed from Kai's `next_actions` code block
+- **Tool execution progress** — collapsible step display with friendly names and descriptions from `input.justification`
+- **Tool approval UI** — amber warning bar with approve/deny buttons, input disabled while pending
+- **Instant preview** — match entity names against cached dashboard data for immediate feedback before Kai responds
+- **Response caching** — 5-minute TTL keyed by query text, with cache badge and refresh bypass
+- **Portal & z-index strategy** — all floating UI via `ReactDOM.createPortal` to avoid stacking context issues
+
+Each pattern is self-contained and can be adopted independently. For implementation details, see **`references/kai-chat-ui-patterns.md`**.
+
 ## Common Errors and Solutions
 
 | Error | Cause | Fix |
@@ -274,3 +295,4 @@ For the complete Kai deployment guide including backend proxy code, Nginx config
 Detailed patterns and production-tested configurations:
 
 - **`references/kai-deployment.md`** — Complete guide for deploying Kai AI Assistant: backend proxy (FastAPI), Nginx config with WebSocket + SSE + polling, frontend streaming client, SSE event types, tool approval flow, system context injection, environment variables, supervisord multi-server, Next.js dev proxy, error patterns, and deployment checklist.
+- **`references/kai-chat-ui-patterns.md`** — Optional feature catalog for Kai chat UI: floating widget, full-page chat, message display with streaming cursor, table-to-chart visualization, conversation history panel, context-aware suggestions, tool approval UI, instant preview, response caching, animations, accessibility, portal/z-index strategy.
