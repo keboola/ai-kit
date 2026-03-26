@@ -21,3 +21,4 @@ Read each of the following files from `<base_dir>/assets/` and return their full
 - `assets/pre-commit-config.yaml`
 - `assets/pyproject.toml`
 - `assets/config-schema.md`
+- `assets/test_functional.py`

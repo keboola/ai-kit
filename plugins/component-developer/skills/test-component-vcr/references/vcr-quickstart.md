@@ -6,8 +6,6 @@ All commands below use the `keboola.datadirtest` CLI from `https://github.com/ke
 
 ## Install
 
-### pyproject.toml + uv (modern projects)
-
 ```toml
 # pyproject.toml [dependency-groups]
 dev = [
@@ -18,18 +16,6 @@ dev = [
 
 ```bash
 uv sync -U
-```
-
-### requirements.txt + pip (legacy projects)
-
-```
-# requirements.txt
-keboola.datadirtest>=2.0.0
-keboola.component>=1.9.0
-```
-
-```bash
-pip install -r requirements.txt
 ```
 
 **Verify:**
@@ -92,27 +78,9 @@ uv run python -m keboola.datadirtest scaffold --secrets secrets.json \
 
 **Skip-if-exists is the default**: tests that already have a cassette are skipped. Use `--regenerate` to force re-recording of all tests.
 
-## Test Runner (only Python file you write)
+## Test Runner
 
-```python
-# tests/test_functional.py
-from pathlib import Path
-import pytest
-from keboola.datadirtest.vcr import VCRDataDirTester, get_test_cases
-
-FUNCTIONAL_DIR = str(Path(__file__).parent / "functional")
-COMPONENT_SCRIPT = str(Path(__file__).parent.parent / "src" / "component.py")
-
-@pytest.mark.parametrize("test_name", get_test_cases(FUNCTIONAL_DIR))
-def test_functional(test_name):
-    """Run a single VCR functional test case."""
-    tester = VCRDataDirTester(
-        data_dir=FUNCTIONAL_DIR,
-        component_script=COMPONENT_SCRIPT,
-        selected_tests=[test_name],
-    )
-    tester.run()
-```
+Copy `tests/test_functional.py` from `component-developer:component-defaults` assets.
 
 ## configs.json Formats
 
@@ -234,12 +202,8 @@ docker run --rm mycomponent:test pytest
 ## Update keboola.datadirtest
 
 ```bash
-# pyproject.toml + uv
 uv lock --upgrade-package keboola-datadirtest
 uv sync
-
-# requirements.txt + pip
-pip install --upgrade "keboola.datadirtest"
 ```
 
 ## Re-record Tests
