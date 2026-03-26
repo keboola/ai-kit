@@ -230,7 +230,7 @@ When you need additional information, reference:
 - [Code Quality](references/code-quality.md) - Ruff, type hints, @staticmethod
 - [Workflow Patterns](references/workflow-patterns.md) - Self-documenting code
 - [Best Practices](references/best-practices.md) - DO/DON'T reference
-- [Default Files](../component-defaults/assets/) - Canonical template files for `pyproject.toml`, `Dockerfile`, `push.yml`, `configSchema.json`, and more — use the `component-developer:component-defaults` skill to load them
+- [Default Files](../component-defaults/assets/) - Canonical template files for `pyproject.toml`, `Dockerfile`, `push.yml`, `config-schema.md`, and more — use the `component-developer:component-defaults` skill to load them
 - [Developer Portal](references/developer-portal.md) - Registration and deployment
 - [Schema Overview](../build-component-ui/references/overview.md) - Complete reference for configSchema.json and configRowSchema.json
 - [UI Elements](../build-component-ui/references/ui-elements.md) - Field formats, options, and editor modes
