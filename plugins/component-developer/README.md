@@ -143,13 +143,6 @@ Initialize a new Keboola component from cookiecutter template with automatic cle
 /init my-awesome-extractor
 ```
 
-### `/run` - Run Component Locally
-Run component locally with test configuration and display results.
-```bash
-/run                    # Uses data/config.json
-/run data/config-test.json
-```
-
 ### `/schema-test` - Test Configuration Schemas
 Launch interactive schema tester for testing and validating configSchema.json and configRowSchema.json.
 ```bash
@@ -162,19 +155,6 @@ Perform thorough code review focusing on Keboola best practices and architecture
 ```bash
 /review                 # Review unstaged changes
 /review src/component.py
-```
-
-### `/fix` - Apply Review Fixes
-Apply fixes from code review incrementally with proper commits.
-```bash
-/fix                    # Per-severity mode (default)
-/fix --per-todo         # One commit per TODO
-```
-
-### `/migrate-repo` - Migrate Repository
-Migrate Keboola component repository from Bitbucket to GitHub with full history.
-```bash
-/migrate-repo git@bitbucket.org:workspace/repo.git
 ```
 
 ### `/generate-vcr-tests` - Generate VCR Functional Tests
@@ -624,12 +604,9 @@ plugins/component-developer/
 │       │   └── initialization.md
 │       └── scripts/
 ├── commands/                           # Slash commands
-│   ├── fix.md                         # Apply review fixes
 │   ├── generate-vcr-tests.md         # Generate VCR functional tests
 │   ├── init.md                        # Initialize new component
-│   ├── migrate-repo.md                # Migrate from Bitbucket
 │   ├── review.md                      # Code review
-│   ├── run.md                         # Run component locally
 │   └── schema-test.md                 # Test configuration schemas
 └── README.md                          # This file
 ```

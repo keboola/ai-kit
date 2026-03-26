@@ -296,6 +296,32 @@ uv run pytest --cov=src
 # Run with verbose output
 uv run pytest -v
 ```
+
+## Running the Component Locally
+
+For manual testing outside of pytest, run the component directly with a local data directory:
+
+```bash
+# Ensure data directory structure exists
+mkdir -p data/in/tables data/in/files data/out/tables data/out/files
+
+# Place your config at data/config.json, then run:
+KBC_DATADIR=data uv run python src/component.py
+```
+
+Exit codes:
+- `0` — success
+- `1` — user error (invalid config, missing params)
+- `2` — application error (network, API, unexpected exception)
+
+For debugging a failed run:
+```bash
+# Verbose logging
+KBC_DATADIR=data KBC_LOGGER_VERBOSITY=verbose uv run python src/component.py
+
+# Step through with debugger
+KBC_DATADIR=data python -m pdb src/component.py
+```
 ```
 
 ## Best Practices
@@ -324,9 +350,4 @@ uv run pytest -v
 ## Related Documentation
 
 For detailed testing patterns and examples:
-- [Testing Guide](../references/testing.md) - Complete testing strategies and patterns
-
-For component development:
-- [Architecture Guide](../guides/component-builder/architecture.md)
-- [Best Practices](../guides/component-builder/best-practices.md)
-- [Running and Testing](../guides/component-builder/running-and-testing.md)
+- [Testing Guide](references/testing.md) - Complete testing strategies and patterns
