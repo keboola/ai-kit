@@ -1,6 +1,13 @@
 ---
 name: component-defaults
-description: Load canonical default files for Keboola Python components into context. Invoke this to get the standard templates for Dockerfile, push.yml, build_n_test.sh, docker-compose.yml, pre-commit-config.yaml, and pyproject.toml.
+description: >
+  Canonical template files for Keboola Python components — Dockerfile, pyproject.toml,
+  push.yml, build_n_test.sh, docker-compose.yml, pre-commit-config.yaml, and
+  config-schema.md. Load this whenever creating or modifying any of these files in a
+  component, or when checking whether non-source files are aligned with the official
+  cookiecutter template. Any deviation from these templates must have an explicit reason.
+  Internal utility — usually invoked via Task from develop-component or migrate-to-uv,
+  but should be consulted any time one of these files is being touched.
 tools: Read, Glob
 model: haiku
 color: purple

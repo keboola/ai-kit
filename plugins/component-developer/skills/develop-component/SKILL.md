@@ -299,6 +299,7 @@ After implementing any Python code:
 - **Advanced schema patterns?** → [../build-component-ui/references/advanced.md](../build-component-ui/references/advanced.md)
 - **Schema examples?** → [../build-component-ui/references/examples.md](../build-component-ui/references/examples.md)
 - **Debugging issues?** → [../debug-component/references/debugging.md](../debug-component/references/debugging.md)
+- **Writing or fixing tests?** → invoke `component-developer:test-component`
 
 **Use the Task tool** to read documentation files when you need detailed guidance on specific topics. The documentation contains comprehensive examples and explanations.
 

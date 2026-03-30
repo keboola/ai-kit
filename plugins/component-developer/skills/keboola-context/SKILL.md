@@ -21,3 +21,4 @@ differs from what the code alone suggests.
 | File | When to read |
 |------|--------------|
 | `references/config-rows.md` | Any time configRows, row-level config, parallelism, or per-row state is involved — including when writing or reviewing tests for row-based components |
+| `references/telemetry.md` | Any time querying Keboola telemetry — connection details, key tables, column mappings, stack name mappings, anonymization rules |

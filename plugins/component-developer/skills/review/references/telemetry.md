@@ -8,41 +8,7 @@ Guide for querying Keboola telemetry data to assess the real-world impact of com
 
 The Keboola Telemetry Project (ID: 133) aggregates operational and usage telemetry from all Keboola stacks. It provides read-only access to raw telemetry data for analysis.
 
-**Connection Details:**
-- **Project ID:** 133
-- **Name:** L3 [Data Product] Telemetry Data Discovery
-- **Stack:** us-east4.gcp.keboola.com
-- **SQL Dialect:** Snowflake
-- **MCP Server:** `keboola-mcp-us-east4gcp`
-
-## Connecting to Telemetry
-
-1. Use the MCP server `keboola-mcp-us-east4gcp`
-2. Call `get_project_info` to verify connection to project 133
-3. Use `query_data` tool to execute SQL queries
-
-If switching from another project: `mcp-cli auth logout keboola-mcp-us-east4gcp` first, then re-authenticate selecting project 133.
-
-## Internal Projects to Exclude
-
-These are Keboola-internal testing projects — always exclude from "real user" impact counts:
-
-| Project ID | Stack | Notes |
-|-----------|-------|-------|
-| 4214 | us-east4.gcp | Internal testing |
-
-This list will be expanded over time. Always state in your review comment: "Excluding N known internal/test projects."
-
-## Key Tables
-
-All telemetry tables use database `KBC_USE4_37` and schema `out.c-kbc_public_telemetry`.
-
-| Table | Purpose |
-|-------|---------|
-| `kbc_component_configuration` | Root component configurations with `configuration_json` |
-| `kbc_component_configuration_row` | Configuration rows with `configuration_row_json` |
-| `kbc_job` | Job execution records |
-| `kbc_project` | Project metadata |
+For connection details, key tables, column mappings, internal projects to exclude, and anonymization rules — see [keboola-context: telemetry](../../keboola-context/references/telemetry.md).
 
 ## Telemetry Queries
 
@@ -172,21 +138,7 @@ This reveals:
 6. **Compile** anonymized telemetry summary for the review comment
 7. **Cross-reference** telemetry results with diff findings to determine final severity
 
-## Anonymization Rules
-
-When writing the review comment:
-
-| OK to include | NEVER include |
-|--------------|---------------|
-| Total count of configurations | Project IDs |
-| Number of configs using a parameter | Project names |
-| Job count and error rate percentage | Stack URLs or names |
-| Number of stacks used | Organization names |
-| "N configs use value X" | Company names |
-| "Excluding N internal projects" | Client names |
-| Aggregate statistics | Configuration IDs |
-
-**Template for telemetry section in review comment:**
+## Review Comment Template
 
 ```markdown
 ### Telemetry Summary
