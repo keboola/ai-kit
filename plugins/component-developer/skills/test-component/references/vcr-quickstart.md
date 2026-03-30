@@ -84,72 +84,7 @@ Copy `tests/test_functional.py` from `component-developer:component-defaults` as
 
 ## configs.json Formats
 
-### Wrapped format (recommended for most components)
-
-Place at `tests/setup/configs.json`:
-
-```json
-[
-  {
-    "name": "test_generation_all_granularities",
-    "config": {
-      "parameters": {
-        "date_from": "2024-01-01",
-        "date_to": "2024-01-02",
-        "endpoints": [
-          {"endpoint_name": "Generation", "granularity": "HR"},
-          {"endpoint_name": "Generation", "granularity": "DY"}
-        ]
-      }
-    }
-  },
-  {
-    "name": "test_missing_params",
-    "config": {
-      "parameters": {}
-    }
-  }
-]
-```
-
-### Writer components (with input tables/files)
-
-Place CSV files in `tests/setup/input_files/`. Reference them via `storage.input` in each config entry:
-
-```json
-[
-  {
-    "name": "01_write_rows",
-    "config": {
-      "parameters": {
-        "#api_key": "DUMMY_KEY"
-      },
-      "storage": {
-        "input": {
-          "tables": [
-            {"destination": "my_input_table.csv"}
-          ]
-        }
-      }
-    }
-  }
-]
-```
-
-The scaffolder auto-copies `tests/setup/input_files/my_input_table.csv` → each test's `source/data/in/tables/my_input_table.csv`.
-
-### Raw Keboola format (auto-named from `reports[0].report_type`)
-
-```json
-[
-  {"parameters": {"reports": [{"report_type": "Sales"}]}, "authorization": {...}},
-  {"parameters": {"reports": [{"report_type": "Inventory"}]}, "authorization": {...}}
-]
-```
-
-Generates: `01_Sales/`, `02_Inventory/`
-
-> **Limitation:** Auto-naming only works with `parameters.reports[0].report_type`. For other parameter structures, use the wrapped format.
+See [vcr-configs-format.md](vcr-configs-format.md) for full reference.
 
 ## Required .gitignore
 

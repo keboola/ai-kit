@@ -10,7 +10,7 @@ Component is making a request not in the cassette. Re-record, or add a custom ma
 
 ## CI shows "Ran 0 tests"
 
-CI uses `python -m unittest discover` which can't find parametrized pytest functions. Change to `python -m pytest` (Step 8 in the setup).
+CI uses `python -m unittest discover` which can't find parametrized pytest functions. Change to `python -m pytest` (Step 7 in the setup workflow).
 
 ## uv.lock out of date
 

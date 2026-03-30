@@ -4,6 +4,6 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 argument-hint: [--secrets path/to/secrets.json] [--chain-state]
 ---
 
-Set up VCR functional tests for this Keboola component using the `component-developer:vcr-tester` skill.
+Set up VCR functional tests for this Keboola component using the `component-developer:test-component` skill.
 
 Arguments: `$ARGUMENTS`

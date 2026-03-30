@@ -52,7 +52,14 @@ Expert skill for debugging Keboola components using Keboola MCP tools and local 
 **Command**: `@test-component` (alias: `@tester`)
 **Color**: 🟢 Green
 
-Expert skill for writing comprehensive tests including datadir tests and unit tests.
+Unified testing skill covering all test types for Keboola components.
+
+**Use cases:**
+- Datadir tests (primary method — mirrors KBC_DATADIR production structure)
+- Unit tests and mock-based tests for logic and transformation code
+- VCR functional tests with `keboola.datadirtest` — records real HTTP interactions once, replays in CI without credentials
+- Setting up VCR infrastructure: scaffold, sanitizers, secrets
+- Regression tests from platform debug job output (`stage_output.zip`)
 
 ### Review
 **Command**: `/review` (or `@review`)
@@ -71,19 +78,6 @@ All telemetry output is anonymized. Never writes client names, project names, or
 **Color**: 🟢 Green
 
 Initializes new Keboola components from cookiecutter template. Auto-detects whether a repo is already set up and skips initialization if so. Triggers conversationally when you describe a new component you want to build.
-
-### VCR Tester
-**Command**: `@vcr-tester`
-**Color**: 🔵 Cyan
-
-Expert skill for setting up VCR (Video Cassette Recording) functional tests for Keboola Python components. Records real HTTP interactions as cassettes and replays them deterministically in CI without credentials.
-
-**Use cases:**
-- Add functional tests to extractors/writers that call external APIs
-- Set up datadirtest with VCR replay
-- Scaffold test cases from configs
-- Migrate from mock-based tests to VCR replay tests
-- Handle OAuth token chaining across test runs
 
 ### Migrate Component to UV
 **Command**: `@migrate-component-to-uv`
@@ -107,6 +101,14 @@ Loads the canonical template files for Keboola components into context. Invoked 
 **Use cases:**
 - Get the standard Dockerfile, push.yml, build_n_test.sh, docker-compose.yml, pre-commit-config.yaml, and pyproject.toml templates
 - Used internally by migrate-to-uv and develop-component for cookiecutter alignment
+
+### Keboola Context
+**Command**: `@keboola-context`
+
+Platform-level knowledge about how Keboola Connection executes components. Pulled automatically whenever platform behaviour affects a decision — config structure, row handling, state, parallelism, test data layout.
+
+**Reference files:**
+- `config-rows.md` — how configRow parameters are merged, parallel execution, per-row state, and test fixture implications
 
 ---
 
@@ -547,21 +549,22 @@ plugins/component-developer/
 │   │   │   ├── debugging.md
 │   │   │   └── telemetry-debugging.md
 │   │   └── scripts/
-│   ├── test-component/                # Testing
+│   ├── test-component/                # Testing (datadir, unit, VCR)
 │   │   ├── SKILL.md
-│   │   ├── references/
-│   │   │   └── testing.md
-│   │   └── scripts/
+│   │   └── references/
+│   │       ├── datadir-tests.md
+│   │       ├── unit-and-mock-tests.md
+│   │       ├── vcr-configs-format.md
+│   │       ├── vcr-sanitizers.md
+│   │       ├── vcr-quickstart.md
+│   │       ├── vcr-troubleshooting.md
+│   │       └── vcr-debug-from-platform.md
 │   ├── review/                        # Code quality + backward compatibility review
 │   │   ├── SKILL.md
 │   │   └── references/
 │   │       ├── code-quality.md
 │   │       ├── breaking-changes.md
 │   │       └── telemetry.md
-│   ├── test-component-vcr/            # VCR functional testing
-│   │   ├── SKILL.md
-│   │   └── references/
-│   │       └── vcr-quickstart.md
 │   └── get-started/                   # Getting started
 │       └── SKILL.md
 ├── commands/                           # Slash commands
@@ -590,11 +593,18 @@ To improve this plugin:
 
 ---
 
-**Version**: 3.4.0
+**Version**: 3.3.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
+
+### 3.5.0 (2026-03-30)
+- **MERGED**: `test-component-vcr` skill absorbed into `test-component` — one unified testing entry point
+- **REMOVED**: `vcr-tester` skill (superseded)
+- **RESTRUCTURED**: `test-component` references split into `datadir-tests.md`, `unit-and-mock-tests.md`, and `vcr/` subdirectory
+- **UPDATED**: `/generate-vcr-tests` command now uses `test-component` skill
+- **UPDATED**: `tester` agent description updated to mention VCR
 
 ### 3.4.0 (2026-03-26)
 - **CONSOLIDATED**: `review-component` and `review-backward-compatibility` skills merged into single `review` skill

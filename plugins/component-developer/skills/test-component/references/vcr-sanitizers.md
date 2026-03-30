@@ -88,7 +88,7 @@ Default `replacement` is `"token"`, default `parameters` is `["access_token"]`.
 
 ## When to check for sanitizers
 
-After Step 5 (scaffold), before committing cassettes:
+After scaffold, before committing cassettes:
 
 ```bash
 # Spot dynamic URL params and potential leaks
