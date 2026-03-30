@@ -1,6 +1,3 @@
-# Sync note: tracks cookiecutter-python-component — update when template changes
-# Only configure the env: block below. Do not modify job definitions, steps, or logic.
-# Deviate: add KBC_DEVELOPERPORTAL_APP_* vars for monorepos; add env vars to tests job for secrets.
 name: Keboola Component Build & Deploy Pipeline
 on:
   push:  # skip the workflow on the main branch without tags
@@ -9,22 +6,60 @@ on:
     tags:
       - "*"
 
-concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
+concurrency: ci-${{ github.ref }}  # to avoid tag collisions in the ECR
 env:
-  KBC_DEVELOPERPORTAL_APP: "vendor.component-id"   # full component ID from Developer Portal
-  KBC_DEVELOPERPORTAL_VENDOR: "vendor"              # your vendor name
-  KBC_TEST_PROJECT_CONFIGS: ""                      # space-separated config IDs for KBC integration tests (optional)
-  DOCKERHUB_USER: "keboolabot"
+  # repository variables:
+  KBC_DEVELOPERPORTAL_APP: keboola.ex-sage-intacct
+  KBC_DEVELOPERPORTAL_VENDOR: keboola
+  DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+  KBC_DEVELOPERPORTAL_USERNAME: ${{ vars.KBC_DEVELOPERPORTAL_USERNAME }}
+
+  # repository secrets:
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}  # recommended for pushing to ECR
+  KBC_DEVELOPERPORTAL_PASSWORD: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+
+  # (optional) test KBC project: https://connection.keboola.com/admin/projects/0000
+  KBC_TEST_PROJECT_CONFIGS: ""  # space separated list of config ids
+  KBC_STORAGE_TOKEN: ${{ secrets.KBC_STORAGE_TOKEN }}  # required for running KBC tests
 
 jobs:
-  build:
+  push_event_info:
+    name: Push Event Info
     runs-on: ubuntu-latest
     outputs:
       app_image_tag: ${{ steps.tag.outputs.app_image_tag }}
       is_semantic_tag: ${{ steps.tag.outputs.is_semantic_tag }}
+      is_default_branch: ${{ steps.default_branch.outputs.is_default_branch }}
+      is_deploy_ready: ${{ steps.deploy_ready.outputs.is_deploy_ready }}
     steps:
-      - name: Check out the repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Fetch all branches from remote repository
+        run: git fetch --prune --unshallow --tags -f
+
+      - name: Get current branch name
+        id: current_branch
+        run: |
+          if [[ ${{ github.ref }} != "refs/tags/"* ]]; then
+            branch_name=${{ github.ref_name }}
+            echo "branch_name=$branch_name" | tee -a $GITHUB_OUTPUT
+          else
+            raw=$(git branch -r --contains ${{ github.ref }})
+            branch="$(echo ${raw/*origin\//} | tr -d '\n')"
+            echo "branch_name=$branch" | tee -a $GITHUB_OUTPUT
+          fi
+
+      - name: Is current branch the default branch
+        id: default_branch
+        run: |
+          echo "default_branch='${{ github.event.repository.default_branch }}'"
+          if [ "${{ github.event.repository.default_branch }}" = "${{ steps.current_branch.outputs.branch_name }}" ]; then
+             echo "is_default_branch=true" | tee -a $GITHUB_OUTPUT
+          else
+             echo "is_default_branch=false" | tee -a $GITHUB_OUTPUT
+          fi
+
       - name: Set image tag
         id: tag
         run: |
@@ -37,104 +72,191 @@ jobs:
           IS_SEMANTIC_TAG=$(echo "$REF" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+$' && echo true || echo false)
           echo "is_semantic_tag=$IS_SEMANTIC_TAG" | tee -a $GITHUB_OUTPUT
           echo "app_image_tag=$TAG" | tee -a $GITHUB_OUTPUT
-      - name: Build the Docker image
-        run: docker build -t ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest .
-      - name: Push the image to artifact storage
+
+      - name: Deploy-Ready check
+        id: deploy_ready
         run: |
-          docker save ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest | gzip > /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
-      - uses: actions/upload-artifact@v4
+          if [[ "${{ steps.default_branch.outputs.is_default_branch }}" == "true" \
+            && "${{ github.ref }}" == refs/tags/* \
+            && "${{ steps.tag.outputs.is_semantic_tag }}" == "true" ]]; then
+              echo "is_deploy_ready=true" | tee -a $GITHUB_OUTPUT
+          else
+              echo "is_deploy_ready=false" | tee -a $GITHUB_OUTPUT
+          fi
+
+  build-test:
+    name: Build Test Image
+    runs-on: ubuntu-latest
+    needs:
+      - push_event_info
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image (runs ruff check at build time)
+        uses: docker/build-push-action@v5
         with:
-          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          path: /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+          context: .
+          file: ./Dockerfile
+          target: test
+          tags: ${{ env.KBC_DEVELOPERPORTAL_APP }}-test:latest
+          outputs: type=docker,dest=/tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}-test.tar
+
+      - name: Upload test image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}-test
+          path: /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}-test.tar
 
   tests:
+    name: Run Tests
     runs-on: ubuntu-latest
-    needs: build
+    needs:
+      - push_event_info
+      - build-test
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download test image artifact
+        uses: actions/download-artifact@v4
         with:
-          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          path: /tmp/
-      - name: Load the Docker image
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}-test
+          path: /tmp
+
+      - name: Load Image & Run Tests
         run: |
-          docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+          docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}-test.tar
           docker image ls -a
-          docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest ruff check .
           echo "Running unit-tests..."
-          docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest python -m pytest tests/ -v
+          docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}-test:latest
 
   tests-kbc:
+    name: Run KBC Tests
+    needs:
+      - push_event_info
+      - build-test
     runs-on: ubuntu-latest
-    needs: tests
-    if: ${{ env.KBC_TEST_PROJECT_CONFIGS != '' && vars.KBC_STORAGE_TOKEN != '' }}
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          path: /tmp/
-      - name: Load the Docker image
-        run: docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
-      - name: Run KBC test configs
+      - name: Set up environment variables
+        run: |
+          echo "KBC_TEST_PROJECT_CONFIGS=${KBC_TEST_PROJECT_CONFIGS}" >> $GITHUB_ENV
+          echo "KBC_STORAGE_TOKEN=${{ secrets.KBC_STORAGE_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Run KBC test jobs
+        if: env.KBC_TEST_PROJECT_CONFIGS != '' && env.KBC_STORAGE_TOKEN != ''
         uses: keboola/action-run-configs-parallel@master
         with:
           token: ${{ secrets.KBC_STORAGE_TOKEN }}
           componentId: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          tag: ${{ needs.build.outputs.app_image_tag }}
+          tag: ${{ needs.push_event_info.outputs.app_image_tag }}
           configs: ${{ env.KBC_TEST_PROJECT_CONFIGS }}
 
-  push:
+  build-production:
+    name: Build Production Image
     runs-on: ubuntu-latest
-    needs: tests
+    needs:
+      - push_event_info
+      - tests
+      - tests-kbc
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          tags: ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest
+          outputs: type=docker,dest=/tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar
+
+      - name: Upload production image artifact
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          path: /tmp/
-      - name: Load the Docker image
-        run: docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar.gz
+          path: /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar
+
+  push:
+    name: Docker Image Push
+    runs-on: ubuntu-latest
+    needs:
+      - push_event_info
+      - build-production
+    env:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+          path: /tmp
+
+      - name: Load Image
+        run: |
+          docker load --input /tmp/${{ env.KBC_DEVELOPERPORTAL_APP }}.tar
+          docker image ls -a
+
       - name: Docker login
-        run: docker login --username "${{ env.DOCKERHUB_USER }}" --password "${{ secrets.DOCKERHUB_TOKEN }}"
-      - name: Push the image to ECR
+        if: env.DOCKERHUB_TOKEN
+        run: docker login --username "${{ env.DOCKERHUB_USER }}" --password "${{ env.DOCKERHUB_TOKEN }}"
+
+      - name: Push image to ECR
         uses: keboola/action-push-to-ecr@master
         with:
           vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR }}
           app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          tag: ${{ needs.build.outputs.app_image_tag }}
-          push_latest: ${{ needs.build.outputs.is_semantic_tag }}
-          source_image: ${{ env.KBC_DEVELOPERPORTAL_APP}}:latest
-          login: ${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
+          username: ${{ env.KBC_DEVELOPERPORTAL_USERNAME }}
           password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+          tag: ${{ needs.push_event_info.outputs.app_image_tag }}
+          push_latest: ${{ needs.push_event_info.outputs.is_deploy_ready }}
+          source_image: ${{ env.KBC_DEVELOPERPORTAL_APP }}
 
   deploy:
-    runs-on: ubuntu-latest
+    name: Deploy to KBC
+    env:
+      KBC_DEVELOPERPORTAL_PASSWORD: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
     needs:
+      - push_event_info
+      - build-production
       - push
-      - build
-    if: ${{ needs.build.outputs.is_semantic_tag == 'true' }}
+    if: needs.push_event_info.outputs.is_deploy_ready == 'true'
+    runs-on: ubuntu-latest
     steps:
-      - name: Set tag in Developer Portal
+      - name: Set Developer Portal Tag
         uses: keboola/action-set-tag-developer-portal@master
         with:
           vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR }}
           app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          login: ${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
+          username: ${{ env.KBC_DEVELOPERPORTAL_USERNAME }}
           password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
-          tag: ${{ needs.build.outputs.app_image_tag }}
+          tag: ${{ needs.push_event_info.outputs.app_image_tag }}
 
   update_developer_portal_properties:
+    name: Developer Portal Properties Update
+    env:
+      KBC_DEVELOPERPORTAL_PASSWORD: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+    needs:
+      - push_event_info
+      - build-production
+      - push
     runs-on: ubuntu-latest
-    needs: deploy
+    if: needs.push_event_info.outputs.is_deploy_ready == 'true'
     steps:
-      - name: Check out the repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
+
       - name: Update developer portal properties
-        uses: keboola/action-update-developer-portal-properties@master
-        with:
-          vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR }}
-          app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
-          login: ${{ secrets.KBC_DEVELOPERPORTAL_USERNAME }}
-          password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+        run: |
+          chmod +x scripts/developer_portal/*.sh
+          scripts/developer_portal/update_properties.sh

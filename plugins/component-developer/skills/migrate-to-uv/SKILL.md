@@ -30,10 +30,23 @@ cat .github/workflows/push.yml
 
 ### Create `pyproject.toml`
 
-Create `pyproject.toml` with this structure. Convert deps from `requirements.txt`:
-- `package.name==x.y.z` → `"package-name>=x.y.z"` (dot→dash, ==→>=)
-- Test-only deps (pytest, mock, freezegun) go in `[dependency-groups] dev`
+Create a minimal `pyproject.toml` with metadata and ruff config but **no dependencies yet** — you'll populate those with `uv add` next:
 - Always use `requires-python = "~=3.13.0"` and `target-version = "py313"`
+- Leave `dependencies = []` empty for now
+
+Then populate dependencies from `requirements.txt` using uv:
+
+```bash
+# Add all main deps at once
+uv add -r requirements.txt
+
+# Move test-only deps to the dev group (common ones: pytest, mock, freezegun, responses)
+# For each test dep found in requirements.txt:
+uv remove <test-dep>
+uv add --group dev <test-dep>
+```
+
+`uv add` auto-converts pinned versions to `>=` ranges and updates `uv.lock` in place — no manual conversion needed.
 
 ### Delete files
 
@@ -72,7 +85,7 @@ Replace bare `data/` with `/data`. Remove duplicate `.vscode/` entries.
 
 ```bash
 git add -u                                          # stages all deletions
-git add pyproject.toml .gitignore component_config/
+git add pyproject.toml uv.lock .gitignore component_config/
 git commit -m "migrate to pyproject.toml 📦"
 ```
 
@@ -82,32 +95,37 @@ git commit -m "migrate to pyproject.toml 📦"
 
 ### Update `Dockerfile`
 
-**ALWAYS upgrade base image to `python:3.13-slim`** regardless of current version unless library dependency issues during uv lock
+**Use the multi-stage build pattern.** The `base` stage is shared by both `test` and `production` — keeping the production image lean (no dev deps, no test files).
 
-Full updated pattern:
 ```dockerfile
-FROM python:3.13-slim
+FROM python:3.13-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # apt-get installs MUST come before uv sync
 # RUN apt-get update && apt-get install -y <packages>  ← keep if already present
 
 WORKDIR /code/
-COPY pyproject.toml .
-COPY uv.lock .
+COPY pyproject.toml uv.lock ./
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
-RUN uv sync --all-groups --frozen
+RUN uv sync --no-dev --frozen
 
-COPY src/ src
-COPY tests/ tests
-COPY scripts/ scripts
+COPY src/ src/
+COPY scripts/ scripts/
 COPY deploy.sh .
 
-# Keep any existing app-specific ENV vars (SSL certs, PYTHONWARNINGS, etc.) here
-CMD ["python", "-u", "src/component.py"]
+FROM base AS test
+RUN uv sync --all-groups --frozen
+COPY tests/ tests/
+RUN uv run ruff check src/ tests/
+CMD ["uv", "run", "pytest", "tests/", "-v"]
+
+FROM base AS production
+CMD ["python", "-u", "/code/src/component.py"]
 ```
 
 Notes:
+- `base` installs only production deps (`--no-dev`); `test` adds dev deps on top
+- Ruff check runs at **image build time** in the `test` stage — failing fast
 - `ENV KEY="value"` syntax (not old `ENV KEY value`)
 - No `pip install` anywhere
 - Any `apt-get` blocks must stay **before** `RUN uv sync`
@@ -133,67 +151,33 @@ sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 
 ### Update `.github/workflows/push.yml`
 
-1. Change trigger to `branches-ignore: [main]`:
+The canonical push.yml uses a **multi-job pipeline** that matches the multi-stage Dockerfile. Rather than patching individual steps, replace the file entirely with the canonical template (from Phase 6 / component-defaults) and update only the `env:` block for this component:
+
 ```yaml
-on:
-  push:
-    branches-ignore:
-      - main
-    tags:
-      - "*"
+env:
+  KBC_DEVELOPERPORTAL_APP: "vendor.component-id"   # full component ID from Developer Portal
+  KBC_DEVELOPERPORTAL_VENDOR: "vendor"              # your vendor name
+  DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
+  KBC_DEVELOPERPORTAL_USERNAME: ${{ vars.KBC_DEVELOPERPORTAL_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  KBC_DEVELOPERPORTAL_PASSWORD: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+  KBC_TEST_PROJECT_CONFIGS: ""
+  KBC_STORAGE_TOKEN: ${{ secrets.KBC_STORAGE_TOKEN }}
 ```
 
-2. Replace the image tag step with:
-```yaml
-- name: Set image tag
-  run: |
-    REF="${GITHUB_REF##*/}"
-    if [ "${{ github.ref_type }}" = "tag" ]; then
-      TAG="$REF"
-    else
-      TAG="$REF-${{ github.run_number }}"
-    fi
-    IS_SEMANTIC_TAG=$(echo "$REF" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+$' && echo true || echo false)
-    echo "is_semantic_tag=$IS_SEMANTIC_TAG" | tee -a $GITHUB_OUTPUT
-    echo "app_image_tag=$TAG" | tee -a $GITHUB_OUTPUT
-```
+The new pipeline structure (keep as-is from the canonical template):
+- `push_event_info` — branch/tag detection, `is_deploy_ready` output (requires default branch + semantic tag)
+- `build-test` — builds `--target test` stage, uploads as `*-test.tar` artifact
+- `tests` — downloads test artifact, runs container (default CMD = pytest; ruff already ran at build time)
+- `tests-kbc` — runs KBC integration tests if `KBC_TEST_PROJECT_CONFIGS` and token are set
+- `build-production` — builds `--target production` stage after all tests pass, uploads as `*.tar` artifact
+- `push` — loads production artifact, pushes to ECR
+- `deploy` — sets tag in Developer Portal, only if `is_deploy_ready == true`
+- `update_developer_portal_properties` — runs `scripts/developer_portal/update_properties.sh`
 
-3. Replace linting step:
-```yaml
-# Before:
-docker run ... flake8 . --config=flake8.cfg
-# After:
-docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest ruff check .
-```
+### Generate / verify lock file
 
-4. Replace test step:
-```yaml
-# Before:
-docker run ... python -m unittest discover
-# After:
-docker run ${{ env.KBC_DEVELOPERPORTAL_APP }}:latest python -m pytest tests/ --tb=short -q
-```
-
-5. Fix `Get current branch name` step if present — check for the broken `//` pattern:
-```yaml
-# WRONG — ${raw//origin\//} is a global replace, leaves "remotes/" prefix, breaks tag pushes:
-branch="$(echo ${raw//origin\//} | tr -d '\n')"
-
-# CORRECT — ${raw/*origin\//} strips everything up to and including the last "origin/":
-- name: Get current branch name
-  id: current_branch
-  run: |
-    if [[ ${{ github.ref }} != "refs/tags/"* ]]; then
-      branch_name=${{ github.ref_name }}
-      echo "branch_name=$branch_name" | tee -a $GITHUB_OUTPUT
-    else
-      raw=$(git branch -r --contains ${{ github.ref }})
-      branch="$(echo ${raw/*origin\//} | tr -d '\n')"
-      echo "branch_name=$branch" | tee -a $GITHUB_OUTPUT
-    fi
-```
-
-### Generate lock file
+`uv add` already updated `uv.lock` during Commit 1. Run this to ensure it's fully consistent:
 
 ```bash
 uv sync --all-groups
@@ -202,7 +186,7 @@ uv sync --all-groups
 ### Commit
 
 ```bash
-git add Dockerfile scripts/ tests/ .github/workflows/ uv.lock
+git add Dockerfile scripts/ tests/ .github/workflows/
 git commit -m "uv 💜"
 ```
 
@@ -252,9 +236,12 @@ git commit -m "align with cookiecutter template 🍪"
 ## Verify
 
 ```bash
-docker build -t test-component .
-docker run test-component ruff check .
-docker run test-component python -m pytest tests/ --tb=short -q
+# Build and run tests (ruff runs at build time inside the test stage)
+docker build --target test -t test-component .
+docker run test-component
+
+# Optionally verify the production image builds cleanly
+docker build --target production -t prod-component .
 ```
 
 ---
