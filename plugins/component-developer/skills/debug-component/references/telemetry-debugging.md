@@ -233,25 +233,18 @@ Report:
 
 ### Stack to Database Mapping
 
-From project info, these are the database names for each stack:
+The `get_project_info` tool returns the database name for the current project's stack.
+Public stacks and their databases:
 
 | Stack | Database |
 |-------|----------|
-| COATES | KBC_USE4_33 |
-| CREDITINFO | KBC_USE4_33 |
-| cloud-keboola-cs | KBC_USE4_35 |
-| GRPN | KBC_USE4_20 |
-| HCI | KBC_USE4_21 |
-| HCKZ | KBC_USE4_286 |
-| INNOGY | KBC_USE4_22 |
-| PASHA | KBC_USE4_377 |
-| RBI | KBC_USE4_69 |
-| cloud-keboola-slsp | KBC_USE4_23 |
 | com-keboola-azure-north-europe | KBC_USE4_54 |
 | com-keboola-gcp-europe-west3 | KBC_USE4_26 |
 | com-keboola-gcp-us-east4 | KBC_USE4_27 |
 | kbc-eu-central-1 | KBC_USE4_30 |
-| AWS US | KBC_USE4_32 |
+| kbc-us-east-1 (AWS US) | KBC_USE4_32 |
+
+For private/dedicated stacks, the database name is returned by `get_project_info` — use that value directly rather than looking it up here.
 
 ## Related Guides
 
