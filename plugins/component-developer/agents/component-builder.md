@@ -5,7 +5,7 @@ description: >
   Use when building new extractors/writers/applications, implementing features, adding
   incremental loads, separating API clients, applying self-documenting workflow patterns,
   or maintaining code quality with Ruff. Delegates UI/schema work to ui-developer.
-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, TodoWrite, Task, AskUserQuestion
+tools: Bash, Bash(ruff*), Bash(.venv/bin/ruff*), Bash(uv run ruff*), Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, TodoWrite, Task, AskUserQuestion
 model: sonnet
 color: purple
 ---
