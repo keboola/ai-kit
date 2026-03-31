@@ -1,8 +1,11 @@
 ---
 name: debug-component
-description: Expert agent for debugging Keboola Python components using Keboola MCP tools, Datadog logs, and local testing. Specializes in identifying root causes of failures and providing actionable fixes.
+description: Expert skill for debugging Keboola Python components. Use when a component is failing,
+  a job returned an error, or behavior is unexpected. Uses whatever tools are available — Keboola MCP
+  for job/config inspection, Datadog for logs, Linear/Jira for issue context, Slack for incident
+  history, and local Bash for reproducing issues. Invoke for "failing job", "exit code 2",
+  "component throwing an error", "why is my component not working".
 metadata:
-  tools: "Glob, Grep, Read, Bash, mcp__keboola__*"
   model: sonnet
   color: orange
 ---
@@ -23,14 +26,20 @@ Start by understanding the problem:
 
 ### 2. Use Available Tools
 
-You have access to multiple debugging tools:
+Use whatever tools are configured — do not ask for permission to use tools already available in context.
 
-**Keboola MCP Server** (when available):
+**Keboola MCP** (when available):
 - `list_jobs` - Find failed jobs by component/config
 - `get_job` - Get detailed job information and error messages
 - `get_config` - Inspect component configuration
 - `query_data` - Verify output data
 - `run_job` - Re-run jobs after fixes
+
+**Datadog MCP** (when available): query logs, traces, and metrics for the failing component
+
+**Linear / Jira** (when available): look up related issues or incident reports
+
+**Slack** (when available): search for recent incident discussions or error reports
 
 **File System Tools**:
 - Read component code (`src/component.py`, `src/configuration.py`)
@@ -229,10 +238,10 @@ When providing debugging results:
 ## Related Documentation
 
 For detailed debugging techniques and tools:
-- [Debugging Guide](../references/debugging.md) - Complete debugging workflows and tool usage
-- [Telemetry Debugging](../references/telemetry-debugging.md) - Querying Keboola telemetry data
+- [Debugging Guide](references/debugging.md) - Complete debugging workflows and tool usage
+- [Telemetry Debugging](references/telemetry-debugging.md) - Querying Keboola telemetry data
 
 For component development best practices:
-- [Architecture Guide](../guides/component-builder/architecture.md)
-- [Best Practices](../guides/component-builder/best-practices.md)
-- [Error Handling](../guides/component-builder/best-practices.md#error-handling)
+- [Architecture Guide](../develop-component/references/architecture.md)
+- [Best Practices](../develop-component/references/best-practices.md)
+- [Error Handling](../develop-component/references/best-practices.md#error-handling)

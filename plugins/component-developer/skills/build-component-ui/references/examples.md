@@ -873,7 +873,7 @@ Based on analysis of 888 components from Keboola Storage API:
 
 ## Related Documentation
 
-- [Overview](configuration-schema-overview.md) - Introduction and basics
-- [UI Elements](configuration-schema-ui-elements.md) - Field formats and options
-- [Sync Actions](configuration-schema-sync-actions.md) - Dynamic dropdowns and validation
-- [Advanced Patterns](configuration-schema-advanced.md) - Confluence best practices
+- [Overview](overview.md) - Introduction and basics
+- [UI Elements](ui-elements.md) - Field formats and options
+- [Sync Actions](sync-actions.md) - Dynamic dropdowns and validation
+- [Advanced Patterns](advanced.md) - Confluence best practices
