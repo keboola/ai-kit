@@ -66,20 +66,23 @@ A specialized toolkit for building production-ready Keboola Python components fo
 
 **[→ View Component Developer Plugin Documentation](./plugins/component-developer/README.md)**
 
-### Data App Developer Plugin
+### Data App Developer Plugin (v3.6.0)
 
 **Location**: [`./plugins/dataapp-developer`](./plugins/dataapp-developer)
 
-A toolkit for building and deploying data apps to Keboola — Streamlit development with validate/build/verify workflow, plus deployment guides for Node.js, Python, and any web framework.
+Build and deploy production data apps to Keboola — Next.js + React + Tailwind frontend with Python FastAPI backend. Single unified skill with 6-phase workflow: Discover, Validate, Scaffold, Customize, Deploy, Verify.
+
+> **Note:** The previous `dataapp-dev` and `dataapp-deployment` skills have been consolidated into a single `dataapp-developer` skill. The deployment reference (`deployment.md`) now covers the full Keboola Docker deployment lifecycle aligned with the canonical [dataapp-deployment](https://github.com/keboola/ai-kit/tree/main/plugins/dataapp-developer/skills/dataapp-deployment) guide.
 
 **Features:**
-- 🎯 **Skills**: Streamlit development (validate → build → verify) + data app deployment (Nginx, Supervisord, Docker)
-- 🚀 **Deployment**: keboola-config directory setup, SSE/WebSocket streaming through Nginx, env var mapping, common error solutions
-- 🔍 **Data Validation**: Automatic schema checking using Keboola MCP
-- 🎨 **Visual Verification**: Browser testing with Playwright MCP
-- 🏗️ **Multi-Framework**: Node.js (Express), Python (Flask, FastAPI, Streamlit, Gunicorn), or any web framework
-- 📚 **Comprehensive Docs**: Quickstart, workflows, templates, checklists, and deployment guides
-- 🔌 **MCP Servers**: Keboola (remote HTTP) and Playwright (browser automation)
+- **Single skill**: `dataapp-developer` covers the full lifecycle from interactive discovery to post-deployment verification
+- **Production template**: Lean Next.js shell with bento grid, production Keboola data loader, shared layout
+- **Keboola deployment**: Nginx reverse proxy, Supervisord, uv sync, pre-built Next.js standalone, env var mapping, error troubleshooting
+- **Data validation**: Schema checking and query testing via Keboola MCP
+- **Visual verification**: Localhost + production testing with Playwright MCP
+- **Design system**: Color tokens, component patterns (KPI cards, charts, tables, DataStatusBadge with Storage links), ARIA accessibility
+- **AI Assistant**: Optional KAI chat integration via polling proxy (components fetched from [keboola/kai-client](https://github.com/keboola/kai-client))
+- **MCP Servers**: Playwright (on-demand), Keboola (on-demand)
 
 **[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
 

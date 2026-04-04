@@ -1,97 +1,96 @@
 # Data App Developer Plugin
 
-A toolkit for building and deploying data apps to Keboola. Supports both **Streamlit (Python)** and **Next.js/React** with interactive discovery, a production design system, Kai AI Assistant integration, and a comprehensive validation pipeline.
+A toolkit for building and deploying production data apps to Keboola using **Next.js (React + Tailwind)** with a **Python FastAPI backend**. Includes interactive discovery, a production design system, Keboola deployment configuration, and visual verification with Playwright.
 
 ---
 
-## What's New in v1.4.0
+## What's New in v3.6.0
 
-Production learnings from a real Keboola Data App deployment (Profit Line Dashboard):
+- **KAI in Header, not NavTabs** — AI Assistant is accessed via ChatButton in the header (sidebar sheet), not a dedicated tab or /assistant route.
+- **Table links to Keboola** — DataStatusBadge table names are clickable hyperlinks to Keboola Storage (correct URL format: bucket/overview/table/name/overview).
+- **Health endpoint includes table_id** — Backend `/api/health` returns `table_id` per table for Storage link construction.
+- **Pin to My Dashboard from KAI** — Fixed `isPinned`/`unpinByHeadersRows` in dashboard-storage. KaiTableChart pin button works correctly.
+- **KAI context is app-scoped** — System context includes only tables loaded in the app, with full schemas, KPI formulas, and domain enumerations.
+- **CUSTOMIZE checklist** — 2-pass priority structure (3 critical + 7 polish items) for reliable agent customization of kai-client files.
+- **Zero hardcoded content** — All kai-client template files use generic defaults with `// CUSTOMIZE:` markers. No warehouse/demo/profitline references.
+- **Header/NavTabs gap fix** — `.glass` CSS split: base class has no border-bottom, only `nav.glass` gets it. Never set `position: relative` on header/nav.
+- **CSS border rules** — Never mix shorthand/longhand border properties. Draggable z-index capped at 10.
+- **KaiTableChart enhanced** — Column sorting, bar/line chart modes, CSV export, 60% numeric threshold, area gradients.
+- **Template deduplication** — `ChartShell` extracts shared drag/resize/snap/fullscreen logic. `useGroupedConversations` hook eliminates ChatHistory duplication. `isPinned` optimized with row-count pre-check.
+- **Dependency comments** — All kai-client files that import from consumer-app paths list required dependencies in JSDoc.
 
-- **CRITICAL FIX: Nginx health probe** -- The server-level `if ($request_method = POST)` intercepted ALL POST requests including `/api/chat`, causing Kai to return empty 200 responses. Fixed to `location = /` (exact root match only).
-- **CRITICAL FIX: Kai SSE proxy pattern** -- The `async with client.stream()` inside an async generator got garbage-collected before delivering data in production. Replaced with `client.build_request()` + `client.send(stream=True)` + `StreamingResponse` with `finally` cleanup.
-- **KAI_TOKEN support** -- Documented that the auto-injected `KBC_TOKEN` may lack Kai permissions (401). Added dedicated `KAI_TOKEN` pattern with fallback.
-- **httpx dependency** -- Added `httpx>=0.27.0` to the template `pyproject.toml` (was missing, causing `ModuleNotFoundError`).
-- **SSE streaming speed** -- Added rAF-batched deltas, Next.js dev proxy bypass, ChatMessage memo pattern, and proper `X-Accel-Buffering`/`Cache-Control` headers.
-- **System context guidance** -- Documented that large system contexts (~2000 chars) confuse Kai. Recommended concise context (~200 chars).
-- **Conversation management** -- Added production patterns: reactive `useConversationList()` hook, slide-over portal, per-message copy, follow-up chips, markdown export.
-- **Deployment skill** -- Added warning about the server-level `if` trap for multi-service Nginx setups.
-- **Adding Kai checklist** -- New checklist in kai-integration.md for all the steps needed when adding Kai to an existing app.
+## What's New in v3.5.0
 
-### v1.3.0
+- **Cross-agent health contract** — Backend agent now explicitly extends `/api/health` to return `tables_loaded` count and per-table details for the DataStatusBadge.
+- **Template dependency accuracy** — My Dashboards reference no longer claims `react-markdown`/`remark-gfm` are in the starter template (they're KAI-only, handled by the KAI guide).
+- **Favicon path consistency** — `app-patterns.md` Root Layout example now matches the template's `/keboola-icon.svg`.
 
-- Full-stack framework support (Next.js/React + Tailwind).
-- Kai AI Assistant integration with SSE streaming and tool approval UX.
-- Production design system (aurora gradients, glassmorphism, animated counters).
-- On-demand Keboola MCP detection and `.mcp.json` setup.
-- Project templates (`nextjs-dashboard-starter`, 29 files).
-- Interactive discovery phase and enhance-existing-app mode.
+## What's New in v3.4.0
 
----
+- **Design file consolidation** — Merged `design-patterns.md` + `design-interactions.md` into `design-advanced.md`. Merged `kai-custom-dashboard.md` into `my-dashboards.md`.
+- **My Dashboards reference** — New `my-dashboards.md` covers the full custom dashboard builder: chart builder with drag/drop field wells, chart library, multi-dashboard tabs, KaiTableChart, pin-from-KAI integration, and storage utilities.
 
-## Available Skills
+## What's New in v3.3.0
 
-### dataapp-dev
-
-**Skill name:** `dataapp-dev`
-**Activation:** Automatic when building new data apps, adding features to existing apps, designing dashboards, creating JS/React web apps, or improving app CX.
-
-The primary development skill. Covers the full lifecycle -- discovery, scaffolding, customization, and validation -- for both Streamlit and Next.js/React apps deployed to Keboola.
-
-Key capabilities:
-
-- Two frameworks: Streamlit (rapid SQL dashboards) and Next.js (production-grade web apps with full design control).
-- Two modes: **New App** (guided discovery questionnaire, then scaffold from template) and **Enhance Existing App** (analyze codebase, implement targeted changes).
-- Kai AI Assistant embed for either framework (persistent httpx client, SSE streaming, markdown rendering, suggestion chips, conversation persistence, tool approval).
-- Design system with color tokens, typography, z-layer specs, glassmorphism cards, ECharts theming.
-- Branding flow: asks for brand colors, logo, and app name -- places them in Header, favicon, loading screen, CSS tokens, and chart palette.
-- Five-phase workflow: Discover, Validate, Scaffold, Customize, Verify.
-- On-demand MCP setup: auto-detects Keboola MCP availability, offers to write `.mcp.json` if the task requires data access. Gracefully degrades without MCP.
-- Validation pipeline: data checks, visual screenshots (Playwright), design audit, accessibility, performance.
-- Reference docs: `design-system.md`, `js-patterns.md`, `streamlit-patterns.md`, `kai-integration.md`, `validation-pipeline.md`.
-
-**Use when:** "build a data app", "create a dashboard", "add Kai to my app", "add a new page", "improve my app", "build a Streamlit app", "create a Next.js dashboard", "modify my app", "fix my data app", "redesign my app".
+- **KAI implementation guide** — Frontend agent fetches complete `KAI_IMPLEMENTATION_GUIDE.md` from keboola/kai-client (polling proxy architecture, not basic SSE).
+- **Agent prompt templates** — Phase 3 and Phase 5 agent prompts in `agent-prompts.md`.
+- **AI assistant reference trimmed** — `ai-assistant.md` is a lightweight pointer to the runtime-fetched guide, with key architecture notes and Nginx config.
 
 ---
 
-### dataapp-deployment
+## Skill: dataapp-developer
 
-**Skill name:** `dataapp-deployment`
-**Activation:** Automatic when deploying any web app to Keboola Data Apps.
+**Activation:** Automatic when building, enhancing, or deploying data apps to Keboola.
 
-Covers Docker infrastructure for Keboola Data Apps: Nginx reverse proxy configuration, Supervisord process management, `setup.sh` startup scripts, environment variable mapping from `dataApp.secrets`, and common deployment pitfalls.
+### 6-Phase Workflow
 
-Key capabilities:
+| Phase | Name | What happens |
+|-------|------|-------------|
+| 0 | Discover | Interactive questionnaire: use case, data sources, branding, pages |
+| 1 | Validate | Verify data structures with Keboola MCP |
+| 2 | Scaffold | Copy lean Next.js + FastAPI template |
+| 3 | Customize | Parallel agents: backend (sonnet) + frontend (sonnet) |
+| 4 | Deploy | Configure keboola-config (Nginx, Supervisord, setup.sh, secrets) |
+| 5 | Verify | Visual validation with Playwright, data checks, accessibility |
 
-- `keboola-config/` directory setup (Nginx, Supervisord, setup.sh).
-- Language-agnostic: Node.js, Python (Flask, FastAPI, Streamlit, Gunicorn), or any framework.
-- SSE and WebSocket streaming through Nginx (`proxy_buffering off`).
-- Python dependency management with `uv sync` and `pyproject.toml`.
-- Troubleshooting: "Cannot POST /", 500 errors, PEP 668 failures, buffered streams, blank Streamlit pages.
+### Key Capabilities
 
-**Use when:** "deploy my app to Keboola", "set up keboola-config", "configure Nginx for SSE", "debug deployment issues".
+- Production design system: aurora backgrounds, glassmorphism, KPI cards with sparklines, animated counters, sticky bars, loading screens.
+- Branding flow: asks for colors, logo, app name — applies to Header, favicon, CSS tokens, chart palette.
+- My Dashboards: custom dashboard builder with chart builder, drag/drop field wells, always scaffolded.
+- On-demand MCP: auto-detects Keboola MCP, offers to configure if needed.
+- Optional AI Assistant via dynamic fetch from kai-client repository.
+- Deployment troubleshooting: covers PEP 668, POST-to-root, SSE buffering, WebSocket failures.
+
+### Reference Docs
+
+| File | Content |
+|------|---------|
+| `design-tokens.md` | Color tokens, typography, number formatting, z-layers |
+| `design-components.md` | Header, NavTabs, FilterBar, KPI Card, tables, empty states, branding, favicon |
+| `design-charts.md` | ECharts/Recharts setup, Y-axis rules, tooltips, responsive heights |
+| `design-advanced.md` | Advanced patterns + interactions: skeleton loaders, spacing, portals, URL filter state, accessible colors, error boundary, animations |
+| `app-patterns.md` | Next.js architecture, React Query, FastAPI backend, SQL patterns |
+| `deployment.md` | Keboola Docker: Nginx, Supervisord, env vars, errors, checklist |
+| `mcp-setup.md` | MCP detection, stack configuration, `.mcp.json` setup |
+| `validation.md` | Data, visual quality, design, accessibility, performance checks |
+| `agent-prompts.md` | Ready-to-use prompt templates for Phase 3 (backend + frontend) and Phase 5 (verify+fix) agents |
+| `ai-assistant.md` | KAI quick-reference (full guide fetched at runtime from keboola/kai-client) |
+| `my-dashboards.md` | Custom dashboard: chart builder, field wells, chart library, KaiTableChart, storage utils |
+
+**Use when:** "build a data app", "create a dashboard", "deploy to Keboola", "add a new page", "improve my app", "fix deployment", "configure Nginx".
 
 ---
 
 ## MCP Servers
 
-### Playwright MCP (bundled)
-
-**Package:** `@executeautomation/playwright-mcp-server`
-
-Bundled in `plugin.json`. Provides browser automation for visual verification: navigate, click, type, take screenshots, evaluate JavaScript.
-
-No configuration needed. The browser installs automatically on first use.
-
 ### Keboola MCP (on-demand)
 
-Not bundled at the plugin level. The `dataapp-dev` skill detects Keboola MCP availability at runtime:
+Not bundled. The skill creates a project-level `.mcp.json` during setup. Named `{project}-keboola`.
 
-1. Checks for existing tools (`mcp__keboola__*`, `mcp__claude_ai_Keboola*`, or `mcp__plugin_*_keboola__*`).
-2. If none are found and the task requires data access, offers to write a `.mcp.json` with the correct MCP URL for the user's Keboola stack.
-3. If the task does not require data access (design changes, Kai integration, deployment config), proceeds without MCP.
+### Playwright MCP (on-demand)
 
-This avoids unnecessary OAuth prompts for tasks that do not need a data connection.
+Not bundled. The skill configures Playwright via `.mcp.json` at Phase 5 (verification) only when needed.
 
 ---
 
@@ -100,47 +99,29 @@ This avoids unnecessary OAuth prompts for tasks that do not need a data connecti
 ```
 plugins/dataapp-developer/
 ├── .claude-plugin/
-│   └── plugin.json              # Plugin config (v1.4.0), Playwright MCP
+│   └── plugin.json
 ├── skills/
-│   ├── dataapp-dev/             # Full-stack development skill
-│   │   ├── SKILL.md
-│   │   ├── references/
-│   │   │   ├── design-system.md
-│   │   │   ├── js-patterns.md
-│   │   │   ├── kai-integration.md
-│   │   │   ├── streamlit-patterns.md
-│   │   │   └── validation-pipeline.md
-│   │   └── templates/
-│   │       └── nextjs-dashboard-starter/   # Next.js + FastAPI + keboola-config (29 files)
-│   └── dataapp-deployment/      # Deployment infrastructure skill
-│       └── SKILL.md
-└── README.md                    # This file
+│   └── dataapp-developer/
+│       ├── SKILL.md
+│       ├── references/
+│       │   ├── agent-prompts.md
+│       │   ├── ai-assistant.md
+│       │   ├── app-patterns.md
+│       │   ├── deployment.md
+│       │   ├── design-advanced.md
+│       │   ├── design-charts.md
+│       │   ├── design-components.md
+│       │   ├── design-tokens.md
+│       │   ├── mcp-setup.md
+│       │   ├── my-dashboards.md
+│       │   └── validation.md
+│       └── templates/
+│           └── nextjs-dashboard-starter/
+└── README.md
 ```
 
 ---
 
-## Contributing
-
-To improve this plugin:
-
-1. Update skill files under `skills/` as needed.
-2. Add new reference docs or templates to `skills/dataapp-dev/references/` or `templates/`.
-3. Update this README when adding skills or changing capabilities.
-4. Bump the version in `.claude-plugin/plugin.json`.
-5. Test with real Streamlit and Next.js apps before merging.
-
----
-
-## Resources
-
-- [Streamlit Documentation](https://docs.streamlit.io)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Keboola Developer Docs](https://developers.keboola.com)
-- [Keboola MCP Server](https://github.com/keboola/mcp-server-keboola)
-- [Playwright MCP Server](https://github.com/executeautomation/playwright-mcp-server)
-
----
-
-**Version:** 1.4.0
-**Maintainer:** Keboola :(){:|:&};: s.r.o.
+**Version:** 3.6.0
+**Maintainer:** Keboola
 **License:** MIT

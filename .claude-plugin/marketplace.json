@@ -1,12 +1,12 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "metadata": {
     "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
   },
   "owner": {
-    "name": "Keboola :(){:|:&};: s.r.o.",
+    "name": "Keboola s.r.o.",
     "email": "support@keboola.com"
   },
   "plugins": [
@@ -26,8 +26,8 @@
     },
     {
       "name": "dataapp-developer",
-      "description": "Toolkit for building and deploying data apps to Keboola — Streamlit and Next.js/React development with interactive discovery, design system, Kai AI Assistant integration, and comprehensive validation pipeline",
-      "version": "1.4.0",
+      "description": "Build and deploy production data apps to Keboola — Next.js + React + Tailwind frontend with Python FastAPI backend, interactive discovery, design system, and Keboola deployment",
+      "version": "3.6.0",
       "source": "./plugins/dataapp-developer",
       "category": "development"
     },

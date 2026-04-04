@@ -1,18 +1,9 @@
 {
   "name": "dataapp-developer",
-  "version": "1.4.0",
-  "description": "Toolkit for building and deploying data apps to Keboola — Streamlit and Next.js/React development with interactive discovery, design system, Kai AI Assistant integration, and comprehensive validation pipeline",
+  "version": "3.6.0",
+  "description": "Build and deploy production data apps to Keboola — Next.js + React + Tailwind frontend with Python FastAPI backend, interactive discovery, design system, and Keboola deployment",
   "author": {
-    "name": "Keboola :(){:|:&};: s.r.o.",
+    "name": "Keboola s.r.o.",
     "email": "support@keboola.com"
-  },
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@executeautomation/playwright-mcp-server@latest"
-      ]
-    }
   }
 }

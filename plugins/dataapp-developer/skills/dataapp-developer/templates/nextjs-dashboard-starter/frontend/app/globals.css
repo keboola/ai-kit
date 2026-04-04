@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@source "../app/**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
+
+/*
+ * DESIGN TOKENS
+ * All brand colors live here. To rebrand:
+ *   1. Change hex values below
+ *   2. Update matching values in lib/constants.ts
+ *
+ * CSS:  bg-brand-primary, text-brand-secondary, border-border
+ * JS:   import { COLORS } from '@/lib/constants'
+ */
+@theme {
+  --color-brand-primary:   #097cf7;
+  --color-brand-secondary: #002151;
+  --color-brand-accent:    #ca8a04;
+  --color-surface:         #f8fafc;
+  --color-border:          #e2e8f0;
+  --color-positive:        #16a34a;
+  --color-negative:        #dc2626;
+  --color-warning:         #f59e0b;
+  --font-sans:             var(--font-sans);
+  --font-mono:             var(--font-mono);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 112.5%; /* 18px base */
+  font-feature-settings: "ss01", "cv01", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: #ffffff;
+  color: #1a1a2e;
+  font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular numbers — use on data grids and KPI values */
+.mono {
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Container ──────────────────────────────────────────────────────────── */
+.container-page {
+  max-width: 80rem; /* 1280px = max-w-7xl */
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+/*
+ * Z-INDEX SCALE
+ * 10: filter bar, sticky KPI bar
+ * 20: nav tabs
+ * 30: header
+ * 40: modals, overlays, drawers (future — use React Portal)
+ * 50: toasts, floating UI (future — use React Portal)
+ */
+
+/* ─── Bento Grid ─────────────────────────────────────────────────────────── */
+.bento-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.bento-grid > .span-3  { grid-column: span 3; }
+.bento-grid > .span-4  { grid-column: span 4; }
+.bento-grid > .span-5  { grid-column: span 5; }
+.bento-grid > .span-6  { grid-column: span 6; }
+.bento-grid > .span-7  { grid-column: span 7; }
+.bento-grid > .span-8  { grid-column: span 8; }
+.bento-grid > .span-12 { grid-column: span 12; }
+
+@media (max-width: 1024px) {
+  .bento-grid > .span-3,
+  .bento-grid > .span-4  { grid-column: span 6; }
+  .bento-grid > .span-5,
+  .bento-grid > .span-6,
+  .bento-grid > .span-7,
+  .bento-grid > .span-8  { grid-column: span 12; }
+}
+
+@media (max-width: 640px) {
+  .bento-grid > [class*="span-"] { grid-column: span 12; }
+}
+
+/* ─── Placeholder Card ───────────────────────────────────────────────────── */
+.placeholder-card {
+  border: 2px dashed var(--color-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: border-color 0.2s, color 0.2s;
+}
+.placeholder-card:hover {
+  border-color: var(--color-brand-primary);
+  color: var(--color-brand-primary);
+}
+
+/* ─── Skeleton Shimmer (ready for use when adding loading states) ────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}

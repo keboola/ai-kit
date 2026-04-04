@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+# Allow standalone's bundled node_modules (required for deployment)
+!frontend/.next/standalone/node_modules/
+!frontend/.next/standalone/node_modules/**
+.pnp
+.pnp.js
+
+# Next.js — ignore build cache but keep standalone output for deployment
+frontend/.next/*
+!frontend/.next/standalone/
+!frontend/.next/standalone/**
+frontend/out/
+
+# Production
+frontend/build/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+backend/.venv/
+*.egg-info/
+backend/dist/
+backend/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Package locks (generated on install)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
