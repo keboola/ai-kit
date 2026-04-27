@@ -1,0 +1,9 @@
+{
+  "name": "sl-builder",
+  "version": "1.0.0",
+  "description": "Generate, build, and populate semantic layer models for any Keboola project — works with or without the Semantic Layer data app",
+  "author": {
+    "name": "Keboola s.r.o.",
+    "email": "support@keboola.com"
+  }
+}

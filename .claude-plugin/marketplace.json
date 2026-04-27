@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "metadata": {
     "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
   },
@@ -37,6 +37,13 @@
       "version": "1.0.0",
       "source": "./plugins/keboola-cli",
       "category": "operations"
+    },
+    {
+      "name": "sl-builder",
+      "description": "Generate, build, and populate semantic layer models for any Keboola project — works with or without the Semantic Layer data app",
+      "version": "1.0.0",
+      "source": "./plugins/sl-builder",
+      "category": "development"
     }
   ]
 }
