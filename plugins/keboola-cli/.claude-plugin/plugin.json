@@ -1,6 +1,6 @@
 {
   "name": "keboola-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Keboola project management and review toolkit with 10-agent review team, CLI sync commands, and financial intelligence analysis",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
@@ -16,7 +16,10 @@
     "sql",
     "security",
     "performance",
-    "data-quality"
+    "data-quality",
+    "duckdb",
+    "transformation",
+    "migration"
   ],
   "mcpServers": {
     "keboola": {
