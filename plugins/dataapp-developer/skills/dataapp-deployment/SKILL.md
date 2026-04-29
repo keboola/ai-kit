@@ -410,15 +410,12 @@ npm install @keboola/query-service
 # or: pnpm add @keboola/query-service / yarn add @keboola/query-service
 ```
 
-Wrap it in a single module so route handlers never touch the raw env vars or Client. The same four env vars apply.
+Wrap it in a single module so route handlers never touch the raw env vars or Client. The same four env vars apply. Load `.env` in your app entrypoint **before** importing this module — keeping dotenv out of `storage.ts` makes the wrapper portable across ESM and CJS.
 
 ```typescript
 // storage.ts (or storage.js — strip the type annotations)
 import { readFileSync } from 'node:fs';
 import { Client } from '@keboola/query-service';
-
-// Optional dev-only: load .env when present (skip in production / container).
-try { (await import('dotenv')).default.config(); } catch { /* ignored */ }
 
 const branchId = process.env.BRANCH_ID!;
 const workspaceId = JSON.parse(
@@ -453,7 +450,24 @@ export async function execute(sql: string): Promise<void> {
 }
 ```
 
-For CommonJS apps, replace the dynamic `dotenv` import with a regular `require('dotenv').config()`, and use `import { Client } = require('@keboola/query-service')` syntax.
+In your entrypoint (e.g. `server.ts`), load `.env` once before importing the wrapper:
+
+```typescript
+// server.ts (ESM)
+import 'dotenv/config';        // dev-only side-effect import; no-op if dotenv isn't installed in the container
+import { select, execute } from './storage.js';
+// ...
+```
+
+For CommonJS apps, the equivalent entrypoint is:
+
+```javascript
+// server.js (CommonJS)
+require('dotenv').config();
+const { select, execute } = require('./storage');
+```
+
+…and inside the wrapper itself, use `const { Client } = require('@keboola/query-service')` for the import.
 
 The reads of all four env vars happen at module load — same trade-off as the Python wrapper: missing env vars fail fast, before the first request.
 
@@ -505,7 +519,6 @@ Concentrate validation in one module so the rest of your app can't accidentally 
 
 ```python
 # validation.py
-from datetime import date, time
 from typing import Final
 
 BOROUGHS: Final[frozenset[str]] = frozenset({
@@ -546,20 +559,26 @@ Same idea in TypeScript:
 // validation.ts
 export class ValidationError extends Error {}
 
-export const BOROUGHS = new Set([
+type Borough = 'BRONX' | 'BROOKLYN' | 'MANHATTAN' | 'QUEENS' | 'STATEN ISLAND';
+const BOROUGHS: ReadonlySet<Borough> = new Set<Borough>([
   'BRONX', 'BROOKLYN', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND',
-] as const);
+]);
+
 const MAX_TEXT_LEN = 200;
+const INT32_MIN = -2_147_483_648;
+const INT32_MAX = 2_147_483_647;
 
 export function parseInt32(v: unknown, field: string): number {
   const n = Number(v);
-  if (!Number.isInteger(n)) throw new ValidationError(`${field} must be an integer`);
+  if (!Number.isInteger(n) || n < INT32_MIN || n > INT32_MAX) {
+    throw new ValidationError(`${field} must be a 32-bit integer`);
+  }
   return n;
 }
 
-export function parseBorough(v: unknown): string {
-  const upper = String(v ?? '').trim().toUpperCase();
-  if (!BOROUGHS.has(upper as typeof BOROUGHS extends Set<infer T> ? T : never)) {
+export function parseBorough(v: unknown): Borough {
+  const upper = String(v ?? '').trim().toUpperCase() as Borough;
+  if (!BOROUGHS.has(upper)) {
     throw new ValidationError(`BOROUGH must be one of ${[...BOROUGHS].join(', ')}`);
   }
   return upper;
