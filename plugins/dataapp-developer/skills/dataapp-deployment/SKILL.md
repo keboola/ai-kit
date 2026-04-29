@@ -1,6 +1,6 @@
 ---
 name: dataapp-deployment
-description: Use when deploying any web app to Keboola Data Apps, setting up keboola-config directory, configuring Nginx/Supervisord for Docker, handling SSE or WebSocket streaming through Nginx, mapping secrets to environment variables, or debugging Keboola Data App deployment issues like POST to root errors, 500s from missing env vars, or buffered streams.
+description: Use when deploying any web app (Python — Streamlit/FastAPI/Flask — or Node.js / TypeScript) to Keboola Data Apps, setting up keboola-config directory, configuring Nginx/Supervisord for Docker, handling SSE or WebSocket streaming through Nginx, mapping secrets to environment variables, accessing Keboola Storage via the Query Service (direct-grant output mapping, keboola-query-service Python or @keboola/query-service JS client), local development setup with workspace tokens, or debugging Keboola Data App deployment issues like POST to root errors, 500s from missing env vars, or buffered streams.
 ---
 
 # Deploying Web Apps to Keboola Data Apps
@@ -293,6 +293,383 @@ const token = process.env.KBC_TOKEN;
 
 Secrets are available to both `setup.sh` and the application runtime.
 
+## Accessing Keboola Storage (Query Service)
+
+Data Apps can read and write Storage tables directly via the **Keboola Query Service**, without unloading data into the container. This is preferable to bundled CSV input mappings for any app that needs:
+
+- Live reads (the data changes between deployments)
+- Writes back into Storage
+- Selective queries (filters / aggregations) on large tables
+
+The mechanism is "Storage Access" — a per-app feature you enable in the data app component config. When enabled (and the right output mappings are present), the platform injects four env vars at container startup that the Query Service Python/JS client reads.
+
+### Enabling Storage Access (operator-side configuration)
+
+In the **data app component config** (Keboola UI / API — *not* in your repo):
+
+1. Enable the **Storage Access** toggle.
+2. Declare each table you want to **write** to in `storage.output.tables` using `"unload_strategy": "direct-grant"`. This grants the data app's workspace direct write privileges on the destination table instead of unloading data:
+
+```json
+{
+  "storage": {
+    "output": {
+      "tables": [
+        {
+          "destination": "out.c-my-bucket.my-table",
+          "unload_strategy": "direct-grant"
+        }
+      ]
+    }
+  }
+}
+```
+
+Reads of any table accessible to the workspace work without an explicit input mapping — the workspace's grants govern what the Query Service will execute.
+
+> The `direct-grant` strategy is what makes the Query Service workable for writes. Without it, the platform tries to unload to the container and back, which is incompatible with live API-driven writes.
+
+**Bucket stage doesn't restrict writes.** The `destination` can be in any stage — `out.`, `in.`, or otherwise — as long as the workspace has write privileges on it. The `out.` examples in this doc are just convention; writing back into an `in.` bucket your workspace owns is equally valid.
+
+### Platform-Provided Environment Variables
+
+When Storage Access is enabled, the platform injects these at container startup. Do NOT add them to `dataApp.secrets` — they come from the platform, not from your secrets list.
+
+| Variable | Purpose |
+|---|---|
+| `BRANCH_ID` | Storage branch the app is bound to |
+| `QUERY_SERVICE_URL` | Stack-specific Query Service endpoint (e.g. `https://query-service.eu-central-1.keboola.com`) |
+| `KBC_TOKEN` | Auth token for the Query Service |
+| `KBC_WORKSPACE_MANIFEST_PATH` | Path to a JSON file containing `{"workspaceId": "..."}` |
+
+### Python: keboola-query-service client
+
+Add the client to `pyproject.toml`:
+
+```toml
+dependencies = [
+    "keboola-query-service>=0.2.0",
+    # ...
+]
+```
+
+Wrap it in a single module so route handlers never touch the raw env vars or Client:
+
+```python
+# storage.py
+"""Thin wrapper around keboola-query-service Client."""
+import json
+import os
+from typing import Any
+
+try:  # dev-only — silently ignored in container
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except ImportError:
+    pass
+
+from keboola_query_service import Client
+
+
+class Storage:
+    def __init__(self) -> None:
+        self.branch_id = os.environ["BRANCH_ID"]
+        with open(os.environ["KBC_WORKSPACE_MANIFEST_PATH"]) as f:
+            self.workspace_id = json.load(f)["workspaceId"]
+        self.client = Client(
+            base_url=os.environ["QUERY_SERVICE_URL"],
+            token=os.environ["KBC_TOKEN"],
+        )
+
+    def select(self, sql: str) -> list[dict[str, Any]]:
+        result = self.client.execute_query(
+            branch_id=self.branch_id,
+            workspace_id=self.workspace_id,
+            statements=[sql],
+        )[0]
+        cols = [c.name for c in result.columns]
+        return [dict(zip(cols, row)) for row in result.data]
+
+    def execute(self, sql: str) -> None:
+        self.client.execute_query(
+            branch_id=self.branch_id,
+            workspace_id=self.workspace_id,
+            statements=[sql],
+        )
+
+
+storage = Storage()  # module-level singleton
+```
+
+### Node.js / TypeScript: @keboola/query-service client
+
+Add the client to `package.json`:
+
+```bash
+npm install @keboola/query-service
+# or: pnpm add @keboola/query-service / yarn add @keboola/query-service
+```
+
+Wrap it in a single module so route handlers never touch the raw env vars or Client. The same four env vars apply.
+
+```typescript
+// storage.ts (or storage.js — strip the type annotations)
+import { readFileSync } from 'node:fs';
+import { Client } from '@keboola/query-service';
+
+// Optional dev-only: load .env when present (skip in production / container).
+try { (await import('dotenv')).default.config(); } catch { /* ignored */ }
+
+const branchId = process.env.BRANCH_ID!;
+const workspaceId = JSON.parse(
+  readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
+).workspaceId as string;
+
+const client = new Client({
+  baseUrl: process.env.QUERY_SERVICE_URL!,
+  token: process.env.KBC_TOKEN!,
+});
+
+export async function select<T = Record<string, unknown>>(
+  sql: string,
+): Promise<T[]> {
+  const [result] = await client.executeQuery({
+    branchId,
+    workspaceId,
+    statements: [sql],
+  });
+  const cols = result.columns.map((c) => c.name);
+  return result.data.map((row: unknown[]) =>
+    Object.fromEntries(cols.map((name, i) => [name, row[i]])) as T,
+  );
+}
+
+export async function execute(sql: string): Promise<void> {
+  await client.executeQuery({
+    branchId,
+    workspaceId,
+    statements: [sql],
+  });
+}
+```
+
+For CommonJS apps, replace the dynamic `dotenv` import with a regular `require('dotenv').config()`, and use `import { Client } = require('@keboola/query-service')` syntax.
+
+The reads of all four env vars happen at module load — same trade-off as the Python wrapper: missing env vars fail fast, before the first request.
+
+### Reading and Writing
+
+Python:
+
+```python
+# Read
+rows = storage.select(
+    'SELECT "ID", "NAME" FROM "in.c-main"."customers" LIMIT 100'
+)
+
+# Write
+storage.execute(
+    '''INSERT INTO "out.c-data-app"."events" ("id","name")
+       VALUES ('abc-123','Click')'''
+)
+```
+
+Node.js / TypeScript (using the wrapper above):
+
+```typescript
+import { select, execute } from './storage';
+
+// Read
+const rows = await select<{ ID: string; NAME: string }>(
+  'SELECT "ID", "NAME" FROM "in.c-main"."customers" LIMIT 100',
+);
+
+// Write
+await execute(
+  `INSERT INTO "out.c-data-app"."events" ("id","name")
+   VALUES ('abc-123','Click')`,
+);
+```
+
+**Table identifier syntax:** `"<bucket_stage>.<bucket_name>"."<table_name>"` — bucket stage and name in one quoted segment, table name in another. Examples:
+- `"in.c-main"."customers"`
+- `"out.c-data-app"."mvc-crashes"`
+
+The Query Service supports `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and `TRUNCATE`. Metadata is refreshed automatically after writes.
+
+### CRITICAL: Validate every SQL input
+
+The Query Service has **no parameterized queries**. Every value interpolated into SQL must be validated and escaped explicitly. Treat every value as untrusted.
+
+Concentrate validation in one module so the rest of your app can't accidentally bypass it:
+
+```python
+# validation.py
+from datetime import date, time
+from typing import Final
+
+BOROUGHS: Final[frozenset[str]] = frozenset({
+    "BRONX", "BROOKLYN", "MANHATTAN", "QUEENS", "STATEN ISLAND",
+})
+MAX_TEXT_LEN: Final[int] = 200
+
+
+class ValidationError(ValueError):
+    pass
+
+
+def parse_int(v, field):
+    try: return int(v)
+    except (TypeError, ValueError) as e:
+        raise ValidationError(f"{field} must be an integer") from e
+
+
+def parse_borough(v):
+    upper = (v or "").strip().upper()
+    if upper not in BOROUGHS:
+        raise ValidationError(f"BOROUGH must be one of {sorted(BOROUGHS)}")
+    return upper
+
+
+def escape_sql_text(v, field):
+    """Returns inner content; caller wraps in single quotes."""
+    if not isinstance(v, str):
+        raise ValidationError(f"{field} must be a string")
+    if len(v) > MAX_TEXT_LEN:
+        raise ValidationError(f"{field} exceeds {MAX_TEXT_LEN}")
+    return v.replace("'", "''")
+```
+
+Same idea in TypeScript:
+
+```typescript
+// validation.ts
+export class ValidationError extends Error {}
+
+export const BOROUGHS = new Set([
+  'BRONX', 'BROOKLYN', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND',
+] as const);
+const MAX_TEXT_LEN = 200;
+
+export function parseInt32(v: unknown, field: string): number {
+  const n = Number(v);
+  if (!Number.isInteger(n)) throw new ValidationError(`${field} must be an integer`);
+  return n;
+}
+
+export function parseBorough(v: unknown): string {
+  const upper = String(v ?? '').trim().toUpperCase();
+  if (!BOROUGHS.has(upper as typeof BOROUGHS extends Set<infer T> ? T : never)) {
+    throw new ValidationError(`BOROUGH must be one of ${[...BOROUGHS].join(', ')}`);
+  }
+  return upper;
+}
+
+export function escapeSqlText(v: unknown, field: string): string {
+  if (typeof v !== 'string') throw new ValidationError(`${field} must be a string`);
+  if (v.length > MAX_TEXT_LEN) throw new ValidationError(`${field} exceeds ${MAX_TEXT_LEN}`);
+  return v.replace(/'/g, "''");
+}
+```
+
+Rules of thumb (apply in any language):
+
+- Numeric fields → coerce to a native number (Python `int()` / `float()`, JS `Number()` + `Number.isFinite/isInteger`), then interpolate as a bare numeric — not a quoted string.
+- Dates / times → parse strictly (Python `datetime.date.fromisoformat`, JS `new Date(iso)` + `isNaN(d.getTime())` rejection), then format to whatever the column expects.
+- Categorical fields → enforce against a hard-coded allow-list (Python `frozenset`, JS `Set`).
+- Free-text fields → length-cap and double single quotes (`'` → `''`).
+- Generated IDs → use a UUID (`uuid.uuid4().hex` in Python, `crypto.randomUUID()` in Node ≥ 14.17), never `MAX(id)+1` (race conditions, and Storage columns are typically `STRING` anyway).
+
+### Local development with Storage Access
+
+The container gets the four env vars from the platform; locally you supply them yourself. Both wrappers above try to load a `.env` file when their respective dotenv package is installed.
+
+**Step 1 — Add a dev dependency for `.env` loading.**
+
+Python (`pyproject.toml`):
+
+```toml
+[project.optional-dependencies]
+dev = ["python-dotenv>=1.0"]
+```
+
+Install with `uv sync --extra dev`.
+
+Node.js (`package.json`):
+
+```json
+{
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
+```
+
+Install with `npm install` (or `pnpm install`). In production / the container, dotenv simply isn't loaded — the import is wrapped in `try/catch`.
+
+**Step 2 — Create a workspace** in your dev project (Storage → Workspaces → New Workspace → SQL/Snowflake). Copy the workspace ID after creation.
+
+**Step 3 — Create a Storage API token** (Settings → API Tokens → New token). Required scopes: read on input buckets, **write on the buckets/tables you `direct-grant`**, plus workspace access. Copy the token value.
+
+**Step 4 — Find your `BRANCH_ID`** (Branches → Default branch → copy the ID).
+
+**Step 5 — Write `.env`** (gitignored):
+
+```
+BRANCH_ID=<branch_id>
+QUERY_SERVICE_URL=https://query-service.<region>.keboola.com
+KBC_TOKEN=<storage_api_token>
+KBC_WORKSPACE_MANIFEST_PATH=./workspace.json
+```
+
+`<region>` is your stack — e.g. `eu-central-1`, `us-east-1`. The exact URL is the same one the platform sets in the container, so you can copy it from a deployed instance if unsure.
+
+**Step 6 — Write `workspace.json`** (also gitignored):
+
+```json
+{ "workspaceId": "<workspace_id_from_step_2>" }
+```
+
+**Step 7 — Add to `.gitignore`** so secrets never leak:
+
+```
+.env
+workspace.json
+```
+
+**Step 8 — Run locally** (use whichever matches your app):
+
+```bash
+# Python (FastAPI)
+uv run uvicorn app.main:app --reload --port 8050
+
+# Python (Streamlit)
+uv run streamlit run app.py --server.port 8050
+
+# Node.js
+node --watch server.js
+```
+
+The exact same wrapper code runs in both environments; the only difference is where the four env vars come from.
+
+### Storage-access-specific errors
+
+**`KeyError: 'BRANCH_ID'` (or any of the four) on app import**
+**Cause:** Storage Access isn't enabled on the data app config, or you're running locally without `.env`.
+**Fix:** In Keboola — toggle Storage Access on the component config and add the `direct-grant` output mappings. Locally — create `.env` and `workspace.json` per the local-dev steps.
+
+**`Insufficient privileges` / write blocked from the Query Service**
+**Cause:** The destination table isn't in `storage.output.tables` with `"unload_strategy": "direct-grant"`. The workspace doesn't have write grants on it.
+**Fix:** Add the table to the output mapping. Re-deploy. Confirm via the Keboola UI that the data app config has the table listed.
+
+**`syntax error` from the Query Service**
+**Cause:** Malformed table identifier (missing quotes, wrong segment order) or SQL dialect mismatch.
+**Fix:** Use `"bucket_stage.bucket_name"."table_name"` — both segments individually double-quoted. The backend is Snowflake by default; use Snowflake SQL functions (`TRY_CAST`, `TRY_TO_DATE`, `COALESCE`, etc.).
+
+**SQL injection-style errors after a user submits weird input**
+**Cause:** A value bypassed validation and broke out of its quoted context.
+**Fix:** Route all user-provided values through your validation module. The Query Service has no parameterized queries — there is no fallback if you forget to validate.
+
 ## Language-Specific Patterns
 
 ### Python with Streamlit
@@ -310,6 +687,25 @@ command=uv run streamlit run /app/streamlit_app.py --server.port 8050 --server.h
 ```bash
 cd /app && uv sync
 ```
+
+**Storage access in Streamlit.** The Python `storage.py` wrapper from the *Accessing Keboola Storage* section above works as-is. Streamlit reruns the script top-to-bottom on every interaction, but Python's import cache means `from app.storage import storage` returns the same singleton across reruns — so the Query Service client isn't reconstructed each time.
+
+If you instead want lazy initialisation inside the script (e.g. dependent on `st.session_state`), wrap construction with `@st.cache_resource`:
+
+```python
+import streamlit as st
+from app.storage import Storage
+
+@st.cache_resource
+def get_storage() -> Storage:
+    return Storage()
+
+storage = get_storage()
+rows = storage.select('SELECT * FROM "out.c-data-app"."mvc-crashes" LIMIT 100')
+st.dataframe(rows)
+```
+
+Wrap the actual SELECT in `@st.cache_data(ttl=60)` if you want the result cached across reruns within a session.
 
 ### Python with Flask
 
@@ -358,6 +754,19 @@ app.listen(PORT, '0.0.0.0');
 ```
 
 **Vercel dual-deployment tip:** Vercel serverless handlers (`export default function(req, res)`) are directly compatible with Express route handlers. Create an Express `server.js` that imports and mounts the same handler files — no code changes to the handlers themselves.
+
+**Storage access in Express.** The TypeScript `storage.ts` wrapper from the *Accessing Keboola Storage* section above is module-level — its `Client` is constructed once at import. Use it from any route handler:
+
+```typescript
+import { select, execute } from './storage';
+
+app.get('/api/customers', async (_req, res) => {
+  const rows = await select('SELECT "ID", "NAME" FROM "in.c-main"."customers" LIMIT 100');
+  res.json(rows);
+});
+```
+
+For a pure-JS / ESM CommonJS setup, do the same with `require('./storage.js')`. Just remember: `process.env.BRANCH_ID` (and the other three) must be set before the module is first imported, or it fails fast at startup.
 
 ## Common Errors and Solutions
 
@@ -414,6 +823,11 @@ app.listen(PORT, '0.0.0.0');
 - [ ] Streaming endpoints (if any) have `proxy_buffering off` in Nginx
 - [ ] Tested locally before deploying (run same start command as Supervisord uses)
 - [ ] No hardcoded port 8888 in your app (Nginx handles that; your app uses an internal port)
+- [ ] **(If using Storage)** Storage Access toggled ON in the data app component config
+- [ ] **(If writing to Storage)** Every destination table listed in `storage.output.tables` with `"unload_strategy": "direct-grant"`
+- [ ] **(If using Storage)** `keboola-query-service` in `pyproject.toml` and a `storage.py` wrapper present
+- [ ] **(If using Storage)** Every SQL value built from user input passes through a validation module — there are no parameterized queries
+- [ ] **(If using Storage)** `.env` and `workspace.json` listed in `.gitignore` so dev credentials never leak
 
 ## Tips
 
