@@ -51,7 +51,6 @@ plugins/dataapp-developer/skills/dataapp-development/
 │   ├── dashboard-patterns.md
 │   ├── kai-integration.md
 │   ├── dev-workflow.md
-│   ├── managed-git-mcp.md
 │   └── troubleshooting.md
 └── templates/
     ├── streamlit/
@@ -130,6 +129,12 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Git commit locking — exit code 153 means the locked commit no longer exists in the remote.
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`, `supervisord-dev/`, `setup-dev.sh`, `dev-deps`) for hot-reload off a branch inside the platform.
 - Bootstrap hook (derived images) — note that customers usually don't need to touch this.
+- **Deployment via MCP (Keboola-managed git) — PLACEHOLDER:**
+  - Future flow: provision a Keboola-managed git repo for the Python/JS app through MCP tooling instead of customers supplying their own GitHub/GitLab repo.
+  - Planned developer flow: feature branch → preview deployment → merge to main → production deployment.
+  - Status today: not yet finished. Agents working on Python/JS apps fall back to **customer-provided git** (private GitHub/GitLab with PAT or SSH key) as the only supported path.
+  - When the platform support lands, this section expands; if it grows past ~50 lines, split into its own reference.
+  - Link to upstream Linear issue / GitHub PR when available so agents can check status without reloading the skill.
 - **Local development section:**
   - **Skip nginx and supervisord locally** — run your app process directly. Nginx/supervisord exist only to satisfy the Keboola container contract.
   - Install deps: Python → `uv sync` from the repo root; Node → `npm install`.
@@ -170,7 +175,7 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Callback URL format for OAuth/OIDC: `https://<dataAppId>.hub.<keboolaConnectionHost>/_proxy/callback`.
 - Basic auth password cannot be rotated — delete + recreate to change.
 - MCP `modify_data_app` defaults to basic-auth for new apps; pass `authentication_type="default"` on update to keep existing setup (especially important for OIDC apps).
-- Pattern: pass the email header into app logic for row-level data filtering, with code link to profitline-js-app.
+- Row-level data filtering by authenticated user is covered in `storage-access.md` (Permission scoping section), not here — that pattern is about data access, not auth itself.
 
 ### `references/duckdb-caching.md`
 - **Why:** querying Snowflake on every page render is slow and costs credits. Cache once per N minutes in an in-memory DuckDB, query DuckDB for all subsequent requests.
@@ -212,10 +217,6 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Verify (when possible): point Playwright MCP at the already-running local server, screenshot, click filters, check console.
 - One-page checklist at the bottom.
 - Optional — if the agent is in Claude Desktop without Playwright access, skip the verify step but require the agent to call out that visual verification was skipped.
-
-### `references/managed-git-mcp.md`
-- **Placeholder.** Describes the planned flow (MCP-provisioned Keboola-managed git, feature branch → preview → merge to main) and links to the relevant Linear issue / GitHub PR when available.
-- Until the platform support lands, the agent falls back to customer-provided git (private GitHub/GitLab).
 
 ### `references/troubleshooting.md`
 - "Cannot POST /" / "Method Not Allowed" — Keboola POSTs to `/` on startup; handle both methods.
@@ -276,13 +277,13 @@ Each template directory contains a minimum-viable runnable starter:
 - **Streamlit deprecation timing.** The skill treats both types as first-class today but should add a "Streamlit will be deprecated; prefer Python/JS for new builds" hint once a date is known. Currently flagged in `choosing-app-type.md` without a date.
 - **Kai integration.** `kai-client` is still WIP. The reference is a stub that points upstream; this is intentional, not a gap.
 - **Permission scoping by user.** No platform-level support yet. The `X-Kbc-User-Email` header workaround is documented in `authentication.md` and `storage-access.md` with a clear "this is a workaround" call-out.
-- **MCP-managed git.** Placeholder reference (`managed-git-mcp.md`). Will be expanded when the platform tooling lands; for now the agent falls back to customer git.
+- **MCP-managed git for Python/JS apps.** Currently a placeholder subsection in `python-js-apps.md`. Will be split out into its own reference once the platform support lands and the section grows past ~50 lines.
 
 ## Acceptance criteria
 
 The consolidation is complete when:
 
-1. `plugins/dataapp-developer/skills/dataapp-development/` exists with `SKILL.md`, the 13 references, and 4 template directories listed above.
+1. `plugins/dataapp-developer/skills/dataapp-development/` exists with `SKILL.md`, the 12 references, and 4 template directories listed above.
 2. `plugins/dataapp-developer/skills/dataapp-dev/` and `plugins/dataapp-developer/skills/dataapp-deployment/` are deleted.
 3. Plugin version is bumped in both `plugin.json` and `marketplace.json`.
 4. Plugin `README.md` and root `README.md` reflect the new single-skill structure.
