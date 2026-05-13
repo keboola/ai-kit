@@ -65,14 +65,20 @@ plugins/dataapp-developer/skills/dataapp-development/
     │       ├── nginx/sites/default.conf
     │       ├── supervisord/services/app.conf
     │       └── setup.sh
-    ├── nodejs-app/
-    │   ├── server.js
+    ├── nodejs-app/                            # dashboarding default — kai-pricing shape
+    │   ├── server.js                          # Express, serves /api/* AND static frontend
+    │   ├── api/
+    │   │   ├── keboola-client.js              # runQuery(sql) against workspace query endpoint
+    │   │   └── queries.js                     # app-specific SQL builders (placeholder)
+    │   ├── public/
+    │   │   ├── index.html                     # CDN Tailwind + Chart.js, no bundler
+    │   │   └── app.js                         # fetch /api/*, render charts
     │   ├── package.json
     │   └── keboola-config/
     │       ├── nginx/sites/default.conf
     │       ├── supervisord/services/app.conf
     │       └── setup.sh
-    ├── python-node-app/
+    ├── python-node-app/                       # when you need a Python backend
     │   ├── backend/
     │   │   ├── main.py
     │   │   └── pyproject.toml
@@ -113,9 +119,12 @@ The decision tree must be readable as a flowchart and not require the agent to r
 Each file has a 1-line description in its frontmatter (or first heading) so the agent can decide whether to load it without reading the whole file.
 
 ### `references/choosing-app-type.md`
-- When to pick Streamlit vs Python/JS.
-- Decision criteria: code complexity, frontend needs, deployment method available, language constraints.
-- Pointer that Streamlit will deprecate eventually and JS/Python is the future.
+- **Decision hierarchy:**
+  1. **Streamlit** — fastest path when the team is Python-only, the UI is mostly sidebar + main pane, and the app is internal/quick-prototype. Supports paste-in-UI "Code" mode for simple cases.
+  2. **Single Node.js + static frontend (Python/JS type)** — preferred default for **dashboarding apps**: one process, no bundler, Chart.js/Tailwind via CDN, easy to deploy. Reference: kai-pricing-calculator-app `nodejs-pricing-simulator` branch.
+  3. **Combined Python + Node (Python/JS type)** — when you need a Python backend (ML model, existing Python codebase, FastAPI services) alongside a JS frontend. Reference: profitline-js-app.
+- Decision criteria: language constraints, complexity, frontend needs, deployment method available.
+- Pointer that Streamlit is on a deprecation path; new apps should default to Python/JS once the simple-UI threshold is exceeded.
 
 ### `references/streamlit-apps.md`
 - Two deployment modes: **Code** (paste in UI) vs **Git Repository** (public/private with PAT or SSH).
@@ -139,10 +148,18 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - App must handle `POST /` (Keboola startup check). Streamlit handles natively; Flask/Express need explicit handlers.
 - Supervisord rules: absolute `/app/...` paths, `uv run` prefix for Python, never declare `[program:nginx]`.
 - `pyproject.toml` is required for Python — `pip install` is blocked by PEP 668; `uv sync` only.
-- **Multi-server pattern (most common Python/JS shape today):**
-  - Python backend + JS frontend running in the same container (e.g. FastAPI/Flask serving `/api/*`, Next.js/Vite/React serving `/`), modeled on the profitline-js-app and the kai-pricing-calculator-app.
+- **Preferred shape for dashboarding apps: single Node.js server + static frontend.**
+  - Pattern: Express (or similar) on one internal port, serving both the JSON API (`/api/*` endpoints) AND the static frontend (`public/index.html` + `public/app.js` + CSS).
+  - Frontend loads its dependencies from CDN (Chart.js, Tailwind, etc.) — no bundler, no build step.
+  - Single supervisord program, single nginx location block, single `setup.sh` line (`npm install`).
+  - Canonical reference: [`keboola-rnd/kai-pricing-calculator-app` on the `nodejs-pricing-simulator` branch](https://github.com/keboola-rnd/kai-pricing-calculator-app/tree/nodejs-pricing-simulator).
+  - Pairs naturally with DuckDB caching (`duckdb-caching.md`) since both live in the same Node process.
+  - Runnable template at `templates/nodejs-app/`.
+- **Multi-server pattern (Python backend + JS frontend) — use when you need it:**
+  - When to reach for it: the team already has a Python backend (FastAPI/Flask), an ML model that needs to live in Python, an existing Python codebase you're wrapping a UI around, or any case where a JS-only backend isn't sufficient.
+  - Reference: profitline-js-app shape (FastAPI :8050 + Next.js :3000 in one Keboola container).
   - Backend convention: Python on `:8050` (`uv run uvicorn app:app --port 8050` or `uv run python app.py`).
-  - Frontend convention: Node on `:3000`. For bundled toolchains (Next.js standalone, Vite preview) the frontend is **pre-built and committed to git** so `setup.sh` only needs to install deps, not build — the profitline app's `setup.sh` runs just `uv sync` because `.next/standalone` is committed.
+  - Frontend convention: Node on `:3000`. For bundled toolchains (Next.js standalone, Vite preview) the frontend is **pre-built and committed to git** so `setup.sh` only needs to install deps, not build — profitline's `setup.sh` runs just `uv sync` because `.next/standalone` is committed.
   - **Nginx config — two location blocks:** `/api/* → :8050` (backend), `/ → :3000` (frontend). Order matters in nginx — more specific path first.
   - **Supervisord — one `[program:]` per process** (e.g. `backend.conf` and `frontend.conf` in `keboola-config/supervisord/services/`). Each gets its own `command`, `stdout_logfile`, `stderr_logfile`.
   - **`setup.sh` parallelism:** run `cd /app && uv sync &` and `cd /app/frontend && npm install &` then `wait`. Saves cold-start time.
@@ -212,11 +229,11 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Reference template at `templates/duckdb-cache/`.
 
 ### `references/styling-guide.md`
-- **Default look.** Take the FI app (`keboola-rnd/keboola-financial-intelligence-app`) and profitline-js-app conventions: Plus Jakarta Sans + JetBrains Mono, Tailwind utility classes, shadcn/ui base components, a single `COLORS` constant, formatters in `lib/constants.ts`.
-- For Streamlit: default Keboola theme colors above + `general-design-guide` extras (logo placement, anchor-link hiding, footer pattern).
-- **Brand customization.** If the customer has a brand kit, override via Tailwind theme (Python/JS) or `[theme]` in `config.toml` (Streamlit). Patterns inline.
+- **Lightweight default (single Node + static frontend — the dashboarding default).** Tailwind via CDN, Chart.js via CDN, vanilla HTML + minimal JS modules. Keboola color palette (primary `#1F8FFF`, bg `#FFFFFF`, secondary `#E6F2FF`, text `#222529`, font sans serif). Reference: kai-pricing-calculator-app `nodejs-pricing-simulator` branch.
+- **Heavier framework option (Vite/Next.js + React + shadcn/ui).** Use when the UI complexity justifies a bundler and component library. Conventions: Plus Jakarta Sans + JetBrains Mono, a single `COLORS` constant in `lib/constants.ts`, formatters in the same module, no emoji in UI elements. Reference: FI app and profitline-js-app conventions.
+- **Streamlit:** default Keboola theme colors above + `general-design-guide` extras (logo placement, anchor-link hiding, footer pattern).
+- **Brand customization.** Override via `tailwind.config.ts` (or inline CDN config), Tailwind theme block (bundled), or `[theme]` in `config.toml` (Streamlit). Patterns inline.
 - **Hook point:** if a "company-styling" skill or theme-factory exists, this reference points to it as the place to customize.
-- No emoji in dashboard UI elements (FI/profitline convention).
 
 ### `references/dashboard-patterns.md`
 - SQL-first: aggregate in the database, never load raw data into the app.
@@ -269,12 +286,16 @@ Each template directory contains a minimum-viable runnable starter:
 - `keboola-config/supervisord/services/app.conf` — `uv run python /app/app.py`.
 - `keboola-config/setup.sh` — `uv sync`.
 
-### `templates/nodejs-app/`
-- `server.js` — Express app, `app.all('/')`, internal port 3000.
-- `package.json` — express; `"type": "module"`.
-- `keboola-config/nginx/sites/default.conf` — `:8888 → :3000`, with WebSocket upgrade headers commented in.
-- `keboola-config/supervisord/services/app.conf` — `node /app/server.js`.
-- `keboola-config/setup.sh` — `npm install`.
+### `templates/nodejs-app/` (the dashboarding default — modeled on kai-pricing-calculator-app `nodejs-pricing-simulator`)
+- `server.js` — Express app, internal port 3000. Serves both `/api/*` (JSON endpoints calling Keboola workspace query) and `/` (static frontend from `public/`). `app.all('/', ...)` for the platform startup POST. Defensive `#`-prefixed env-var mirror and `.streamlit/secrets.toml` local-dev fallback (same shape kai-pricing uses).
+- `api/keboola-client.js` — `runQuery(sql)` against `/v2/storage/branch/{branch}/workspaces/{workspace}/query`; env-var resolution with multiple fallbacks (`KBC_URL`/`KBC_STACK_API_URL`, `KBC_TOKEN`/`KBC_STORAGEAPI_TOKEN`, `KBC_WORKSPACE_ID`/`WORKSPACE_ID`); workspace-ID normalizer that strips the `WORKSPACE_<id>` prefix.
+- `api/queries.js` — placeholder for app-specific SQL builders so the agent has the file to extend.
+- `public/index.html` — single-page UI loading Tailwind and Chart.js via CDN. No bundler, no build step.
+- `public/app.js` — fetches `/api/*`, renders Chart.js charts, wires up filters.
+- `package.json` — `express` only (no DuckDB unless the agent opts in via the `duckdb-cache` template). `"type": "module"`, `"engines": { "node": ">=20" }`.
+- `keboola-config/nginx/sites/default.conf` — `:8888 → :3000`, with WebSocket upgrade headers commented in for SSE/streaming use cases.
+- `keboola-config/supervisord/services/app.conf` — `node /app/server.js`, `directory=/app`.
+- `keboola-config/setup.sh` — `cd /app && npm install --omit=dev`.
 
 ### `templates/python-node-app/` (the most common Python/JS shape — based on profitline-js-app)
 - `backend/main.py` — FastAPI app on `:8050`, single `GET /api/hello` returning JSON; reads `KBC_URL`/`KBC_TOKEN` from env.
