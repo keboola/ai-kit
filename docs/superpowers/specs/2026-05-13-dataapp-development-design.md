@@ -167,7 +167,7 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - **For Python/JS apps without MCP injection:** use the Query Service API directly (POST to `/v2/storage/branch/{branch}/workspaces/{workspace}/query`) — example from `kai-pricing-calculator-app/api/keboola-client.js`.
 - **RW direct access (Storage Access).** Snowflake only. Configure `storage.output.tables[].unload_strategy = "direct-grant"`. Use `keboola-query-service` (Python) or `@keboola/query-service` (JS). Ephemeral workspace recreated on every app start. **SQL-injection risk** — validate/sanitize all user input (allowlists, type coercion).
 - **Input mapping — discouraged for new apps.** Snapshot at deploy time, no fresh data, no write-back. Use only for static reference data.
-- **Permission scoping by user.** Not currently supported at the app-storage level (column-level perms also missing). Pattern for now: filter in app code based on `X-Kbc-User-Email` header (the platform injects it), as profitline-js-app does. Mention this is a workaround until platform-level support lands.
+- **Data access management — PLACEHOLDER.** Per-user / row-level data access control at the app-storage layer is not currently supported by the platform (column-level permissions also missing). Internal patterns exist and differ between JS/Python apps and legacy Streamlit apps — they will be documented here once the patterns are firmed up and verified. Until then this section is intentionally empty; do not invent a pattern.
 
 ### `references/authentication.md`
 - Six options: None, Basic (Keboola-generated password), OIDC (Auth0/Google/Entra ID/Okta), GitHub OAuth, GitLab OAuth, JumpCloud.
@@ -175,7 +175,7 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Callback URL format for OAuth/OIDC: `https://<dataAppId>.hub.<keboolaConnectionHost>/_proxy/callback`.
 - Basic auth password cannot be rotated — delete + recreate to change.
 - MCP `modify_data_app` defaults to basic-auth for new apps; pass `authentication_type="default"` on update to keep existing setup (especially important for OIDC apps).
-- Row-level data filtering by authenticated user is covered in `storage-access.md` (Permission scoping section), not here — that pattern is about data access, not auth itself.
+- Per-user / row-level data access control is a storage-access concern, not an auth concern. See the "Data access management" placeholder in `storage-access.md` — no documented pattern exists yet for either JS/Python or legacy Streamlit apps.
 
 ### `references/duckdb-caching.md`
 - **Why:** querying Snowflake on every page render is slow and costs credits. Cache once per N minutes in an in-memory DuckDB, query DuckDB for all subsequent requests.
@@ -276,7 +276,7 @@ Each template directory contains a minimum-viable runnable starter:
 
 - **Streamlit deprecation timing.** The skill treats both types as first-class today but should add a "Streamlit will be deprecated; prefer Python/JS for new builds" hint once a date is known. Currently flagged in `choosing-app-type.md` without a date.
 - **Kai integration.** `kai-client` is still WIP. The reference is a stub that points upstream; this is intentional, not a gap.
-- **Permission scoping by user.** No platform-level support yet. The `X-Kbc-User-Email` header workaround is documented in `authentication.md` and `storage-access.md` with a clear "this is a workaround" call-out.
+- **Data access management (per-user / row-level).** No platform-level support yet. `storage-access.md` carries an intentional placeholder; internal patterns exist (different for JS/Python vs legacy Streamlit) but were unverified during research, so the spec deliberately ships no pattern. Fill in once patterns are confirmed with the platform/internal teams.
 - **MCP-managed git for Python/JS apps.** Currently a placeholder subsection in `python-js-apps.md`. Will be split out into its own reference once the platform support lands and the section grows past ~50 lines.
 
 ## Acceptance criteria
