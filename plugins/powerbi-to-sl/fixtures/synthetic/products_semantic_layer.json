@@ -1,0 +1,13 @@
+{
+  "name": "Products",
+  "description": "Product catalogue.",
+  "columns": [
+    {"name": "ProductId", "dataType": "int64", "isKey": true},
+    {"name": "Name", "dataType": "string"},
+    {"name": "Category", "dataType": "string"},
+    {"name": "Cost", "dataType": "decimal"}
+  ],
+  "measures": [
+    {"name": "Product Count", "expression": "COUNTROWS('Products')"}
+  ]
+}
