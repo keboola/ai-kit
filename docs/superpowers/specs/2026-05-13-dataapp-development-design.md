@@ -110,8 +110,14 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - `secrets.toml` — direct UI upload (flat keys) vs repo-based (supports nested groups).
 - Theme via Keboola Theming UI (predefined themes + custom) vs `parameters.dataApp.streamlit.config.toml` raw override (preserves non-`[theme]` sections).
 - Default Keboola theme values (primary `#1F8FFF`, bg `#FFFFFF`, secondary `#E6F2FF`, text `#222529`, sans serif).
-- Local dev: `streamlit run streamlit_app.py` on `:8501`.
 - AgGrid Enterprise license is pre-configured platform-wide.
+- **Local development section:**
+  - Install deps with `uv sync` (or `pip install -e .`) — the local box does NOT have the PEP-668 restriction.
+  - Run with `streamlit run streamlit_app.py` on `:8501` (default Streamlit port).
+  - Local credentials in `.streamlit/secrets.toml` (gitignored). Production credentials come from Keboola `dataApp.secrets` as env vars.
+  - Env-parity pattern: `os.environ.get('KBC_TOKEN') or st.secrets.get('KBC_TOKEN')` so the same code works in both environments without branching.
+  - Hot reload: just save the file — Streamlit auto-reloads. No restart needed.
+  - For the validate→build→verify change loop, point to `dev-workflow.md`.
 
 ### `references/python-js-apps.md`
 - The `/app` contract: nginx/sites/`*.conf`, supervisord/services/`*.conf`, optional `setup.sh`, optional `run.sh`.
@@ -122,8 +128,18 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - `pyproject.toml` is required for Python — `pip install` is blocked by PEP 668; `uv sync` only.
 - Multi-server pattern (Python + Node simultaneously), citing the profitline-js-app shape (FastAPI + Next.js).
 - Git commit locking — exit code 153 means the locked commit no longer exists in the remote.
-- Dev mode (`KBC_APP_MODE=dev`, `supervisord-dev/`, `setup-dev.sh`, `dev-deps`).
+- Keboola-hosted dev mode (`KBC_APP_MODE=dev`, `supervisord-dev/`, `setup-dev.sh`, `dev-deps`) for hot-reload off a branch inside the platform.
 - Bootstrap hook (derived images) — note that customers usually don't need to touch this.
+- **Local development section:**
+  - **Skip nginx and supervisord locally** — run your app process directly. Nginx/supervisord exist only to satisfy the Keboola container contract.
+  - Install deps: Python → `uv sync` from the repo root; Node → `npm install`.
+  - Run the app directly: `uv run python app.py` (Flask), `uv run uvicorn app:app --reload --port 5000` (FastAPI), `node --watch server.js` (Express), or `npm run dev` for bundled toolchains (Vite, Next.js).
+  - Visit `http://localhost:<internal-port>` directly — do NOT add a local nginx on :8888.
+  - Local secrets: pattern from `kai-pricing-calculator-app` — load from `.env` (Node), `.streamlit/secrets.toml` (works for both types as the kai-pricing app does), or shell exports. Mirror the same env-var names Keboola injects (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`, `BRANCH_ID`).
+  - Env-parity pattern: read from `process.env.X` / `os.environ.get("X")` everywhere; in dev, populate those from your local file. The same code runs unchanged in Keboola where `dataApp.secrets` populates the same env vars.
+  - Quick local-vs-prod sanity check: run the exact same command your `supervisord/services/app.conf` uses (just point to the right Python interpreter). If it works locally, it works in Keboola.
+  - Multi-server local dev: run each process in its own terminal; let your frontend dev server proxy `/api/*` to the backend (Next.js: `next.config.ts` rewrites; Vite: `server.proxy`). This skips nginx locally entirely.
+  - For the validate→build→verify change loop, point to `dev-workflow.md`.
 
 ### `references/deployment-paths.md`
 - **Path A — Claude Desktop / web (MCP-only, no filesystem).**
@@ -189,10 +205,11 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Minimal embed pattern. **Note:** the library is still in development; treat this reference as a stub until APIs settle. Link to upstream README from inside the file rather than copying patterns that may change.
 
 ### `references/dev-workflow.md`
+- **Prerequisite pointer:** first-time local-dev setup (install, run, secrets) lives in `streamlit-apps.md` (Streamlit) or `python-js-apps.md` (Python/JS). This reference assumes the agent already has a local server running.
 - The validate → build → verify loop, preserved from the current `dataapp-dev` skill but condensed.
 - Validate: `mcp__keboola__get_table`, `mcp__keboola__query_data`, `mcp__keboola__get_project_info`.
 - Build: SQL-first, centralized `data_loader`, session state initialization, no variable conflicts.
-- Verify (when possible): start local server, navigate with Playwright MCP, screenshot, click filters, check console.
+- Verify (when possible): point Playwright MCP at the already-running local server, screenshot, click filters, check console.
 - One-page checklist at the bottom.
 - Optional — if the agent is in Claude Desktop without Playwright access, skip the verify step but require the agent to call out that visual verification was skipped.
 
