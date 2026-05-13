@@ -72,6 +72,20 @@ plugins/dataapp-developer/skills/dataapp-development/
     │       ├── nginx/sites/default.conf
     │       ├── supervisord/services/app.conf
     │       └── setup.sh
+    ├── python-node-app/
+    │   ├── backend/
+    │   │   ├── main.py
+    │   │   └── pyproject.toml
+    │   ├── frontend/
+    │   │   ├── package.json
+    │   │   ├── vite.config.ts
+    │   │   └── src/App.tsx
+    │   └── keboola-config/
+    │       ├── nginx/sites/default.conf      # /api/* -> :8050, / -> :3000
+    │       ├── supervisord/services/
+    │       │   ├── backend.conf              # uv run uvicorn ...
+    │       │   └── frontend.conf             # node ...
+    │       └── setup.sh                       # uv sync & npm install & wait
     └── duckdb-cache/
         ├── python/cache.py
         └── nodejs/duck.js
@@ -125,7 +139,16 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - App must handle `POST /` (Keboola startup check). Streamlit handles natively; Flask/Express need explicit handlers.
 - Supervisord rules: absolute `/app/...` paths, `uv run` prefix for Python, never declare `[program:nginx]`.
 - `pyproject.toml` is required for Python — `pip install` is blocked by PEP 668; `uv sync` only.
-- Multi-server pattern (Python + Node simultaneously), citing the profitline-js-app shape (FastAPI + Next.js).
+- **Multi-server pattern (most common Python/JS shape today):**
+  - Python backend + JS frontend running in the same container (e.g. FastAPI/Flask serving `/api/*`, Next.js/Vite/React serving `/`), modeled on the profitline-js-app and the kai-pricing-calculator-app.
+  - Backend convention: Python on `:8050` (`uv run uvicorn app:app --port 8050` or `uv run python app.py`).
+  - Frontend convention: Node on `:3000`. For bundled toolchains (Next.js standalone, Vite preview) the frontend is **pre-built and committed to git** so `setup.sh` only needs to install deps, not build — the profitline app's `setup.sh` runs just `uv sync` because `.next/standalone` is committed.
+  - **Nginx config — two location blocks:** `/api/* → :8050` (backend), `/ → :3000` (frontend). Order matters in nginx — more specific path first.
+  - **Supervisord — one `[program:]` per process** (e.g. `backend.conf` and `frontend.conf` in `keboola-config/supervisord/services/`). Each gets its own `command`, `stdout_logfile`, `stderr_logfile`.
+  - **`setup.sh` parallelism:** run `cd /app && uv sync &` and `cd /app/frontend && npm install &` then `wait`. Saves cold-start time.
+  - Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy feature to route `/api/*` to the backend (Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.ts`).
+  - User-identity passthrough across the local-vs-Keboola boundary (e.g. injecting an email header for testing) is convention-specific to the app — not a platform feature; see `storage-access.md` placeholder before relying on it.
+  - Runnable template at `templates/python-node-app/`.
 - Git commit locking — exit code 153 means the locked commit no longer exists in the remote.
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`, `supervisord-dev/`, `setup-dev.sh`, `dev-deps`) for hot-reload off a branch inside the platform.
 - Bootstrap hook (derived images) — note that customers usually don't need to touch this.
@@ -253,6 +276,16 @@ Each template directory contains a minimum-viable runnable starter:
 - `keboola-config/supervisord/services/app.conf` — `node /app/server.js`.
 - `keboola-config/setup.sh` — `npm install`.
 
+### `templates/python-node-app/` (the most common Python/JS shape — based on profitline-js-app)
+- `backend/main.py` — FastAPI app on `:8050`, single `GET /api/hello` returning JSON; reads `KBC_URL`/`KBC_TOKEN` from env.
+- `backend/pyproject.toml` — fastapi + uvicorn + `requires-python = ">=3.11"`.
+- `frontend/` — minimal Vite + React + TypeScript skeleton, `vite.config.ts` with `server.proxy` for `/api/* → http://localhost:8050` (local dev only). Production build committed under `frontend/dist/`.
+- `keboola-config/nginx/sites/default.conf` — two location blocks: `/api/ → 127.0.0.1:8050` and `/ → 127.0.0.1:3000`. WebSocket upgrade headers included for the frontend block.
+- `keboola-config/supervisord/services/backend.conf` — `uv run uvicorn main:app --host 127.0.0.1 --port 8050`, `directory=/app/backend`.
+- `keboola-config/supervisord/services/frontend.conf` — `node /app/frontend/server.js` (or `npx serve` against the built `dist/` for the Vite case; concrete command picked when the template is written).
+- `keboola-config/setup.sh` — parallel install: `cd /app/backend && uv sync &` then `cd /app/frontend && npm install &` then `wait`.
+- README.md in the template root summarising the local-dev sequence (`cd backend && uv run uvicorn...`, `cd frontend && npm run dev`) and the Keboola deployment sequence (build frontend, commit, push, deploy).
+
 ### `templates/duckdb-cache/`
 - `python/cache.py` — adaptation of the Node pattern to Python: `init()`, `refresh()`, `query(sql)`, status dict.
 - `nodejs/duck.js` — slimmed-down version of `kai-pricing-calculator-app/api/duck.js` (the schema-specific bits stripped out, kept as a generic refresh-from-Snowflake-into-DuckDB harness).
@@ -283,7 +316,7 @@ Each template directory contains a minimum-viable runnable starter:
 
 The consolidation is complete when:
 
-1. `plugins/dataapp-developer/skills/dataapp-development/` exists with `SKILL.md`, the 12 references, and 4 template directories listed above.
+1. `plugins/dataapp-developer/skills/dataapp-development/` exists with `SKILL.md`, the 12 references, and 5 template directories listed above.
 2. `plugins/dataapp-developer/skills/dataapp-dev/` and `plugins/dataapp-developer/skills/dataapp-deployment/` are deleted.
 3. Plugin version is bumped in both `plugin.json` and `marketplace.json`.
 4. Plugin `README.md` and root `README.md` reflect the new single-skill structure.
