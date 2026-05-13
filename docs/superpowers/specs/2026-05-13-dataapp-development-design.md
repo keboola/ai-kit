@@ -245,9 +245,23 @@ Each file has a 1-line description in its frontmatter (or first heading) so the 
 - Numeric columns must stay numeric for table sorting; use column config for currency display in Streamlit's `st.dataframe`.
 
 ### `references/kai-integration.md`
-- Optional Kai chat embed inside the app via `kai-client` library (`github.com/keboola/kai-client`).
-- Authentication into Kai using the same project token.
-- Minimal embed pattern. **Note:** the library is still in development; treat this reference as a stub until APIs settle. Link to upstream README from inside the file rather than copying patterns that may change.
+- **When to add Kai.** Optional. Use when the app would benefit from a natural-language assistant grounded in the project's data (e.g. "what's our revenue YTD?", "show me last week's costs by team"). Skip for pure dashboarding apps where users already know what they're looking at.
+- **Library.** [`keboola/kai-client`](https://github.com/keboola/kai-client) — Python async client with SSE streaming, session management, tool-approval flow, and a `kai` CLI. JS apps integrate by proxying to the same `/api/chat` endpoint (no separate JS package needed).
+- **Service discovery.** Auto-discover the Kai URL from the project's Storage API:
+  - Python: `KaiClient.from_storage_api(storage_api_token=KBC_TOKEN, storage_api_url=KBC_URL)`.
+  - JS: `GET {KBC_URL}/v2/storage` → find `services[].id === "kai-assistant"` → use its `url`.
+- **Authentication.** Pass the project's Storage API token in `x-storageapi-token` (and `x-storageapi-url`) on requests to Kai. Same token your app already uses for data access — no separate Kai token.
+- **Pattern A — Streamlit embed** (modeled on `kai-client/examples/streamlit_app.py`):
+  - `KaiClient.new_chat_id()` stored in `st.session_state.chat_id` (one chat per session).
+  - `async for event in client.send_message(chat_id, prompt)` — events have `type`: `text` (stream chunk), `tool-call`, `finish`, `tool-approval-required`.
+  - Bridge async→sync with a small `run_async()` helper since Streamlit's main loop is sync.
+  - Tool-approval UI: pause the loop on `tool-approval-required`, render Approve / Deny buttons, resume with the response.
+- **Pattern B — JS data-app embed** (modeled on `kai-client/examples/js-dataapp/server.js`):
+  - Express backend proxies `POST /api/chat` (and `POST /api/chat/:chatId/:action/:approvalId` for tool approval) to Kai, streaming the SSE response back to the browser unchanged.
+  - Cache the discovered Kai URL after the first lookup.
+  - Frontend reads the SSE stream and renders chunks progressively.
+- **Plugins already shipped by kai-client.** `plugins/kai-dataapp/skills/{kai-js, kai-streamlit}` in the kai-client repo are dedicated skills for each path. This reference points users at those skills when they go deep on integration; the goal here is awareness + the minimal embed pattern, not a duplicate of those skills.
+- **DIY alternative — Anthropic SDK directly.** When the team wants full control (custom tool catalog tied to app-specific data, no dependency on Kai's lifecycle), call the Anthropic API directly. Reference: the FI app's `api/chat` Vercel serverless function with tool calls scoped to its financial JSON files. Trade-off: you own model selection, prompt caching, and tool catalogue; Kai gives you those plus Keboola-grounded context for free.
 
 ### `references/dev-workflow.md`
 - **Prerequisite pointer:** first-time local-dev setup (install, run, secrets) lives in `streamlit-apps.md` (Streamlit) or `python-js-apps.md` (Python/JS). This reference assumes the agent already has a local server running.
@@ -329,7 +343,7 @@ Each template directory contains a minimum-viable runnable starter:
 ## Open questions / risks
 
 - **Streamlit deprecation timing.** The skill treats both types as first-class today but should add a "Streamlit will be deprecated; prefer Python/JS for new builds" hint once a date is known. Currently flagged in `choosing-app-type.md` without a date.
-- **Kai integration.** `kai-client` is still WIP. The reference is a stub that points upstream; this is intentional, not a gap.
+- **Kai integration.** `kai-client` is mature enough to embed today (Streamlit + JS examples in-repo, dedicated `kai-dataapp` plugin shipped with skills for both paths). The reference covers both the `KaiClient` library and the SSE-proxy JS pattern, and points to the kai-client repo's own skills for deeper integration work.
 - **Data access management (per-user / row-level).** No platform-level support yet. `storage-access.md` carries an intentional placeholder; internal patterns exist (different for JS/Python vs legacy Streamlit) but were unverified during research, so the spec deliberately ships no pattern. Fill in once patterns are confirmed with the platform/internal teams.
 - **MCP-managed git for Python/JS apps.** Currently a placeholder subsection in `python-js-apps.md`. Will be split out into its own reference once the platform support lands and the section grows past ~50 lines.
 
