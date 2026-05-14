@@ -797,7 +797,7 @@ if __name__ == "__main__":
 
 ## Related Documentation
 
-- [Overview](configuration-schema-overview.md) - Introduction and basics
-- [UI Elements](configuration-schema-ui-elements.md) - Field formats and options
-- [Advanced Patterns](configuration-schema-advanced.md) - Confluence best practices
-- [Examples](configuration-schema-examples.md) - Real production examples
+- [Overview](overview.md) - Introduction and basics
+- [UI Elements](ui-elements.md) - Field formats and options
+- [Advanced Patterns](advanced.md) - Confluence best practices
+- [Examples](examples.md) - Real production examples

@@ -4,30 +4,21 @@ A comprehensive toolkit for building production-ready Keboola Python components 
 
 ## 🎯 Available Skills
 
-### Build Component
-**Command**: `@build-component` (alias: `@component-builder`)
+### Develop Component
+**Command**: `@develop-component` (alias: `@component-builder`)
 **Color**: 🟣 Purple
 
-Expert agent for building Keboola Python components with comprehensive knowledge of:
-- Keboola Common Interface
-- Component architecture patterns
-- Configuration schemas and UI elements
-- CSV processing best practices
-- State management for incremental loads
-- Error handling conventions
-- Developer Portal registration
-- CI/CD deployment workflows
+Expert agent for developing Keboola Python components — both new and existing.
 
 **Use cases:**
-- Create new components from scratch
 - Implement extractors, writers, and applications
 - Add features to existing components
 - Implement incremental data processing
-- Set up CI/CD pipelines
-- Debug component issues
-- Follow Keboola best practices
+- API client separation and architecture
+- Self-documenting workflow patterns
+- Code quality with Ruff
 
-**Note:** build-component automatically delegates UI/schema work to the build-component-ui skill.
+**Note:** Automatically delegates UI/schema work to the build-component-ui skill.
 
 ### Build Component UI
 **Command**: `@build-component-ui` (alias: `@ui-developer`)
@@ -49,7 +40,7 @@ Expert agent specializing in Keboola configuration schemas and UI development:
 - Set up Playwright tests for UI validation
 - Fix schema-related issues
 
-**Note:** Usually called automatically by build-component, but can be used directly for UI-only work.
+**Note:** Usually called automatically by develop-component, but can be used directly for UI-only work.
 
 ### Debug Component
 **Command**: `@debug-component` (alias: `@debugger`)
@@ -61,84 +52,69 @@ Expert skill for debugging Keboola components using Keboola MCP tools and local 
 **Command**: `@test-component` (alias: `@tester`)
 **Color**: 🟢 Green
 
-Expert skill for writing comprehensive tests including datadir tests and unit tests.
-
-### Review Component
-**Command**: `@review-component` (alias: `@reviewer`)
-**Color**: 🔴 Red
-
-Expert skill for code review with actionable feedback grouped by severity.
-
-### Review Backward Compatibility
-**Command**: `@review-backward-compatibility` (alias: `@backward-compatibility-reviewer`)
-**Color**: 🔴 Red
-
-Expert agent for reviewing component PRs with focus on **backward compatibility** — ensuring existing user configurations, sync actions, and output tables are not broken by changes. This is NOT a code quality review.
-
-**Key capabilities:**
-- Identifies all component IDs from `push.yml` (supports single, multiple env vars, and matrix strategies)
-- Analyzes diffs for breaking change vectors (configSchema, Pydantic models, sync actions, output tables, state files)
-- Queries telemetry data (Keboola MCP) for real-world impact assessment (active configs, job stats, error rates)
-- Posts structured review with severity levels (HIGH/MEDIUM/LOW/SAFE) and verdict (APPROVE/REQUEST CHANGES/WARN)
-- All telemetry results are anonymized — never exposes client names, project names, or stack URLs
+Unified testing skill covering all test types for Keboola components.
 
 **Use cases:**
-- Review PRs in `component-*` repositories for backward compatibility
-- Assess real-world impact of breaking changes using telemetry data
-- Verify sync actions are preserved and return correct formats
-- Check that output table structures remain stable for downstream consumers
-- Validate that state file changes include backward-compatible fallbacks
+- Datadir tests (primary method — mirrors KBC_DATADIR production structure)
+- Unit tests and mock-based tests for logic and transformation code
+- VCR functional tests with `keboola.datadirtest` — records real HTTP interactions once, replays in CI without credentials
+- Setting up VCR infrastructure: scaffold, sanitizers, secrets
+- Regression tests from platform debug job output (`stage_output.zip`)
+
+### Review
+**Command**: `/review` (or `@review`)
+**Color**: 🔴 Red
+
+Single consolidated reviewer covering code quality and backward compatibility in one pass.
+
+**Code quality:** architecture patterns (Config/Client separation, `__init__` initialization, `run()` as orchestrator), typing, Pythonic best practices. Runs ruff automatically for formatting and lint.
+
+**Backward compatibility:** configSchema field changes, Pydantic model changes, sync action preservation, output table stability, state file compatibility — with real-world impact via Keboola telemetry.
+
+All telemetry output is anonymized. Never writes client names, project names, or stack URLs to public repos.
 
 ### Get Started
 **Command**: `@get-started`
 **Color**: 🟢 Green
 
-Guide for initializing new Keboola components using cookiecutter template.
-
-### VCR Tester
-**Command**: `@vcr-tester` (alias: `@test-component-vcr`)
-**Color**: 🔵 Cyan
-
-Expert skill for setting up VCR (Video Cassette Recording) functional tests for Keboola Python components. Records real HTTP interactions as cassettes and replays them deterministically in CI without credentials.
-
-**Use cases:**
-- Add functional tests to extractors/writers that call external APIs
-- Set up datadirtest with VCR replay
-- Scaffold test cases from configs
-- Migrate from mock-based tests to VCR replay tests
-- Handle OAuth token chaining across test runs
+Initializes new Keboola components from cookiecutter template. Auto-detects whether a repo is already set up and skips initialization if so. Triggers conversationally when you describe a new component you want to build.
 
 ### Migrate Component to UV
 **Command**: `@migrate-component-to-uv`
 **Color**: 🟣 Purple
 
-Expert skill for migrating Keboola Python packages from legacy `setup.py` + pip to modern `pyproject.toml` + uv build system with deterministic dependencies.
+Expert skill for migrating Keboola Python components from `requirements.txt` + pip to `pyproject.toml` + uv with ruff linting.
 
 **Use cases:**
-- Migrate from `setup.py` to `pyproject.toml`
-- Modernize build system to use uv instead of pip
+- Migrate from `requirements.txt` to `pyproject.toml`
+- Upgrade Dockerfile to Python 3.13 + uv
 - Add deterministic dependency management with `uv.lock`
-- Update CI/CD workflows to use uv
-- Follow Keboola's python-http-client and python-component patterns
+- Update CI/CD workflows: `branches-ignore`, ruff, pytest
+- Align non-source files with cookiecutter template
+
+### Component Defaults
+**Command**: `@component-defaults`
+**Color**: 🟣 Purple
+
+Loads the canonical template files for Keboola components into context. Invoked automatically by other skills during alignment checks.
+
+**Use cases:**
+- Get the standard Dockerfile, push.yml, build_n_test.sh, docker-compose.yml, pre-commit-config.yaml, and pyproject.toml templates
+- Used internally by migrate-to-uv and develop-component for cookiecutter alignment
+
+### Keboola Context
+**Command**: `@keboola-context`
+
+Platform-level knowledge about how Keboola Connection executes components. Pulled automatically whenever platform behaviour affects a decision — config structure, row handling, state, parallelism, test data layout.
+
+**Reference files:**
+- `config-rows.md` — how configRow parameters are merged, parallel execution, per-row state, and test fixture implications
 
 ---
 
 ## ⚡ Available Commands
 
 Quick actions for common component development tasks:
-
-### `/init` - Initialize New Component
-Initialize a new Keboola component from cookiecutter template with automatic cleanup.
-```bash
-/init my-awesome-extractor
-```
-
-### `/run` - Run Component Locally
-Run component locally with test configuration and display results.
-```bash
-/run                    # Uses data/config.json
-/run data/config-test.json
-```
 
 ### `/schema-test` - Test Configuration Schemas
 Launch interactive schema tester for testing and validating configSchema.json and configRowSchema.json.
@@ -152,19 +128,6 @@ Perform thorough code review focusing on Keboola best practices and architecture
 ```bash
 /review                 # Review unstaged changes
 /review src/component.py
-```
-
-### `/fix` - Apply Review Fixes
-Apply fixes from code review incrementally with proper commits.
-```bash
-/fix                    # Per-severity mode (default)
-/fix --per-todo         # One commit per TODO
-```
-
-### `/migrate-repo` - Migrate Repository
-Migrate Keboola component repository from Bitbucket to GitHub with full history.
-```bash
-/migrate-repo git@bitbucket.org:workspace/repo.git
 ```
 
 ### `/generate-vcr-tests` - Generate VCR Functional Tests
@@ -559,16 +522,15 @@ plugins/component-developer/
 ├── .claude-plugin/
 │   └── plugin.json                    # Plugin configuration
 ├── skills/                             # Agent Skills format
-│   ├── build-component/               # Python component development
+│   ├── develop-component/             # Python component development
 │   │   ├── SKILL.md                   # Skill definition
-│   │   ├── references/                # Documentation
-│   │   │   ├── architecture.md
-│   │   │   ├── best-practices.md
-│   │   │   ├── code-quality.md
-│   │   │   ├── workflow-patterns.md
-│   │   │   ├── developer-portal.md
-│   │   │   └── running-and-testing.md
-│   │   └── scripts/                   # Helper scripts
+│   │   └── references/                # Documentation
+│   │       ├── architecture.md
+│   │       ├── best-practices.md
+│   │       ├── code-quality.md
+│   │       ├── workflow-patterns.md
+│   │       ├── developer-portal.md
+│   │       └── running-and-testing.md
 │   ├── build-component-ui/            # UI/schema development
 │   │   ├── SKILL.md
 │   │   ├── references/
@@ -587,39 +549,27 @@ plugins/component-developer/
 │   │   │   ├── debugging.md
 │   │   │   └── telemetry-debugging.md
 │   │   └── scripts/
-│   ├── test-component/                # Testing
-│   │   ├── SKILL.md
-│   │   ├── references/
-│   │   │   └── testing.md
-│   │   └── scripts/
-│   ├── review-component/              # Code review
-│   │   ├── SKILL.md
-│   │   ├── references/
-│   │   │   ├── review-checklist.md
-│   │   │   ├── review-principles.md
-│   │   │   └── review-style-guide.md
-│   │   └── scripts/
-│   ├── test-component-vcr/            # VCR functional testing
+│   ├── test-component/                # Testing (datadir, unit, VCR)
 │   │   ├── SKILL.md
 │   │   └── references/
-│   │       └── vcr-quickstart.md
-│   ├── review-backward-compatibility/  # Backward compatibility review
+│   │       ├── datadir-tests.md
+│   │       ├── unit-and-mock-tests.md
+│   │       ├── vcr-configs-format.md
+│   │       ├── vcr-sanitizers.md
+│   │       ├── vcr-quickstart.md
+│   │       ├── vcr-troubleshooting.md
+│   │       └── vcr-debug-from-platform.md
+│   ├── review/                        # Code quality + backward compatibility review
 │   │   ├── SKILL.md
 │   │   └── references/
+│   │       ├── code-quality.md
 │   │       ├── breaking-changes.md
-│   │       └── telemetry-analysis.md
+│   │       └── telemetry.md
 │   └── get-started/                   # Getting started
-│       ├── SKILL.md
-│       ├── references/
-│       │   └── initialization.md
-│       └── scripts/
+│       └── SKILL.md
 ├── commands/                           # Slash commands
-│   ├── fix.md                         # Apply review fixes
 │   ├── generate-vcr-tests.md         # Generate VCR functional tests
-│   ├── init.md                        # Initialize new component
-│   ├── migrate-repo.md                # Migrate from Bitbucket
 │   ├── review.md                      # Code review
-│   ├── run.md                         # Run component locally
 │   └── schema-test.md                 # Test configuration schemas
 └── README.md                          # This file
 ```
@@ -631,7 +581,7 @@ plugins/component-developer/
 To improve this plugin:
 
 1. Update skill files in `skills/*/SKILL.md`
-   - `build-component/SKILL.md` for Python development
+   - `develop-component/SKILL.md` for Python development
    - `build-component-ui/SKILL.md` for UI/schema development
    - Other skills as needed
 2. Add or update documentation in `skills/*/references/`
@@ -643,13 +593,36 @@ To improve this plugin:
 
 ---
 
-**Version**: 3.2.0
+**Version**: 3.3.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
 
 ## 📝 Changelog
 
-### 3.2.0 (2026-03-05)
+### 3.5.0 (2026-03-30)
+- **MERGED**: `test-component-vcr` skill absorbed into `test-component` — one unified testing entry point
+- **REMOVED**: `vcr-tester` skill (superseded)
+- **RESTRUCTURED**: `test-component` references split into `datadir-tests.md`, `unit-and-mock-tests.md`, and `vcr/` subdirectory
+- **UPDATED**: `/generate-vcr-tests` command now uses `test-component` skill
+- **UPDATED**: `tester` agent description updated to mention VCR
+
+### 3.4.0 (2026-03-26)
+- **CONSOLIDATED**: `review-component` and `review-backward-compatibility` skills merged into single `review` skill
+- **REMOVED**: `reviewer` agent (replaced by `review` skill + `/review` command)
+- **SIMPLIFIED**: `/review` command is now a lean entry point — all logic lives in the skill
+- **IMPROVED**: Review now runs `ruff format --check` and `ruff check` automatically; linting issues reported as "run ruff" rather than individual findings
+- **TRIMMED**: Removed checklist and style-guide reference files; code-quality.md consolidated and lean
+
+### 3.3.1 (2026-03-26)
+- **RENAMED**: `build-component` skill → `develop-component` (better reflects ongoing development, not just greenfield)
+- **AGENT**: Redesigned `reviewer` agent — now covers both code quality AND backward compatibility in one pass, read-only tools, Opus model
+- **AGENT**: Removed `backward-compatibility-reviewer` agent (subsumed into `reviewer`)
+- **REMOVED**: `fix`, `migrate-repo`, `run`, `init` slash commands (bloated or obsolete)
+- **SKILL**: `get-started` converted from thin routing stub to actionable cookiecutter skill with state detection
+- **SKILL**: `test-component` gains "Running Locally" section (KBC_DATADIR, exit codes, debug steps)
+- **FIXED**: Stale `../guides/component-builder/` paths in `review-component` and `debug-component`
+
+### 3.3.0 (2026-03-05)
 - **NEW**: Added `test-component-vcr` skill for VCR-based functional testing
 - Records real HTTP interactions as cassettes and replays them in CI without credentials
 - Supports OAuth token chaining, time freezing, and automatic credential sanitization

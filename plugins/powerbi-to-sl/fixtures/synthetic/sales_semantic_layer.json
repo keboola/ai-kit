@@ -1,0 +1,30 @@
+{
+  "name": "Sales",
+  "description": "Order line items for the storefront.",
+  "columns": [
+    {"name": "OrderId", "dataType": "int64", "isKey": true, "description": "PK"},
+    {"name": "OrderDate", "dataType": "dateTime"},
+    {"name": "ProductId", "dataType": "int64"},
+    {"name": "CustomerId", "dataType": "int64"},
+    {"name": "Quantity", "dataType": "int64"},
+    {"name": "UnitPrice", "dataType": "decimal"},
+    {"name": "Channel", "dataType": "string"}
+  ],
+  "measures": [
+    {
+      "name": "Total Revenue",
+      "expression": "SUMX('Sales', 'Sales'[Quantity] * 'Sales'[UnitPrice])",
+      "description": "Sum of qty × unit price across all orders."
+    },
+    {
+      "name": "Revenue YoY %",
+      "expression": "VAR _cy = [Total Revenue] VAR _py = CALCULATE([Total Revenue], DATEADD('Date'[Date], -1, YEAR)) RETURN DIVIDE(_cy - _py, _py)",
+      "description": "Year-over-year revenue growth."
+    }
+  ],
+  "relationships": [
+    {"fromTable": "Sales", "fromColumn": "ProductId", "toTable": "Products", "toColumn": "ProductId", "cardinality": "manyToOne"},
+    {"fromTable": "Sales", "fromColumn": "CustomerId", "toTable": "Customers", "toColumn": "CustomerId", "cardinality": "manyToOne"},
+    {"fromTable": "Sales", "fromColumn": "OrderDate", "toTable": "Date", "toColumn": "Date", "cardinality": "manyToOne"}
+  ]
+}

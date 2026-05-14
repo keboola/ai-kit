@@ -774,7 +774,7 @@ Use with `format: "editor"` and `options.editor.mode`.
 
 ## Related Documentation
 
-- [Overview](configuration-schema-overview.md) - Introduction and basics
-- [Sync Actions](configuration-schema-sync-actions.md) - Dynamic dropdowns and validation
-- [Advanced Patterns](configuration-schema-advanced.md) - Confluence best practices
-- [Examples](configuration-schema-examples.md) - Real production examples
+- [Overview](overview.md) - Introduction and basics
+- [Sync Actions](sync-actions.md) - Dynamic dropdowns and validation
+- [Advanced Patterns](advanced.md) - Confluence best practices
+- [Examples](examples.md) - Real production examples

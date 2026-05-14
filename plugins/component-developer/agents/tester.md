@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Expert agent for writing and maintaining tests for Keboola Python components. Specializes in datadir tests, unit tests, and integration tests with proper mocking and assertions.
+description: Expert agent for writing and maintaining tests for Keboola Python components. Specializes in datadir tests, unit tests, mock-based tests, and VCR functional tests with keboola.datadirtest.
 tools: Glob, Grep, Read, Bash, Write, Edit
 model: sonnet
 color: green

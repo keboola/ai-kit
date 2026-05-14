@@ -1,0 +1,82 @@
+[
+  {
+    "query": "hey i need to build a keboola component for the stripe api, never done this before, where do i start",
+    "should_trigger": true
+  },
+  {
+    "query": "We need a new extractor for Salesforce — let's create the repo and set it up from scratch with the proper structure",
+    "should_trigger": true
+  },
+  {
+    "query": "I just got access to the Shopify API and need to pull order data into Keboola. What's the best way to create a component for this?",
+    "should_trigger": false
+  },
+  {
+    "query": "empty git repo here, want to start a keboola writer for our internal postgres. what do i need to do first",
+    "should_trigger": true
+  },
+  {
+    "query": "let's build ex-hubspot from scratch — need to pull contacts, deals, and activities from HubSpot",
+    "should_trigger": true
+  },
+  {
+    "query": "i want to create a new application component that transforms data between two tables, how should I structure the project",
+    "should_trigger": false
+  },
+  {
+    "query": "starting a brand new component, never done this in keboola before. we want to pull data from our internal API at api.company.com/v2/reports",
+    "should_trigger": true
+  },
+  {
+    "query": "fresh repo, need to create keboola.wr-bigquery — loads CSV files from keboola storage into BigQuery tables",
+    "should_trigger": true
+  },
+  {
+    "query": "our team needs a new google analytics 4 extractor, nothing exists yet, want to start with the cookiecutter template",
+    "should_trigger": true
+  },
+  {
+    "query": "scaffolding a new keboola component for zendesk tickets. just initialized the git repo, what's the next step",
+    "should_trigger": true
+  },
+  {
+    "query": "add incremental loading to my existing salesforce extractor in src/component.py — currently doing full load every time and it's too slow",
+    "should_trigger": false
+  },
+  {
+    "query": "my component is throwing exit code 2, can you look at the error? job id is 384729483 in the keboola project",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to add a new configSchema field called 'incremental_key' to my extractor — should be a dropdown populated via sync action",
+    "should_trigger": false
+  },
+  {
+    "query": "can you review src/component.py and check if the api client separation looks correct according to keboola best practices",
+    "should_trigger": false
+  },
+  {
+    "query": "want to write datadir tests for the incremental load scenario in my component, the test data is already in tests/data/",
+    "should_trigger": false
+  },
+  {
+    "query": "migrating keboola.ex-shopify from requirements.txt to uv, need help updating the Dockerfile and push.yml",
+    "should_trigger": false
+  },
+  {
+    "query": "the pagination in my API client only fetches the first page — need to add cursor-based pagination support to handle large datasets",
+    "should_trigger": false
+  },
+  {
+    "query": "conditional field in configSchema.json isn't showing up when I select 'incremental' from the mode dropdown, options.dependencies looks right to me",
+    "should_trigger": false
+  },
+  {
+    "query": "need to update push.yml to deploy to the new EU stack — currently only deploying to US",
+    "should_trigger": false
+  },
+  {
+    "query": "my extractor started getting 429 rate limit errors from the API around line 87 in client.py — how do I add retry logic with exponential backoff",
+    "should_trigger": false
+  }
+]
