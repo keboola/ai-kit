@@ -54,10 +54,16 @@ Notes:
 
 ### BRANCH_ID
 
-Defaults to `default` (production). Set explicitly only when working against a Keboola development branch.
+Defaults to `default` (production). Almost always leave it that way.
 
-- Production branch → `BRANCH_ID=default` (or omit; the code defaults to `default`).
-- Development branch → find the branch ID via the project UI under **Development Branches** (the URL of the branch shows the numeric ID).
+**Important context:** data apps themselves only live in the **production branch** — the platform does not deploy or run data apps from development branches. So `BRANCH_ID` is not about where the app runs (it always runs in production), but about which branch's tables the app reads from at runtime.
+
+You only need to set `BRANCH_ID` explicitly if:
+
+- The app needs to read tables that live in a **development branch** (e.g. previewing data from an in-progress migration before it lands in production).
+- In that case, find the numeric branch ID in the project UI under **Development Branches** — the URL of the branch shows it.
+
+For every other case → omit `BRANCH_ID` (or set it to `default`) and the app reads production tables.
 
 ## Preferred default for read-only apps: DuckDB-cached RO
 
