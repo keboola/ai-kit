@@ -17,23 +17,23 @@ Answer these questions in order. Each answer routes to the right reference.
 
 | Task | Where to look first |
 |---|---|
-| Build a new app from scratch | `choosing-app-type.md` → type-specific reference → `deployment-paths.md` |
-| Modify an existing app (add feature, fix bug) | `dev-workflow.md` for the change loop |
-| Deploy or redeploy | `deployment-paths.md` |
-| Debug a deployment or runtime issue | `troubleshooting.md` |
-| Migrate an existing app between types | `choosing-app-type.md` + both type references |
+| Build a new app from scratch | `references/choosing-app-type.md` → type-specific reference → `references/deployment-paths.md` |
+| Modify an existing app (add feature, fix bug) | `references/dev-workflow.md` for the change loop |
+| Deploy or redeploy | `references/deployment-paths.md` |
+| Debug a deployment or runtime issue | `references/troubleshooting.md` |
+| Migrate an existing app between types | `references/choosing-app-type.md` + `references/streamlit-apps.md` + `references/python-js-apps.md` |
 
 ### 2. Which app type?
 
-If unsure → `choosing-app-type.md`. Short version:
+If unsure → `references/choosing-app-type.md`. Short version:
 
-- **Streamlit** — fastest when the team is Python-only and the UI is mostly sidebar + main pane. Read `streamlit-apps.md`.
-- **Single Node.js + static frontend** — the dashboarding default. One process, no bundler, Chart.js/Tailwind via CDN. Read `python-js-apps.md`.
-- **Combined Python + Node** — only when you genuinely need a Python backend (ML model, existing Python codebase). Read `python-js-apps.md` (multi-server section).
+- **Streamlit** — fastest when the team is Python-only and the UI is mostly sidebar + main pane. Read `references/streamlit-apps.md`.
+- **Single Node.js + static frontend** — the dashboarding default. One process, no bundler, Chart.js/Tailwind via CDN. Read `references/python-js-apps.md`.
+- **Combined Python + Node** — only when you genuinely need a Python backend (ML model, existing Python codebase). Read `references/python-js-apps.md` (multi-server section).
 
 ### 3. Which client path?
 
-`deployment-paths.md` covers all three:
+`references/deployment-paths.md` covers all three:
 
 - **Path A — Claude Desktop / web (MCP-only, no filesystem):** Use `modify_data_app` / `deploy_data_app` MCP tools (Streamlit only today).
 - **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to customer git, deploy via MCP or kbagent.
@@ -43,12 +43,12 @@ If unsure → `choosing-app-type.md`. Short version:
 
 | Concern | Reference |
 |---|---|
-| Reading from / writing to Keboola Storage | `storage-access.md` |
-| Securing the app (login, SSO, OAuth) | `authentication.md` |
-| Making the app fast / avoiding repeated Snowflake hits | `duckdb-caching.md` |
-| Styling — default look or brand override | `styling-guide.md` |
-| Building a dashboarding-style app | `dashboard-patterns.md` |
-| Adding a natural-language assistant to the app | `kai-integration.md` |
+| Reading from / writing to Keboola Storage | `references/storage-access.md` |
+| Securing the app (login, SSO, OAuth) | `references/authentication.md` |
+| Making the app fast / avoiding repeated Snowflake hits | `references/duckdb-caching.md` |
+| Styling — default look or brand override | `references/styling-guide.md` |
+| Building a dashboarding-style app | `references/dashboard-patterns.md` |
+| Adding a natural-language assistant to the app | `references/kai-integration.md` |
 
 ## Reference index
 
@@ -80,8 +80,8 @@ If unsure → `choosing-app-type.md`. Short version:
 ## Hard rules (apply to every task)
 
 1. **Never commit `.streamlit/secrets.toml`** or any file with real credentials. Add to `.gitignore` before committing.
-2. **RO workspace before input mapping.** New apps default to the RO workspace pattern. Input mapping is discouraged — see `storage-access.md`.
+2. **RO workspace before input mapping.** New apps default to the RO workspace pattern. Input mapping is discouraged — see `references/storage-access.md`.
 3. **Apps must handle `POST /`** on the root path. Keboola POSTs to `/` on startup. Streamlit handles this natively; Flask needs `methods=["GET", "POST"]`; Express needs `app.all('/')`.
 4. **No `pip install` in Python apps.** The base image blocks PEP 668. Use `uv sync` driven by `pyproject.toml`. All Python supervisord commands must use `uv run`.
 5. **Never declare `[program:nginx]`** in `keboola-config/supervisord/`. Nginx is managed by the base image.
-6. **Validate data first, code second.** When using Keboola MCP, call `get_table` and `query_data` to confirm schema before writing SQL. See `dev-workflow.md`.
+6. **Validate data first, code second.** When using Keboola MCP, call `get_table` and `query_data` to confirm schema before writing SQL. See `references/dev-workflow.md`.
