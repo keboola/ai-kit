@@ -173,6 +173,8 @@ streamlit run streamlit_app.py
 
 Then open http://localhost:8501.
 
+See [storage-access.md](storage-access.md) §Getting the env vars for local development for where to find each value in the Keboola UI.
+
 The key pattern for keeping prod and local in sync is **read config from env first, fall back to `st.secrets`**:
 
 ```python

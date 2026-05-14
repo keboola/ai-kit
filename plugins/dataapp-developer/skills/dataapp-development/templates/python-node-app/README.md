@@ -24,6 +24,8 @@ node --watch server.js
 
 Open http://localhost:3000. The frontend's Express server proxies `/api/*` to the backend so you don't need a local nginx.
 
+Where to find each value (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`): see `references/storage-access.md` §Getting the env vars for local development.
+
 ## Deployment
 
 Push this directory to a Git repo. The `keboola-config/setup.sh` runs `uv sync` and `npm install` in parallel. Add Keboola secrets for `KBC_URL`, `KBC_TOKEN`, etc.

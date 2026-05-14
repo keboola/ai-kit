@@ -2,6 +2,63 @@
 
 **Use this when:** the app reads from or writes to Keboola Storage tables.
 
+## Getting the env vars for local development
+
+Production: Keboola auto-injects these as env vars from `dataApp.secrets` when the app deploys. Local dev: you set them yourself, once per machine, from values in the Keboola project UI.
+
+### KBC_URL
+
+The base URL of the Keboola project's stack — not the project-specific URL.
+
+- Open the project in your browser.
+- The URL bar shows `https://connection.<stack>.keboola.com/admin/projects/<id>/...`.
+- `KBC_URL` is the prefix WITHOUT `/admin/...`: `https://connection.<stack>.keboola.com`.
+
+Stack examples (replace `<stack>` with your actual stack):
+- `us-east4.gcp.keboola.com`
+- `north-europe.azure.keboola.com`
+- `europe-west3.gcp.keboola.com`
+- `eu-central-1.keboola.com` (legacy AWS EU)
+
+### KBC_TOKEN
+
+Storage API token. **Do NOT use the master token from your user account.** Create a dedicated, scoped token for the app.
+
+How to create one:
+1. Open the project → **Settings → API Tokens** (or the equivalent "Users & Settings" → "API Tokens" depending on UI version).
+2. Click **New Token** (or "Create New Token").
+3. Give it a descriptive name (e.g. `my-app-local-dev`).
+4. Scope it minimally:
+   - **Read-only apps:** read access to the buckets/tables the app needs. Don't grant write or admin permissions.
+   - **RW apps (Storage Access):** the app's workspace is provisioned with its own DB user, so the token only needs read access — write permissions on tables come from the workspace grant.
+5. Copy the token immediately — Keboola shows it once.
+6. Treat it like a password: never commit it, never paste it in screenshots / chat.
+
+For production, the same value goes into `dataApp.secrets` as `#KBC_TOKEN` (the `#` prefix marks it encrypted at rest).
+
+### KBC_WORKSPACE_ID
+
+A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-backed projects). Required for the workspace-query endpoint that powers RO reads.
+
+How to provision:
+1. Open the project → **Workspaces** (or "Sandboxes" / "Transformations → Workspaces" depending on UI version).
+2. Click **New Workspace** (or "Create Workspace").
+3. Choose the backend (Snowflake or BigQuery — matches your project).
+4. Pick a size (XS or S is enough for an app cache pull).
+5. Open the created workspace detail. The numeric `id` is shown in the URL (`.../workspaces/12345`) and in the workspace detail panel.
+6. Use that numeric value — `12345`, not `WORKSPACE_12345` (the latter is the Snowflake schema name; the Storage API needs the numeric form; see [troubleshooting.md](troubleshooting.md) for the prefix-stripping pattern).
+
+Notes:
+- One workspace can serve multiple local-dev sessions; you don't need a new one per developer.
+- For RW apps, do NOT use a generic workspace — the platform provisions an ephemeral, permission-scoped workspace at deploy time (see "Read-write direct access" below).
+
+### BRANCH_ID
+
+Defaults to `default` (production). Set explicitly only when working against a Keboola development branch.
+
+- Production branch → `BRANCH_ID=default` (or omit; the code defaults to `default`).
+- Development branch → find the branch ID via the project UI under **Development Branches** (the URL of the branch shows the numeric ID).
+
 ## Preferred default for read-only apps: DuckDB-cached RO
 
 For any read-only dashboarding app, this is the default. Don't query the warehouse on every render — cache once into an in-memory DuckDB and serve every dashboard query from local memory.

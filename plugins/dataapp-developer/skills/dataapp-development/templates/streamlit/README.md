@@ -13,6 +13,8 @@ streamlit run streamlit_app.py
 
 Open http://localhost:8501.
 
+Where to find each value: see `references/storage-access.md` §Getting the env vars for local development.
+
 ## Deployment
 
 Push this directory to a Git repo, then create a Streamlit App in Keboola pointing at the repo. Add the same env vars as `dataApp.secrets` (prefix each key with `#`).

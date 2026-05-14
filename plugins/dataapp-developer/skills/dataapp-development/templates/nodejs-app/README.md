@@ -12,6 +12,8 @@ node --watch server.js
 
 Open http://localhost:3000.
 
+Where to find each value: see `references/storage-access.md` §Getting the env vars for local development.
+
 ## Deployment
 
 Push this directory to a Git repo, then create a Python/JS App in Keboola pointing at the repo. Add `KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID` as `dataApp.secrets` (prefix each key with `#`).

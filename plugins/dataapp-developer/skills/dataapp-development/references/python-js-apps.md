@@ -238,7 +238,7 @@ Run directly:
 
 Visit `http://localhost:<internal-port>` directly. Do NOT add a local nginx on `:8888` — there's no reason to.
 
-Local secrets: load from `.env` (Node) or `.streamlit/secrets.toml` (works for both types) or shell exports. Mirror the env-var names Keboola injects (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`, `BRANCH_ID`) so the same code paths run unchanged in both places.
+Local secrets: load from `.env` (Node) or `.streamlit/secrets.toml` (works for both types) or shell exports. Mirror the env-var names Keboola injects (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`, `BRANCH_ID`) so the same code paths run unchanged in both places. See [storage-access.md](storage-access.md) §Getting the env vars for local development for how to obtain each value (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`).
 
 Env-parity pattern: read from `process.env.X` / `os.environ.get("X")` everywhere. In dev, populate those from your local file. The same code runs unchanged in Keboola where `dataApp.secrets` populates the same env vars.
 
