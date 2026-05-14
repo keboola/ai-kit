@@ -46,6 +46,7 @@ A comprehensive toolkit for developers including specialized agents for code rev
 **Features:**
 - 🤖 **Agents**: Code review, security analysis, code mess detection & fixing
 - ⚡ **Commands**: Task management, PR creation, merge conflict resolution, GitHub PR review processing
+- 📚 **Skills**: Keboola Architecture (C4 model bundled for impact analysis & dependency questions)
 - 📊 **Scripts**: Context window progress bar for statusline
 - 🔌 **MCP Server**: Linear integration
 
