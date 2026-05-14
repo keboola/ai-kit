@@ -66,6 +66,7 @@ If unsure → `references/choosing-app-type.md`. Short version:
 | `references/kai-integration.md` | You want to embed Kai chat in the app. |
 | `references/dev-workflow.md` | You're modifying an existing app and want the validate→build→verify loop. |
 | `references/troubleshooting.md` | The app is failing, returning errors, or behaving unexpectedly. |
+| `references/glossary.md` | You need the source repo / canonical docs URL for a tool, library, or platform feature mentioned elsewhere. |
 
 ## Templates index
 
