@@ -14,8 +14,6 @@ There are three viable shapes for a Keboola App. Pick the lowest one in this lis
 - The app is internal or a quick prototype.
 - You want the paste-in-UI **Code** deployment mode for the very simplest apps.
 
-**Reference apps:** `agent-usage-data-app` (multi-page dashboard with global filters).
-
 **Read next:** [streamlit-apps.md](streamlit-apps.md).
 
 ### 2. Single Node.js + static frontend (Python/JS type)
@@ -27,8 +25,6 @@ There are three viable shapes for a Keboola App. Pick the lowest one in this lis
 
 Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoints and a static frontend (`public/index.html` + `public/app.js`) with Tailwind and Chart.js loaded via CDN. Pairs naturally with DuckDB caching.
 
-**Reference app:** [`keboola-rnd/kai-pricing-calculator-app` on the `nodejs-pricing-simulator` branch](https://github.com/keboola-rnd/kai-pricing-calculator-app/tree/nodejs-pricing-simulator).
-
 **Read next:** [python-js-apps.md](python-js-apps.md). Template at `templates/nodejs-app/`.
 
 ### 3. Combined Python + Node (Python/JS type)
@@ -38,8 +34,6 @@ Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoin
 - An ML model needs to live in Python.
 - You need FastAPI/Flask services alongside the frontend.
 - The frontend justifies a bundler (Next.js, Vite + React + shadcn/ui).
-
-**Reference app:** `keboola/profitline-js-app` (FastAPI :8050 + Next.js :3000 in one Keboola container).
 
 **Read next:** [python-js-apps.md](python-js-apps.md) (multi-server section). Template at `templates/python-node-app/`.
 
@@ -57,6 +51,6 @@ Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoin
 
 ## Migration notes
 
-- **Streamlit → Python/JS** is a common path once a Streamlit app outgrows its sidebar-and-main shape. The kai-pricing-calculator-app moved from Streamlit to single Node + static to gain layout control and reduce cold-start time.
+- **Streamlit → Python/JS** is a common path once a Streamlit app outgrows its sidebar-and-main shape. Migrating from Streamlit to single Node + static can give a team layout control and reduce cold-start time.
 - **Streamlit is on a deprecation path.** New apps that exceed the simple-UI threshold should default to Python/JS. Existing Streamlit apps don't need to be migrated until you hit a Streamlit limitation.
 - The Python/JS app type does not currently support paste-in-UI "Code" deployment; only Git deployment. Streamlit retains "Code" mode.

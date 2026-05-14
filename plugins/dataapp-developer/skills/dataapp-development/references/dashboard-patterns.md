@@ -40,7 +40,7 @@ Rules of thumb:
 
 Store filter selections in app-level state (Streamlit: `st.session_state`; React/Next.js: URL search params or React Query state; vanilla JS: in-memory object + URL hash).
 
-Pattern from agent-usage-data-app (Streamlit):
+Pattern (Streamlit):
 
 ```python
 # Initialize default

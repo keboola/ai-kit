@@ -2,7 +2,7 @@
 
 Combined Python (FastAPI) backend + Node.js (Express) frontend in one Keboola container. Use this when you genuinely need a Python backend alongside a JS frontend; for pure dashboarding, the simpler `nodejs-app/` template is preferred.
 
-Modeled on the [`keboola/profitline-js-app`](https://github.com/keboola/profitline-js-app) shape (FastAPI :8050 + Express :3000).
+Pattern: FastAPI :8050 + Express :3000 in one Keboola container.
 
 ## Local development
 

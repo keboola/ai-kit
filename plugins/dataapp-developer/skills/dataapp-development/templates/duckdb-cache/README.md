@@ -9,7 +9,7 @@ Generic harness for caching Keboola Snowflake data in an in-memory DuckDB so the
 
 ## Files
 
-- `nodejs/duck.js` — Node.js harness (init / refresh / query / status). Adapted from `kai-pricing-calculator-app/api/duck.js`.
+- `nodejs/duck.js` — Node.js harness (init / refresh / query / status).
 - `python/cache.py` — Python harness, same API shape.
 
 ## Integration

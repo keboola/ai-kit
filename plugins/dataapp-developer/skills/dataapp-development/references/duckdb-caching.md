@@ -20,7 +20,7 @@ Skip DuckDB caching when:
 
 ## Node.js pattern
 
-Adapted from `keboola-rnd/kai-pricing-calculator-app/api/duck.js` on the `nodejs-pricing-simulator` branch. Module-level singleton — one DuckDB instance per server process.
+Module-level singleton — one DuckDB instance per server process.
 
 ```javascript
 const duckdb = require('duckdb');

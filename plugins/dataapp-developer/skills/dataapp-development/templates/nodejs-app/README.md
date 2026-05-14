@@ -2,8 +2,6 @@
 
 The preferred shape for dashboarding apps: single Express server serving both `/api/*` JSON endpoints and a static frontend with Tailwind + Chart.js loaded via CDN. No bundler, no build step.
 
-Modeled on [`keboola-rnd/kai-pricing-calculator-app` on the `nodejs-pricing-simulator` branch](https://github.com/keboola-rnd/kai-pricing-calculator-app/tree/nodejs-pricing-simulator).
-
 ## Local development
 
 ```bash

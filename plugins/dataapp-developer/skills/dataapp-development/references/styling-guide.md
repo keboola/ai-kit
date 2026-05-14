@@ -26,23 +26,16 @@ Minimal `<head>` snippet:
 </head>
 ```
 
-Reference app: [`keboola-rnd/kai-pricing-calculator-app` on `nodejs-pricing-simulator`](https://github.com/keboola-rnd/kai-pricing-calculator-app/tree/nodejs-pricing-simulator).
-
 ## Heavier framework option
 
 Vite/Next.js + React + shadcn/ui. Reach for this when the UI complexity justifies a bundler and a component library — for example, intricate forms, drag-and-drop, multi-step wizards, or a custom design system.
 
-Conventions (from FI app and profitline-js-app):
+Conventions:
 
 - **Fonts:** Plus Jakarta Sans (`--font-sans`), JetBrains Mono (`--font-mono`) for code blocks.
 - **Colors:** Single `COLORS` constant in `lib/constants.ts`; mirrored as CSS variables in `app/globals.css` (`@theme` block for Tailwind 4).
 - **Formatters:** Number / currency / percent formatters in the same `lib/constants.ts` (or `lib/formatters.ts`). Use them everywhere — never `.toFixed()` inline.
-- **No emoji in UI elements** (FI/profitline convention).
-
-References:
-
-- FI app: `keboola-rnd/keboola-financial-intelligence-app` (note: deployed on Vercel, not Keboola; conventions still useful).
-- profitline-js-app: `keboola/profitline-js-app` (Keboola-deployed dual-server).
+- **No emoji in UI elements.**
 
 ## Streamlit
 
@@ -75,7 +68,7 @@ For Code-deployed Streamlit apps that can't commit a `config.toml`, set `paramet
 }
 ```
 
-**General Design Guide extras** (for Streamlit, from `help.keboola.com/data-apps/general-design-guide/`):
+**General Design Guide extras** (for Streamlit):
 
 - **Logo:** store a PNG in `static/`, display with:
 

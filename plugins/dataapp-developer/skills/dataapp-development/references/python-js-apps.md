@@ -170,8 +170,6 @@ Why this shape wins for dashboards:
 - Static frontend served from the same Node process means no CORS, no proxy plumbing, no separate deploy of frontend assets.
 - DuckDB caching lives inside the same Node process, so cache hits never cross a process boundary.
 
-Reference: [`keboola-rnd/kai-pricing-calculator-app` on the `nodejs-pricing-simulator` branch](https://github.com/keboola-rnd/kai-pricing-calculator-app/tree/nodejs-pricing-simulator).
-
 Pairs naturally with [duckdb-caching.md](duckdb-caching.md) since both live in the same Node process.
 
 Runnable starter: `templates/nodejs-app/`.
@@ -179,8 +177,6 @@ Runnable starter: `templates/nodejs-app/`.
 ## Multi-server pattern (Python backend + JS frontend) — use when you need it
 
 Reach for this only when you actually need a Python backend — an existing Python codebase, an ML model in Python, FastAPI/Flask services that are hard to port. For pure dashboarding the simpler single-Node shape (above) is preferred. Two processes mean two log streams, two ports, two dependency installs, and a more involved local-dev story.
-
-Reference: `keboola/profitline-js-app` — FastAPI on `:8050` plus Next.js on `:3000` in one container.
 
 Backend convention: Python on `:8050`.
 Frontend convention: Node on `:3000`. For bundled toolchains (Next.js, Vite), the frontend is pre-built and **committed to git** so `setup.sh` only installs deps — it does NOT run a build step. Building during `setup.sh` is slow and makes startup unreliable.
@@ -242,7 +238,7 @@ Run directly:
 
 Visit `http://localhost:<internal-port>` directly. Do NOT add a local nginx on `:8888` — there's no reason to.
 
-Local secrets: load from `.env` (Node) or `.streamlit/secrets.toml` (works for both types — that's what `kai-pricing-calculator-app` does) or shell exports. Mirror the env-var names Keboola injects (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`, `BRANCH_ID`) so the same code paths run unchanged in both places.
+Local secrets: load from `.env` (Node) or `.streamlit/secrets.toml` (works for both types) or shell exports. Mirror the env-var names Keboola injects (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`, `BRANCH_ID`) so the same code paths run unchanged in both places.
 
 Env-parity pattern: read from `process.env.X` / `os.environ.get("X")` everywhere. In dev, populate those from your local file. The same code runs unchanged in Keboola where `dataApp.secrets` populates the same env vars.
 
@@ -266,7 +262,7 @@ Env vars:
 - `KBC_GIT_POLL_INTERVAL` — integer seconds, default `1`.
 - `KBC_DEV_AUTO_SETUP` — `1` (default) or `0`. When `0`, dep-file changes are detected and logged but `setup-dev.sh` is NOT auto-run. Useful when you want to control reinstalls yourself.
 
-For the full author contract see the [base image dev-mode doc](https://github.com/keboola/data-app-python-js/blob/main/docs/dev-mode.md).
+For the full author contract see the base image's dev-mode documentation.
 
 ## Git commit locking
 
@@ -288,7 +284,7 @@ Derived images can replace the hook to:
 - Fetch source from non-git sources (S3, registry, etc.).
 - Materialise app source from `/data/config.json` (inline-script mode).
 
-See the [base image bootstrap doc](https://github.com/keboola/data-app-python-js/blob/main/docs/bootstrap.md).
+See the base image's bootstrap documentation.
 
 ## Deployment via MCP (Keboola-managed git) — PLACEHOLDER
 

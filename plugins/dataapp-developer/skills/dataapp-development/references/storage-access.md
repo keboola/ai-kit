@@ -34,7 +34,7 @@ Header: X-StorageApi-Token: {KBC_TOKEN}
 Body: { "query": "<your SQL>" }
 ```
 
-Robust JS implementation pattern (adapted from `kai-pricing-calculator-app/api/keboola-client.js`):
+Robust JS implementation pattern:
 - Resolve env vars with multiple fallback names: `KBC_URL` / `KBC_STACK_API_URL` / `STORAGE_API_URL`; `KBC_TOKEN` / `KBC_STORAGEAPI_TOKEN` / `STORAGE_API_TOKEN`; `KBC_WORKSPACE_ID` / `WORKSPACE_ID`; `KBC_BRANCH_ID` / `BRANCH_ID` (defaults to `default`).
 - Normalize the workspace ID — Keboola sometimes exposes it as `WORKSPACE_<id>` (the Snowflake schema name). Strip that prefix; the Storage API expects the numeric ID. Regex: `/^WORKSPACE_(\d+)$/i`.
 - Retry on 5xx (e.g. 2 retries, 800ms backoff).
@@ -115,8 +115,8 @@ Env vars set when Storage Access is enabled:
 - `WORKSPACE_ID`, `BRANCH_ID`, `QUERY_SERVICE_URL`, `KBC_TOKEN`.
 
 Library:
-- Python: [`keboola-query-service`](https://pypi.org/project/keboola-query-service/)
-- JS/TS: [`@keboola/query-service`](https://www.npmjs.com/package/@keboola/query-service)
+- Python: `keboola-query-service`
+- JS/TS: `@keboola/query-service`
 
 Minimal Python read example:
 
@@ -165,7 +165,7 @@ client.execute_query(
 - String enums: use an allowlist set; reject anything not in it.
 - Arbitrary strings: don't interpolate. Wait for the planned `SQL.literal()` helpers in the Python and JS SDKs.
 
-The `keboola/query-service-api-python-sdk` and `keboola/query-service-api-js-sdk` have first-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers in development. Once shipped, prefer them over manual sanitization.
+The `query-service-api-python-sdk` and `query-service-api-js-sdk` have first-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers in development. Once shipped, prefer them over manual sanitization.
 
 ## Input mapping — discouraged for new apps
 

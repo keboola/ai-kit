@@ -15,7 +15,7 @@ Skip Kai when:
 
 ## Library
 
-[`keboola/kai-client`](https://github.com/keboola/kai-client) — Python async client with SSE streaming, session management, tool-approval flow, and a `kai` CLI.
+`kai-client` — Python async client with SSE streaming, session management, tool-approval flow, and a `kai` CLI.
 
 JS apps don't need a separate JS package — they proxy HTTP requests to the same `/api/chat` endpoint Kai exposes and stream the SSE response straight back to the browser.
 
@@ -58,8 +58,6 @@ Use the SAME Keboola Storage API token the app already has. Pass it on every Kai
 No separate Kai token. No OAuth flow on top. If your app authenticates the end user via OIDC (or whatever) you still use the project's Storage token for the Kai call — the end-user identity is conveyed via Kai's chat history association.
 
 ## Pattern A — Streamlit embed
-
-Modeled on `kai-client/examples/streamlit_app.py`.
 
 ```python
 import asyncio
@@ -130,7 +128,7 @@ if prompt := st.chat_input("Ask about your project data"):
 
 ## Pattern B — JS data-app embed
 
-Modeled on `kai-client/examples/js-dataapp/server.js`. Express backend proxies POST requests to Kai and streams the SSE response back to the browser unchanged.
+Express backend proxies POST requests to Kai and streams the SSE response back to the browser unchanged.
 
 ```javascript
 import express from 'express';
@@ -173,7 +171,6 @@ async function proxySSE(payload, res) {
 app.post('/api/chat', (req, res) => proxySSE(req.body, res));
 app.post('/api/chat/:chatId/:action/:approvalId', (req, res) => {
   // Tool approval — forward to Kai with the approval response payload
-  // See kai-client/examples/js-dataapp/server.js for the payload shape
   proxySSE(/* approval payload */, res);
 });
 ```
@@ -221,7 +218,7 @@ location /api/chat {
 
 ## Pre-built skills
 
-The `kai-client` repo ships its own skill plugin: `plugins/kai-dataapp/skills/{kai-js, kai-streamlit}`. Point users there for deeper integration work — those skills cover the full chat UI, history management, voting, and tool-approval UX patterns.
+The `kai-client` library ships its own pre-built skills covering deeper integration work — full chat UI, history management, voting, and tool-approval UX patterns.
 
 What the dedicated skills add on top of the patterns above:
 - Conversation history persistence (server-side via Kai's chat-id, plus client-side caching for fast re-render).
@@ -230,13 +227,13 @@ What the dedicated skills add on top of the patterns above:
 - Suggested-prompt chips and follow-up suggestions extracted from Kai's response metadata.
 - Error and reconnection handling for dropped SSE streams.
 
-This reference here covers awareness + the minimum embed pattern. For production-quality integration, install the kai-client plugin and use its dedicated skills.
+This reference here covers awareness + the minimum embed pattern. For production-quality integration, install the `kai-client` plugin and use its dedicated skills.
 
 ## DIY alternative — Anthropic SDK directly
 
 When you want full control — custom tool catalog tied to app-specific data, no dependency on Kai's lifecycle — call the Anthropic API directly.
 
-Reference: the FI app (`keboola-rnd/keboola-financial-intelligence-app`) uses a Vercel serverless function `api/chat` that calls the Anthropic SDK with tools scoped to its financial JSON files. Tools include `get_entities`, `get_pl_data`, `get_kpis`, etc., each reading from `public/data/*.json`.
+An alternative DIY pattern: a serverless function (e.g. Vercel) that calls the Anthropic SDK with tools scoped to app-specific data files. Tools like `get_entities`, `get_pl_data`, `get_kpis`, etc., each read from JSON files committed alongside the app.
 
 Trade-offs vs Kai:
 | Aspect | Kai | Anthropic SDK direct |

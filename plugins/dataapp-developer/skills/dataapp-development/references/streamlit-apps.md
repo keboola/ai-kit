@@ -2,7 +2,7 @@
 
 **Use this when:** you're building, modifying, or debugging a Streamlit app on Keboola.
 
-This reference covers Keboola-specific concerns for Streamlit apps: how they get deployed, what's already in the image, how secrets and themes work, and how to keep local dev in parity with production. For the iterative change loop (validate -> build -> verify) on an existing app, see [dev-workflow.md](dev-workflow.md). For a non-trivial reference implementation, look at `keboola-rnd/agent-usage-data-app`.
+This reference covers Keboola-specific concerns for Streamlit apps: how they get deployed, what's already in the image, how secrets and themes work, and how to keep local dev in parity with production. For the iterative change loop (validate -> build -> verify) on an existing app, see [dev-workflow.md](dev-workflow.md).
 
 ## Deployment modes
 
@@ -18,7 +18,7 @@ Keboola supports two ways to ship Streamlit code into a data app slot. The choic
 - A GitHub username + Personal Access Token (PAT) pair, or
 - An SSH private key for deploy-key style access.
 
-Git mode is what `agent-usage-data-app` uses. Pick it whenever the app has more than one file, needs a real `pyproject.toml`, or wants a committed `.streamlit/config.toml` and `.streamlit/secrets.toml.example`.
+Git mode is the right choice whenever the app has more than one file, needs a real `pyproject.toml`, or wants a committed `.streamlit/config.toml` and `.streamlit/secrets.toml.example`.
 
 Regardless of mode, **never paste secrets into a public repo**. API tokens, database passwords, and OAuth client secrets belong in `dataApp.secrets` on the configuration -- they get injected as environment variables at runtime. The repo only sees a `.streamlit/secrets.toml.example` with placeholder values.
 
@@ -33,8 +33,6 @@ The Keboola Streamlit base image already includes the libraries most data apps n
 If you need anything else -- `duckdb`, `pydeck`, `altair`, an LLM SDK, an HTTP client -- declare it in the **Packages** field on the configuration. The field accepts pip-style lines, one per package, and runs at container start.
 
 From backend version 1.15.0 onward, the runtime exposes a Python version selector with **3.10**, **3.11**, and **3.13** available; **3.10** is the default. Lock the version explicitly if your dependencies require a specific minor release.
-
-For the full backend version history (release notes, retirement schedule, what each bundle pins), see https://help.keboola.com/data-apps/backend-versions/. That page is the source of truth -- don't duplicate it here, just link.
 
 ## Secrets
 

@@ -176,8 +176,6 @@ def normalize_workspace_id(raw: str) -> str | None:
     return m.group(1) if m else raw
 ```
 
-Reference: `keboola-rnd/kai-pricing-calculator-app/api/keboola-client.js`.
-
 ## 500 from missing env var
 
 **Symptom:** API endpoints return 500. Application logs show `KeyError` for an env var or `process.env.X` is undefined.
@@ -203,4 +201,4 @@ Three options for reading logs from a deployed data app:
 
 - **Keboola UI Terminal Log tab** — near-real-time view of container stdout/stderr. Available while the app is running. "Download Logs" button gives the full log file. Logs are deleted when the app stops.
 - **MCP `get_data_apps([cfg_id])`** — returns the latest 20 log lines via `deployment_info.logs`. Good for quick checks from Claude Desktop.
-- **kbagent** — a dedicated `data-app logs` command is a follow-up (tracked at https://github.com/padak/keboola_agent_cli/issues/240). For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+- **kbagent** — a dedicated `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
