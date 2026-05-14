@@ -196,6 +196,28 @@ Systematically process GitHub PR review comments by fetching threads to local JS
 
 ---
 
+## 📚 Skills
+
+### Keboola Architecture (C4)
+
+**Skill**: `keboola-architecture`
+
+Bundled snapshot of the Keboola platform's C4 architecture model (Structurizr DSL + per-service findings reports). Use when answering impact analysis, service dependency, or platform topology questions — *"if service X is down, what breaks?"*, *"if I change service X's API, who needs to update?"*, *"what does service Y depend on?"*
+
+**Contents:**
+- L1 systems, L2 containers, L3 components and their inter-service and cloud-vendor edges
+- Methodology and design decisions (`c4-approach.md`)
+- Non-automatable domain rules (`service-knowledge.md`)
+- `scripts/sync.sh` to refresh from the upstream private repo (`keboola/platform-architecture-and-concepts`)
+
+**Caveats** (built into the skill):
+- Model is **idealized** — shows all cloud variants per service, real impact on a single stack may be smaller
+- Scanning is **one-directional**; inbound edges only reliable once the caller has been scanned
+- Cloud vendors are hidden at L2; "runs on Kubernetes" is implicit everywhere
+- Snapshot drifts over time — re-run `sync.sh` when answering edge cases
+
+---
+
 ## 🔌 MCP Servers
 
 ### Linear

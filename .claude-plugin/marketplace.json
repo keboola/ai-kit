@@ -20,7 +20,7 @@
     {
       "name": "developer",
       "description": "Developer toolkit with specialized agents for code review, security analysis, and GitHub PR review processing",
-      "version": "1.7.1",
+      "version": "1.8.0",
       "source": "./plugins/developer",
       "category": "development"
     },
