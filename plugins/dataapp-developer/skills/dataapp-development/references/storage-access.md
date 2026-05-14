@@ -257,7 +257,7 @@ client.execute_query(
 - String enums: use an allowlist set; reject anything not in it.
 - Arbitrary strings: don't interpolate. Wait for the planned `SQL.literal()` helpers in the Python and JS SDKs.
 
-The `query-service-api-python-sdk` and `query-service-api-js-sdk` have first-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers in development. Once shipped, prefer them over manual sanitization.
+First-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers are in development in the Python and JS Query Service SDKs. Once shipped, prefer them over manual sanitization. SDK source repos are listed in [glossary.md](glossary.md) §Libraries.
 
 ## Input mapping — discouraged for new apps
 
