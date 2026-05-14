@@ -77,6 +77,10 @@ If unsure → `references/choosing-app-type.md`. Short version:
 | `templates/python-node-app/` | New combined Python backend + JS frontend app. |
 | `templates/duckdb-cache/` | Adding the DuckDB caching pattern to an existing Python or Node app. |
 
+## Need authoritative Keboola docs?
+
+The Keboola MCP server exposes a `docs_query` tool that searches the official Keboola Connection documentation. When this skill's references don't answer a question — UI navigation specifics, edge cases, recent platform changes — call `docs_query` to get the canonical answer rather than guessing or relying on stale memory.
+
 ## Hard rules (apply to every task)
 
 1. **Never commit `.streamlit/secrets.toml`** or any file with real credentials. Add to `.gitignore` before committing.
