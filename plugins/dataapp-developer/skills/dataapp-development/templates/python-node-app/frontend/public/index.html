@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Keboola App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-white text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto p-8">
+      <h1 class="text-3xl font-semibold mb-4">Keboola App</h1>
+      <p class="text-slate-600 mb-6">Combined Python (FastAPI) backend + Node.js frontend.</p>
+      <pre id="health" class="bg-slate-100 p-4 rounded text-sm"></pre>
+    </main>
+    <script>
+      fetch('/api/health')
+        .then((r) => r.json())
+        .then((d) => (document.getElementById('health').textContent = JSON.stringify(d, null, 2)));
+    </script>
+  </body>
+</html>
