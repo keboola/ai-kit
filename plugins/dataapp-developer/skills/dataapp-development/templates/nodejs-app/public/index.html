@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Keboola App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  </head>
+  <body class="bg-white text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto p-8">
+      <h1 class="text-3xl font-semibold mb-4">Keboola App</h1>
+      <section id="summary" class="grid grid-cols-3 gap-4 mb-8">
+        <div class="p-4 rounded border border-slate-200">
+          <div class="text-sm text-slate-500">Total rows</div>
+          <div class="text-2xl font-semibold" id="row-count">—</div>
+        </div>
+      </section>
+      <canvas id="chart" height="120"></canvas>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
