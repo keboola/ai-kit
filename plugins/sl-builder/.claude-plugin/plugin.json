@@ -1,7 +1,7 @@
 {
   "name": "sl-builder",
   "version": "2.0.0",
-  "description": "Semantic layer helper tools for Keboola — inspect, add, edit, remove, and validate semantic model entities via the metastore API. Works with or without the Semantic Layer data app.",
+  "description": "Semantic layer tools for Keboola — inspect (/sl-show), validate (/sl-validate), and build (/sl-build) models via the metastore API. Add/edit/remove operations handled conversationally via the semantic-layer reference skill.",
   "author": {
     "name": "Keboola s.r.o.",
     "email": "support@keboola.com"

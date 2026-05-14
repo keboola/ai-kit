@@ -20,7 +20,8 @@ export KBAGENT_CONVERSATION_ID="$(uuidgen)"
 ```
 
 Use the **setup recipe** from the `semantic-layer` skill to get `TOKEN` and `METASTORE`
-(env vars → kbagent config → ask user). **Never auto-select a project.**
+(env vars → kbagent config → ask user). Store the resolved values as `TOKEN`, `METASTORE`,
+and the chosen project alias as `PROJECT`. **Never auto-select a project.**
 
 Detect kbagent and check for existing models in parallel:
 
@@ -29,20 +30,21 @@ Detect kbagent and check for existing models in parallel:
 KBAGENT_AVAILABLE=false
 command -v kbagent &>/dev/null && KBAGENT_AVAILABLE=true
 
-# Always: check for existing models
-python3 -c "
-import json, urllib.request, os
-token='TOKEN'; metastore='METASTORE'
-req = urllib.request.Request(metastore+'/api/v1/repository/semantic-model', headers={'X-StorageAPI-Token': token})
-existing = json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
-print('EXISTING='+json.dumps([{'id': m['id'], 'name': m.get('attributes',{}).get('name','?')} for m in existing]))
-" &
-
 # If kbagent available: fetch table list too
 if $KBAGENT_AVAILABLE; then
-    kbagent --json storage tables --project PROJECT > /tmp/sl_tables.json &
+    kbagent --json storage tables --project "$PROJECT" > /tmp/sl_tables.json &
 fi
-wait
+```
+
+```python
+# Check for existing models (use the resolved TOKEN and METASTORE from setup recipe)
+import json, urllib.request
+req = urllib.request.Request(
+    f"{METASTORE}/api/v1/repository/semantic-model",
+    headers={'X-StorageAPI-Token': TOKEN})
+existing = json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+for m in existing:
+    print(m['id'], m.get('attributes', {}).get('name', '?'))
 ```
 
 If kbagent is **not** available: skip Step 2 schema fetch — ask the user instead:
@@ -50,7 +52,12 @@ If kbagent is **not** available: skip Step 2 schema fetch — ask the user inste
 Then proceed directly to Step 3 using the user's description.
 
 If models already exist ask: **"Update an existing model or create new?"**
-Store chosen model id as `UPDATE_ID` (or `None` for new).
+Store the chosen model id as `UPDATE_ID` (or empty string for new) and persist it:
+
+```python
+with open('/tmp/sl_update_id.txt', 'w') as f:
+    f.write(UPDATE_ID or '')
+```
 
 ---
 
@@ -76,11 +83,13 @@ Fetch table schemas in parallel (10 workers):
 import subprocess, json, os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-ENV = {**os.environ, 'KBAGENT_CONVERSATION_ID': 'CONV_ID'}
+# PROJECT and KBAGENT_CONVERSATION_ID are already set in the environment from Step 0
+ENV = {**os.environ}
 
 def fetch_schema(tid):
-    r = subprocess.run(['kbagent','--json','storage','table-detail','--project','PROJECT','--table-id',tid],
-                        capture_output=True, text=True, env=ENV)
+    r = subprocess.run(
+        ['kbagent','--json','storage','table-detail','--project', PROJECT, '--table-id', tid],
+        capture_output=True, text=True, env=ENV)
     try: return tid, json.loads(r.stdout).get('data', {})
     except: return tid, None
 
@@ -94,7 +103,7 @@ json.dump(schemas, open('/tmp/sl_schemas.json','w'))
 Also fetch SQL transformation context (run in parallel with schemas):
 
 ```bash
-kbagent --json config list --project PROJECT > /tmp/sl_transforms.json 2>/dev/null || echo '{}' > /tmp/sl_transforms.json
+kbagent --json config list --project "$PROJECT" > /tmp/sl_transforms.json 2>/dev/null || echo '{}' > /tmp/sl_transforms.json
 ```
 
 Extract SQL from `keboola.snowflake-transformation` configs and use it to inform metric formulas in Step 3.
@@ -103,7 +112,12 @@ Extract SQL from `keboola.snowflake-transformation` configs and use it to inform
 
 ## Step 3 — Generate
 
-Build `/tmp/sl_model.json` with keys `name`, `description`, `datasets`, `metrics`, `relationships`, `glossary`.
+Build `/tmp/sl_model.json` with keys:
+```json
+{"name": "...", "description": "...", "datasets": [...], "metrics": [...],
+ "relationships": [...], "glossary": [...], "constraints": [...]}
+```
+
 Use **payload shapes, field roles, VERSION rule, and constraint encoding** from the `semantic-layer` skill.
 Prefer SQL formulas found in transformation context over guesses.
 
@@ -111,7 +125,65 @@ Prefer SQL formulas found in transformation context over guesses.
 
 ## Step 4 — Validate
 
-Run the checks from `/sl-validate` inline against `/tmp/sl_model.json` + `/tmp/sl_schemas.json`.
+Run the validation checks **inline against `/tmp/sl_model.json` and `/tmp/sl_schemas.json`**.
+Do **not** fetch from the metastore API here — the model has not been pushed yet.
+
+```python
+import json, re
+
+model   = json.load(open('/tmp/sl_model.json'))
+schemas = json.load(open('/tmp/sl_schemas.json'))
+cols    = {tid: set(d.get('columns',[])) for tid,d in schemas.items()}
+types   = {tid: {c['name']:c.get('type','') for c in d.get('column_details',[])} for tid,d in schemas.items()}
+
+datasets      = model.get('datasets', [])
+metrics       = model.get('metrics', [])
+relationships = model.get('relationships', [])
+constraints   = model.get('constraints', [])
+all_tids      = {ds['tableId'] for ds in datasets}
+metric_names  = {m['name'] for m in metrics}
+errors, warnings = [], []
+
+# Duplicates
+for section, key, items in [('datasets','name',datasets),('metrics','name',metrics),
+                              ('relationships','name',relationships),('glossary','term',model.get('glossary',[]))]:
+    names = [i[key] for i in items]
+    dups  = {n for n in names if names.count(n) > 1}
+    if dups: errors.append(f"DUPLICATES {section}: {dups}")
+
+# Dangling rels
+for r in relationships:
+    for side, tid in [('from', r.get('from','')), ('to', r.get('to',''))]:
+        if tid and tid not in all_tids: errors.append(f"DANGLING REL {r['name']}.{side}={tid}")
+
+# Dangling metrics + phantom cols
+for m in metrics:
+    if m.get('dataset') and m['dataset'] not in all_tids:
+        errors.append(f"DANGLING METRIC {m['name']}")
+    if re.search(r'SUM\([^)]*PCT[^)]*\)', m.get('sql',''), re.I):
+        errors.append(f"SUM-ON-PCT {m['name']}")
+    actual = cols.get(m.get('dataset',''), set())
+    for col in re.findall(r'"[^"]+"\."([^"]+)"', m.get('sql','')):
+        if actual and col not in actual: errors.append(f"METRIC PHANTOM {m['name']} col={col}")
+
+# Phantom fields
+for ds in datasets:
+    actual = cols.get(ds['tableId'], set())
+    for f in ds.get('fields', []):
+        if actual and f['name'] not in actual: errors.append(f"PHANTOM FIELD {ds['name']}.{f['name']}")
+
+# Constraint orphans
+for c in constraints:
+    for mn in (c.get('metrics') or []):
+        if mn not in metric_names: errors.append(f"CONSTRAINT ORPHAN {c['name']} → '{mn}'")
+    if not any(c['name'].lower().endswith(s) for s in ('_critical','_warning','_healthy','_review')):
+        warnings.append(f"constraint '{c['name']}' missing severity suffix")
+
+for e in sorted(set(errors)):   print(f"✗ {e}")
+for w in sorted(set(warnings)): print(f"⚠ {w}")
+if not errors: print("✓ clean")
+```
+
 Fix all errors and re-run until `✓ clean`.
 
 ---
@@ -124,8 +196,9 @@ Show summary and ask *"Confirm model name and say 'go'."* Never push without exp
 import json, urllib.request, urllib.error, time
 from concurrent.futures import ThreadPoolExecutor
 
-model = json.load(open('/tmp/sl_model.json'))
-H     = {'X-StorageAPI-Token': TOKEN, 'Content-Type': 'application/json'}
+model     = json.load(open('/tmp/sl_model.json'))
+UPDATE_ID = open('/tmp/sl_update_id.txt').read().strip() or None
+H         = {'X-StorageAPI-Token': TOKEN, 'Content-Type': 'application/json'}
 
 def api_post(path, body):
     req = urllib.request.Request(f"{METASTORE}{path}", json.dumps(body).encode(), H, method='POST')
@@ -154,18 +227,20 @@ else:
         'data': {'name': model['name'], 'description': model['description'], 'sql_dialect': 'Snowflake'},
         'branch': 'main', 'schemaVersion': '1.0.0', 'scope': 'project'
     })['data']['id']
-    print(f"✓ model created {uuid}")
+    print(f'✓ model created {uuid}')
 
 for type_path, items, key in [
-    ('semantic-dataset', model['datasets'], 'name'),
-    ('semantic-metric',  model['metrics'],  'name'),
-    ('semantic-relationship', model['relationships'], 'name'),
-    ('semantic-glossary', model['glossary'], 'term'),
+    ('semantic-dataset',      model.get('datasets', []),     'name'),
+    ('semantic-metric',       model.get('metrics', []),      'name'),
+    ('semantic-relationship', model.get('relationships', []),'name'),
+    ('semantic-glossary',     model.get('glossary', []),     'term'),
+    ('semantic-constraint',   model.get('constraints', []),  'name'),
 ]:
+    if not items: continue
     ok = fail = 0
     with ThreadPoolExecutor(max_workers=4) as ex:
         for s, n, e in ex.map(lambda i: push_item(type_path, i, key, uuid), items):
             if s: ok += 1
-            else: fail += 1; print(f"  ✗ {n}: {e}")
+            else: fail += 1; print(f'  ✗ {n}: {e}')
     print(f"  {'✓' if not fail else '⚠'} {type_path}: {ok}/{len(items)}")
 ```

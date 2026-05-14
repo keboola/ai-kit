@@ -88,7 +88,7 @@ command -v kbagent &>/dev/null && echo "kbagent available" || echo "kbagent not 
 
 If kbagent is **not available**, skip deep checks and report: *"Basic validation passed. Install kbagent for deep schema checks (phantom fields, type mismatches)."*
 
-If kbagent **is available**, fetch Snowflake column details per dataset and check for:
+If kbagent **is available**, fetch Snowflake column details per dataset in parallel and check for:
 - **PHANTOM FIELD** — field name not in actual Snowflake columns
 - **TYPE MISMATCH** — declared type conflicts with Snowflake column type
 - **METRIC PHANTOM** — column in metric `sql` not in its table
@@ -96,30 +96,39 @@ If kbagent **is available**, fetch Snowflake column details per dataset and chec
 
 ```python
 import subprocess, json, os, re
+from concurrent.futures import ThreadPoolExecutor
 ENV = {**os.environ, 'KBAGENT_CONVERSATION_ID': __import__('uuid').uuid4().hex}
 
-for ds in datasets:
-    r = subprocess.run(['kbagent','--json','storage','table-detail',
-                        '--project','PROJECT_ALIAS','--table-id', ds['tableId']],
-                       capture_output=True, text=True, env=ENV)
+def check_dataset(ds):
+    local_errors, local_warnings = [], []
+    r = subprocess.run(
+        ['kbagent','--json','storage','table-detail','--project', PROJECT, '--table-id', ds['tableId']],
+        capture_output=True, text=True, env=ENV)
     try:
         d     = json.loads(r.stdout).get('data', {})
         cols  = set(d.get('columns', []))
         types = {c['name']: c.get('type','') for c in d.get('column_details', [])}
-    except: continue
+    except:
+        return local_errors, local_warnings
     for f in ds.get('fields', []):
         if cols and f['name'] not in cols:
-            errors.append(f"PHANTOM FIELD {ds['name']}.{f['name']}")
+            local_errors.append(f"PHANTOM FIELD {ds['name']}.{f['name']}")
         sf = types.get(f['name'])
         if sf == 'STRING' and f.get('type') not in ('string','json'):
-            warnings.append(f"TYPE MISMATCH {ds['name']}.{f['name']}: declared {f.get('type')} but Snowflake STRING")
+            local_warnings.append(f"TYPE MISMATCH {ds['name']}.{f['name']}: declared {f.get('type')} but Snowflake STRING")
     for m in [m for m in metrics if m.get('dataset') == ds['tableId']]:
-        for col in re.findall(r'"[^"]+"."([^"]+)"', m.get('sql','')):
+        for col in re.findall(r'"[^"]+"\."([^"]+)"', m.get('sql','')):
             if cols and col not in cols:
-                errors.append(f"METRIC PHANTOM '{m['name']}' col={col}")
-        for col in re.findall(r'\b(?:SUM|AVG)\s*\(\s*"[^"]+"."([^"]+)"\s*\)', m.get('sql',''), re.I):
+                local_errors.append(f"METRIC PHANTOM '{m['name']}' col={col}")
+        for col in re.findall(r'\b(?:SUM|AVG)\s*\(\s*"[^"]+"\."([^"]+)"\s*\)', m.get('sql',''), re.I):
             if types.get(col) == 'STRING':
-                errors.append(f"AGG ON STRING '{m['name']}' col={col}")
+                local_errors.append(f"AGG ON STRING '{m['name']}' col={col}")
+    return local_errors, local_warnings
+
+with ThreadPoolExecutor(max_workers=10) as ex:
+    for local_e, local_w in ex.map(check_dataset, datasets):
+        errors.extend(local_e)
+        warnings.extend(local_w)
 ```
 
 Report a final count: `N errors, M warnings` or `✓ model is valid`.
