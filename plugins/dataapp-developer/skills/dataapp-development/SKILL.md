@@ -43,9 +43,9 @@ If unsure → `references/choosing-app-type.md`. Short version:
 
 | Concern | Reference |
 |---|---|
-| Reading from / writing to Keboola Storage | `references/storage-access.md` |
+| Reading from / writing to Keboola Storage (RO default uses DuckDB cache) | `references/storage-access.md` + `references/duckdb-caching.md` |
 | Securing the app (login, SSO, OAuth) | `references/authentication.md` |
-| Making the app fast / avoiding repeated Snowflake hits | `references/duckdb-caching.md` |
+| Cutting DWH costs and speeding up read-only dashboards (default for RO apps) | `references/duckdb-caching.md` |
 | Styling — default look or brand override | `references/styling-guide.md` |
 | Building a dashboarding-style app | `references/dashboard-patterns.md` |
 | Adding a natural-language assistant to the app | `references/kai-integration.md` |
@@ -60,7 +60,7 @@ If unsure → `references/choosing-app-type.md`. Short version:
 | `references/deployment-paths.md` | You need to know which tool to use (MCP / Claude Code / kbagent). |
 | `references/storage-access.md` | The app reads from or writes to Keboola Storage. |
 | `references/authentication.md` | You need to pick or configure an auth method. |
-| `references/duckdb-caching.md` | The app is read-only and would benefit from query caching. |
+| `references/duckdb-caching.md` | Building any read-only app — this is the default pattern for keeping DWH costs in check. |
 | `references/styling-guide.md` | You need brand-default styling or a customer override. |
 | `references/dashboard-patterns.md` | You're building a dashboarding app (sidebar filters, charts, metrics). |
 | `references/kai-integration.md` | You want to embed Kai chat in the app. |

@@ -1,22 +1,29 @@
 # DuckDB Caching
 
-**Use this when:** the app reads from Keboola Storage and the same queries would otherwise hit Snowflake on every page render.
+**Use this when:** building a read-only dashboarding app that reads from Keboola Storage. This is the default storage-access pattern — caching avoids re-querying Snowflake on every page render and cuts data-warehouse costs significantly.
 
 ## Why
 
-Querying Snowflake on every page render is slow (network round-trip + warehouse spin-up) and burns credits. By caching the dataset in an in-memory DuckDB once per refresh interval, every subsequent query is a local in-process call — typically sub-millisecond. The app feels instant and Snowflake usage drops by orders of magnitude.
+DWH cost containment is the primary motivation. Querying Snowflake on every render burns credits for data that changed once:
 
-## When to use
+- A 5-KPI dashboard viewed by 100 users per day = 500 queries/day for data that may have changed once that morning. Across the customer's full dashboard fleet, that's the bulk of their warehouse bill.
+- DWH credits are billed per query AND per byte scanned — repeated identical queries burn budget for no information gain.
+- An in-memory DuckDB serves the same query sub-millisecond per call. The dashboard feels instant.
+- The trade-off (data up to N minutes old) is invisible for almost every dashboard use case — aggregates, KPIs, and trend charts don't move minute-to-minute.
 
-Use DuckDB caching when:
+## When DuckDB caching IS the right default
+
+Apply this pattern when all of:
 - The app is read-only (no writes back to Storage).
-- Data refresh interval is acceptable in minutes (e.g. 5–60 min), not seconds.
-- The cached dataset fits in container memory (DuckDB is in-process).
+- Data freshness in minutes (5–60) is acceptable for users.
+- The cached dataset fits in container memory — rule of thumb, hundreds of MB max.
 
-Skip DuckDB caching when:
-- The app writes back via Storage Access (RW) — every read must reflect the latest state.
-- The user expects sub-minute freshness (e.g. live operational dashboard).
-- The data is too large to fit in memory (consider pagination + RO workspace pattern instead).
+## When to skip DuckDB caching
+
+Fall back to direct access when:
+- The app writes back via Storage Access (RW). See [storage-access.md](storage-access.md) — every read must be current; no caching.
+- The user expects sub-minute freshness (live operational dashboards, real-time monitoring).
+- The dataset is too large to fit in memory. Use pagination + direct RO workspace queries instead, or pre-aggregate before caching.
 
 ## Node.js pattern
 

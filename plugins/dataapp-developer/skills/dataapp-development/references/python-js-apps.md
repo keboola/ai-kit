@@ -170,7 +170,7 @@ Why this shape wins for dashboards:
 - Static frontend served from the same Node process means no CORS, no proxy plumbing, no separate deploy of frontend assets.
 - DuckDB caching lives inside the same Node process, so cache hits never cross a process boundary.
 
-Pairs naturally with [duckdb-caching.md](duckdb-caching.md) since both live in the same Node process.
+Pairs with [duckdb-caching.md](duckdb-caching.md) by default — for read-only dashboards, cache once into an in-memory DuckDB so the dashboard never re-hits Snowflake on a page render. The cache and the API server live in the same process.
 
 Runnable starter: `templates/nodejs-app/`.
 

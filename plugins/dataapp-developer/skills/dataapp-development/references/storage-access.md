@@ -2,20 +2,51 @@
 
 **Use this when:** the app reads from or writes to Keboola Storage tables.
 
-## Default: RO workspace
+## Preferred default for read-only apps: DuckDB-cached RO
 
-When using MCP `modify_data_app`, a `query_data(sql) -> pd.DataFrame` function is injected automatically into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it; don't roll your own.
+For any read-only dashboarding app, this is the default. Don't query the warehouse on every render — cache once into an in-memory DuckDB and serve every dashboard query from local memory.
 
-Behind the scenes:
-- Snowflake projects: the function uses the Query Service API.
-- BigQuery projects: it uses the Storage API (Query Service does not yet support BigQuery).
+Why this is the default:
+- Querying Snowflake on every render burns DWH credits. A dashboard with 5 KPIs viewed by 100 users per day is 500 queries/day for data that changed once. Multiply by every dashboard the customer runs.
+- A single pull from Snowflake into an in-memory DuckDB costs ONE query and serves every subsequent dashboard render at local-process speed (typically sub-millisecond).
+- Most dashboards tolerate minutes-old data; users do not notice a 30-minute refresh interval on aggregate KPIs.
 
-The function signature is consistent across backends; the agent doesn't need to know which one it's hitting.
+The pattern:
+1. On app start: `init()` creates an in-memory DuckDB with the right table schemas.
+2. `refresh()` pulls from Snowflake once (via the RO workspace endpoint) and bulk-inserts the rows into DuckDB.
+3. A background interval (`setInterval` in Node, `threading.Timer` in Python) re-runs `refresh()` every N minutes — typical interval 30-60 min.
+4. An admin endpoint (`POST /api/refresh`) forces a refresh on demand for operators who can't wait for the next interval.
+5. Every dashboard query runs against DuckDB, not Snowflake.
 
-Required env vars (auto-injected by Keboola when the app deploys):
+When NOT to use this default:
+- The app writes back via Storage Access — see "Read-write direct access" below. Every read must be current; no caching.
+- The user needs sub-minute freshness (live operational monitoring) — see "Direct RO workspace queries".
+- The cached dataset would exceed container memory. Rule of thumb: pulling more than a few hundred MB at a time is the warning sign — either pull aggregates instead of raw rows, or fall back to "Direct RO workspace queries".
+
+Full reference and runnable harness: [duckdb-caching.md](duckdb-caching.md) and `templates/duckdb-cache/`. This section is the "why" and "when"; that reference is the "how".
+
+## Direct RO workspace queries
+
+Use this when:
+- You're using the MCP `modify_data_app` flow and the `{QUERY_DATA_FUNCTION}` placeholder gets injected automatically — most agent-driven Streamlit creation works this way.
+- The cached dataset would be too large for an in-memory cache, OR the freshness requirement is sub-minute.
+- You're prototyping and haven't wired DuckDB yet.
+
+Two paths to call the workspace:
+
+- **MCP-injected `query_data`** — when `modify_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
+- **Direct API call** — for Python/JS apps without MCP injection, POST to `/v2/storage/branch/{branch}/workspaces/{workspace_id}/query` with `X-StorageApi-Token`.
+
+Required env vars (Keboola auto-injects on deploy):
 - `KBC_URL`, `KBC_TOKEN` — auth.
 - `KBC_WORKSPACE_ID` (or `WORKSPACE_ID`) — workspace identifier.
 - `BRANCH_ID` — Storage API branch.
+
+Behind the scenes:
+- Snowflake projects → Query Service API.
+- BigQuery projects → Storage API (Query Service does not yet support BigQuery).
+
+The function signature is consistent across backends; the agent doesn't need to know which one it's hitting.
 
 Usage pattern in a Streamlit app:
 
@@ -24,9 +55,7 @@ df = query_data('SELECT * FROM "in.c-main"."customers" LIMIT 100')
 st.dataframe(df)
 ```
 
-## Direct workspace queries (Python/JS without MCP injection)
-
-For Python/JS apps where MCP can't inject the function, query the workspace directly via the Storage API:
+Direct API call shape:
 
 ```
 POST {KBC_URL}/v2/storage/branch/{branch}/workspaces/{workspace_id}/query
@@ -88,9 +117,9 @@ async function runQuery(sql, { retries = 2, backoffMs = 800 } = {}) {
 }
 ```
 
-## RW direct access (Storage Access)
+## Read-write direct access (Storage Access)
 
-Real-time read AND write to Keboola Storage. **Snowflake only.** BigQuery support is planned.
+Real-time read AND write to Keboola Storage. **Snowflake only.** BigQuery support is planned. No caching — every read must reflect the latest state.
 
 Setup:
 - Project Settings → Features → enable "Storage Access".
@@ -171,7 +200,7 @@ The `query-service-api-python-sdk` and `query-service-api-js-sdk` have first-cla
 
 Snapshot at deploy time. Files appear at `/data/in/tables/<table-name>.csv`. NO write-back. NO fresh data until redeploy.
 
-Use ONLY for static reference data loaded once at deploy time. For everything else, use RO workspace or RW Storage Access.
+Use ONLY for static reference data loaded once at deploy time. For everything else, use the DuckDB-cached RO default or RW Storage Access.
 
 Read pattern:
 
