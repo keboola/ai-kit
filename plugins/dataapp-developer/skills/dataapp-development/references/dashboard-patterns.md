@@ -38,9 +38,9 @@ Rules of thumb:
 
 ## Sidebar global filters
 
-Store filter selections in app-level state (Streamlit: `st.session_state`; React/Next.js: URL search params or React Query state; vanilla JS: in-memory object + URL hash).
+Store filter selections somewhere stable so every page/view reads from the same source, then centralize the SQL fragment they produce.
 
-Pattern (Streamlit):
+**Streamlit** — use `st.session_state` as the single source of truth:
 
 ```python
 # Initialize default
@@ -76,9 +76,63 @@ def get_user_type_filter_clause() -> str:
     return ''  # All Users
 ```
 
-## Per-page module layout (Streamlit)
+**Node.js + static frontend** — store filter selections in the URL search params: they survive reloads, work with browser back/forward, and are shareable. The frontend reads them and passes them as query params to `/api/*`; the backend reuses one filter-clause helper across every route.
 
+Frontend (`public/app.js`):
+
+```javascript
+// Read filters from URL — single source of truth across reloads/shares
+function readFilters() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    userType: params.get('user_type') ?? 'external',
+    period: params.get('period') ?? 'l90d',
+  };
+}
+
+function setFilter(key, value) {
+  const params = new URLSearchParams(window.location.search);
+  params.set(key, value);
+  history.replaceState(null, '', `?${params.toString()}`);
+  refreshDashboard();
+}
+
+async function fetchSummary() {
+  const filters = readFilters();
+  const qs = new URLSearchParams(filters).toString();
+  const res = await fetch(`/api/summary?${qs}`);
+  return res.json();
+}
 ```
+
+Backend (`api/queries.js`):
+
+```javascript
+function getUserTypeFilterClause(userType) {
+  if (userType === 'external') return `"user_type" = 'External User'`;
+  if (userType === 'internal') return `"user_type" != 'External User'`;
+  return '';  // all
+}
+
+export async function getSummary({ userType, period }) {
+  const parts = [`"status" = 'success'`];
+  const userFilter = getUserTypeFilterClause(userType);
+  if (userFilter) parts.push(userFilter);
+  // Add other filters similarly
+  const whereClause = parts.join(' AND ');
+  return runQuery(`SELECT COUNT(*) AS n FROM ${tableName} WHERE ${whereClause}`);
+}
+```
+
+Both patterns share the same design: a single filter source, a centralized clause-builder, and queries that fail closed — when a filter helper returns an empty string, that fragment simply isn't appended. The only real difference is where the state lives (`st.session_state` vs URL search params).
+
+## Project structure
+
+Two reasonable layouts depending on app type. Both keep data access centralized and pages thin.
+
+### Streamlit
+
+```text
 streamlit_app.py          # entry, navigation, global filters
 page_modules/             # individual pages
   overview.py
@@ -105,7 +159,58 @@ query = f'''
 '''
 ```
 
-For non-Streamlit dashboards (single Node + static frontend), put filter assembly in `api/queries.js` and pass filter values from the frontend as query params (`/api/summary?user_type=external&period=l3m`).
+### Node.js + static frontend
+
+```text
+server.js                 # Express entry, mounts routes
+api/
+  keboola-client.js       # runQuery against workspace
+  queries.js              # SQL builders, filter helpers
+  routes.js               # (optional) route handlers if server.js grows
+public/
+  index.html
+  app.js                  # frontend bootstrap, filter wiring, charts
+  views/                  # (optional) per-page JS modules
+    overview.js
+    cost-analysis.js
+```
+
+`server.js` mounts API routes against the query builders:
+
+```javascript
+import express from 'express';
+import { getSummary } from './api/queries.js';
+
+const app = express();
+app.use(express.static('public'));
+
+app.get('/api/summary', async (req, res) => {
+  const { user_type, period } = req.query;
+  const data = await getSummary({ userType: user_type, period });
+  res.json({ data });
+});
+
+app.listen(process.env.PORT || 3000);
+```
+
+`app.js` swaps between views by reacting to the URL hash and re-rendering:
+
+```javascript
+const views = {
+  '#/overview': renderOverview,
+  '#/cost-analysis': renderCostAnalysis,
+};
+
+function route() {
+  const render = views[window.location.hash] ?? renderOverview;
+  render(document.getElementById('app'));
+}
+
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', route);
+```
+
+In both layouts, queries live in one place (`utils/data_loader.py` or `api/queries.js`), and pages are render-only — they call a function, get rows back, and draw.
 
 ## Charts
 
@@ -176,9 +281,11 @@ When you change formatting (e.g. show currency in EUR), edit the helper once. Ot
 
 ## Sortable tables
 
-Keep numeric columns numeric throughout the pipeline. Streamlit's `st.dataframe` sorts by COLUMN TYPE — if a currency column is stored as the string `"$1,234.56"`, sorting falls back to alphabetical and the user sees `$1,000` between `$100` and `$2,000`.
+Keep numeric columns numeric throughout the pipeline. Sort behaviour follows column type — if a currency column is stored as the string `"$1,234.56"`, sorting falls back to alphabetical and the user sees `$1,000` between `$100` and `$2,000`.
 
-Use Streamlit's column config to display formatted currency while preserving numeric sort:
+### Streamlit
+
+Use `st.dataframe` with `st.column_config.NumberColumn` to display formatted currency while preserving numeric sort:
 
 ```python
 st.dataframe(
@@ -197,7 +304,67 @@ st.dataframe(
 )
 ```
 
-Same principle for React tables: store as `number`, format only at render time. Whatever table library you pick (TanStack Table, AG Grid, MUI DataGrid), pass raw numeric values and use a `cell` renderer for display formatting; set the column's `sortingFn: 'basic'` (or equivalent) so the library compares numbers, not their formatted strings.
+### Node.js + static frontend
+
+Keep rows as raw JSON (numbers stay numbers), sort in JS, and format only inside the cell template. A plain `<table>` with click-to-sort headers is enough for most dashboards — no library required.
+
+`public/app.js`:
+
+```javascript
+// State
+let rows = [];
+let sortBy = 'revenue';
+let sortDir = 'desc';
+
+async function loadRows() {
+  const res = await fetch('/api/customers');
+  const { data } = await res.json();
+  rows = data;  // numeric values stay as numbers — never pre-format
+  render();
+}
+
+function setSort(col) {
+  if (col === sortBy) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  else { sortBy = col; sortDir = 'desc'; }
+  render();
+}
+
+function compare(a, b) {
+  const va = a[sortBy], vb = b[sortBy];
+  if (va == null) return 1;   // NULLs to the bottom on ascending
+  if (vb == null) return -1;
+  return sortDir === 'asc' ? va - vb : vb - va;
+}
+
+function fmtCurrency(v) {
+  return v == null ? '—' : v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
+function render() {
+  const sorted = [...rows].sort(compare);
+  document.getElementById('table-body').innerHTML = sorted.map((r) => `
+    <tr>
+      <td>${r.name}</td>
+      <td class="text-right">${fmtCurrency(r.revenue)}</td>
+      <td class="text-right">${fmtPercent(r.growth_rate)}</td>
+    </tr>
+  `).join('');
+}
+```
+
+In the markup, headers call `setSort`:
+
+```html
+<thead>
+  <tr>
+    <th>Customer</th>
+    <th onclick="setSort('revenue')">Revenue</th>
+    <th onclick="setSort('growth_rate')">Growth</th>
+  </tr>
+</thead>
+```
+
+Same principle for any JS table library (TanStack Table, AG Grid, etc.): store as `number`, format only at render time. Set the column's sort function so the library compares numbers, not their formatted strings.
 
 Quick checklist before shipping a sortable table:
 - Click each numeric column header — does it sort numerically (1, 2, 10, 100), not alphabetically (1, 10, 100, 2)?
