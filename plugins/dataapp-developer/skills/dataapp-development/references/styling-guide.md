@@ -1,47 +1,28 @@
 # Styling Guide
 
-**Use this when:** you need default Keboola styling, brand customization, or to pick a frontend stack for visual presentation.
+**Use this when:** styling a new app, or asked to apply brand-specific overrides.
 
-## Lightweight default (dashboarding default)
+## Default to the Keboola palette — every app, every stack
 
-The preferred stack for single-Node + static frontend apps. Tailwind via CDN, Chart.js via CDN, vanilla HTML + minimal JS modules. No bundler, no build step.
+Unless the user explicitly asks for a different brand or design system, **use the Keboola palette across all three stacks** (Streamlit, single-Node + static, combined Python+Node). The point is consistency — apps coming out of this skill should look like they belong together.
 
-Keboola palette:
+The palette:
 
-- Primary: `#1F8FFF`
-- Background: `#FFFFFF`
-- Secondary background: `#E6F2FF`
-- Text: `#222529`
-- Font: sans serif (system default)
+| Token | Value |
+|---|---|
+| Primary | `#1F8FFF` |
+| Background | `#FFFFFF` |
+| Secondary background | `#E6F2FF` |
+| Text | `#222529` |
+| Font | sans-serif (system default) |
 
-Minimal `<head>` snippet:
-
-```html
-<head>
-  <meta charset="utf-8" />
-  <title>Keboola App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-</head>
-```
-
-## Heavier framework option
-
-Vite/Next.js + React + shadcn/ui. Reach for this when the UI complexity justifies a bundler and a component library — for example, intricate forms, drag-and-drop, multi-step wizards, or a custom design system.
-
-Conventions:
-
-- **Fonts:** Plus Jakarta Sans (`--font-sans`), JetBrains Mono (`--font-mono`) for code blocks.
-- **Colors:** Single `COLORS` constant in `lib/constants.ts`; mirrored as CSS variables in `app/globals.css` (`@theme` block for Tailwind 4).
-- **Formatters:** Number / currency / percent formatters in the same `lib/constants.ts` (or `lib/formatters.ts`). Use them everywhere — never `.toFixed()` inline.
-- **No emoji in UI elements.**
+No custom typeface, no design-system overlay, no shadcn theme. Plain Tailwind defaults (system font stack) with the palette above for color tokens. Same values across all three stacks.
 
 ## Streamlit
 
 Set the theme via either:
 
-**(a) Theming UI** in the Keboola app configuration. Preferred for simple cases — pick a predefined theme (Keboola, Light Red, Light Purple, Light Blue, Dark Green, Dark Amber, Dark Orange) or set custom colors via the color pickers.
+**(a) Theming UI** in the Keboola app configuration. Preferred for simple cases — pick the predefined **Keboola** theme (which matches the palette above) or set the values via the color pickers.
 
 **(b) Repository-committed `.streamlit/config.toml`** for git-deployed apps:
 
@@ -61,14 +42,14 @@ For Code-deployed Streamlit apps that can't commit a `config.toml`, set `paramet
   "parameters": {
     "dataApp": {
       "streamlit": {
-        "config.toml": "[theme]\nprimaryColor = \"#1F8FFF\"\n[server]\nmaxUploadSize = 500"
+        "config.toml": "[theme]\nprimaryColor = \"#1F8FFF\"\nbackgroundColor = \"#FFFFFF\"\nsecondaryBackgroundColor = \"#E6F2FF\"\ntextColor = \"#222529\"\nfont = \"sans serif\""
       }
     }
   }
 }
 ```
 
-**General Design Guide extras** (for Streamlit):
+Streamlit-specific UI extras:
 
 - **Logo:** store a PNG in `static/`, display with:
 
@@ -90,43 +71,85 @@ For Code-deployed Streamlit apps that can't commit a `config.toml`, set `paramet
 
 - **Footer pattern:** custom HTML/CSS injected via `st.markdown` with a flex container, copyright on the left, version on the right.
 
-## Brand customization
+## Single Node + static frontend (CDN Tailwind)
 
-When a customer has a brand kit, override the defaults via:
+Tailwind via CDN, Chart.js via CDN. Set the Keboola palette in the inline Tailwind config so every component/utility can reach it:
 
-- **CDN Tailwind (lightweight stack):** add an inline `<script>` config in `<head>`:
-
-  ```html
+```html
+<head>
+  <meta charset="utf-8" />
+  <title>Keboola App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            brand: { primary: '#FF5D5D', accent: '#FFE6E6' },
+            kbc: {
+              primary: '#1F8FFF',
+              bg: '#FFFFFF',
+              bgAlt: '#E6F2FF',
+              text: '#222529',
+            },
           },
         },
       },
     };
   </script>
-  ```
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body class="bg-kbc-bg text-kbc-text font-sans">
+  <!-- ... -->
+</body>
+```
 
-- **Bundled Tailwind (heavier stack):** edit `tailwind.config.ts` and `app/globals.css`:
+Use `bg-kbc-primary`, `text-kbc-primary`, `bg-kbc-bgAlt` for surfaces. Don't sprinkle raw hex literals across the page — drive everything from the four tokens above.
 
-  ```ts
-  // tailwind.config.ts
-  export default {
-    theme: {
-      extend: {
-        colors: {
-          brand: { primary: '#FF5D5D', accent: '#FFE6E6' },
+For Chart.js, set the brand color on each dataset:
+
+```javascript
+new Chart(ctx, {
+  type: 'bar',
+  data: { datasets: [{ data: [...], backgroundColor: '#1F8FFF' }] },
+});
+```
+
+## Combined Python + Node (bundled toolchain)
+
+For Vite / Next.js with Tailwind, define the palette once in `tailwind.config.ts` and reference it everywhere:
+
+```ts
+// tailwind.config.ts
+export default {
+  theme: {
+    extend: {
+      colors: {
+        kbc: {
+          primary: '#1F8FFF',
+          bg: '#FFFFFF',
+          bgAlt: '#E6F2FF',
+          text: '#222529',
         },
       },
+      fontFamily: {
+        sans: ['system-ui', 'sans-serif'],
+      },
     },
-  };
-  ```
+  },
+};
+```
 
-- **Streamlit:** edit `[theme]` in `.streamlit/config.toml` or the JSON config string.
+No custom typefaces. No shadcn theme overlay unless the user explicitly asks for one — defaulting to a component library introduces visual conventions that conflict with the goal of consistency across apps coming out of this skill.
 
-## Hook for a company-styling skill
+## Brand customization — only when explicitly requested
 
-If a separate "company-styling" or `theme-factory` skill exists in the user's setup, that's where customer-brand defaults should live. This reference covers the platform-default look (Keboola palette) only — it does NOT bake in customer-specific colors / fonts / logos. Brand customization belongs in a dedicated skill or a project-level config file.
+Apply customer-specific colors / fonts / logos **only** when the user asks for them. Even then, keep the override surface narrow — change the four tokens (`primary`, `bg`, `bgAlt`, `text`) and the font family if needed; don't redesign components.
+
+Override paths:
+
+- **CDN Tailwind (single-Node + static):** change the values in the inline `tailwind.config` `<script>` block in `<head>`.
+- **Bundled Tailwind (Python+Node):** change the values in `tailwind.config.ts`.
+- **Streamlit:** change `[theme]` values in `.streamlit/config.toml` (or the JSON config string for Code-deployed apps), or use the Keboola Theming UI's "Custom" option.
+
+If a separate company-styling or theme-factory skill exists in the user's setup, defer to it — that's where customer brand defaults belong. This skill ships only the Keboola default.
