@@ -20,12 +20,16 @@ Run **both** checks in order — don't stop after the first hit. Many agents wil
 
 Before any project-mutating call, surface the choice. If kbagent and an MCP are both available, the question MUST include both. Don't silently drop kbagent because you found the MCP first.
 
+When phrasing the question, also tell the user what each path expects of them:
+
 > I see both an MCP server (`keboola-test` → branch 35403) and kbagent (`new-branches` alias → project 3047, branch 37363) available, with filesystem access. Two viable paths:
 >
-> - **MCP-only**: compose source into `modify_data_app`, deploy via `deploy_data_app`, debug via platform logs.
-> - **kbagent + local iteration**: edit `streamlit_app.py` locally, run with `streamlit run` against the workspace, deploy via `kbagent data-app deploy` when it works.
+> - **MCP-only** (recommended for most users): compose source into `modify_data_app`, deploy via `deploy_data_app`, debug via platform logs. No CLI work on your machine, no local environment to manage.
+> - **kbagent + local iteration** (developer-oriented): edit `streamlit_app.py` locally, run with `streamlit run` against the workspace, deploy via `kbagent data-app deploy` when it works. **Best for developers comfortable with the CLI** — you'll be filling in `.env.local`, running shell commands, debugging CLI output. Not recommended for non-developers.
 >
 > Which would you like? Note: these paths may resolve to different branches or projects.
+
+**Audience note.** Path A (MCP-only) is the safer default for non-developer users — analysts, data scientists who want a working dashboard without managing a local shell environment. Path C (kbagent) gives more control and faster iteration but assumes the user can handle CLI failures, missing dependencies, token-shaped errors, and shell quirks. If the user hasn't self-identified as a developer (or asked for kbagent explicitly), prefer the MCP path.
 
 ### Why kbagent + filesystem often beats MCP-only locally
 
@@ -123,11 +127,14 @@ Best fit for:
 
 ## Path C — CLI agent (kbagent)
 
+**Developer-oriented path. Not recommended for non-developer users** (analysts, data scientists, business users) — it involves shell commands, local environment management, hand-edited `.env` files, and CLI failure modes that are harder to recover from than UI / MCP equivalents. For non-developers, prefer Path A (MCP-only).
+
 Full lifecycle via the `kbagent data-app` command group. Use this when:
 
 - You're working in an agentic CLI environment without MCP (or in addition to MCP).
 - You need fine-grained control over secrets, deployment versions, simpleAuth passwords.
 - You want to validate the repo before burning a deploy cycle.
+- You want the fast local-iteration loop (`streamlit run` against real workspace creds) and you can handle CLI errors when they happen.
 
 Commands:
 
