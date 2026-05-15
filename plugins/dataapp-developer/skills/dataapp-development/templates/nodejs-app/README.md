@@ -6,9 +6,11 @@ The preferred shape for dashboarding apps: single Express server serving both `/
 
 ```bash
 npm install
-# Create .env (or .streamlit/secrets.toml) with KBC_URL, KBC_TOKEN, KBC_WORKSPACE_ID
-node --watch server.js
+# Create .env (or .env.local) with KBC_URL, KBC_TOKEN, KBC_WORKSPACE_ID
+npm run dev
 ```
+
+The `dev` and `start` scripts load both `.env` and `.env.local` via Node's built-in `--env-file-if-exists` flag (`.env.local` overrides `.env` if both exist). Both filenames should be gitignored.
 
 Open http://localhost:3000.
 

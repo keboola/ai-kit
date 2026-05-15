@@ -6,6 +6,8 @@
 
 Production: Keboola auto-injects these as env vars from `dataApp.secrets` when the app deploys. Local dev: you set them yourself, once per machine, from values in the Keboola project UI.
 
+The Python/JS templates load local env vars from `.env` or `.env.local` (both supported; `.env.local` overrides `.env` if both exist). Pick whichever fits your project. Both filenames must be gitignored. The Streamlit template uses `.streamlit/secrets.toml` instead, matching the Streamlit convention.
+
 ### KBC_URL
 
 The base URL of the Keboola project's stack — not the project-specific URL.
