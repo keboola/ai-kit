@@ -4,6 +4,42 @@
 
 There are three deployment paths, distinguished by what the agent has access to: MCP tools only, MCP plus a local filesystem, or a CLI-driven flow without (or alongside) MCP. Pick the path that matches your client, then pick the tools within that path.
 
+## Pick one path per session — don't mix
+
+When more than one path is available — typical of Claude Code in a Keboola working directory — the agent may have multiple ways to talk to the same Keboola project, and they may point at **different branches or even different projects**. Mixing them within one session is a recipe for silent inconsistency: validating against branch X via MCP, then deploying via kbagent that's wired to branch Y, will produce confusing failures.
+
+### Detect available paths at session start
+
+- **Any Keboola MCP** — scan the available tool surface for tools matching `mcp__*[Kk]eboola*` (typically `mcp__keboola-*` for project-local servers, `mcp__claude_ai_Keboola_*` for hosted ones). The config could come from project-local `.mcp.json`, user-level Claude settings, or an org-level marketplace install — all three surface tools the same way. Don't condition detection on `.mcp.json` alone.
+- **kbagent CLI** — `which kbagent && kbagent project list` succeeds. Note the project alias, project ID, and branch that kbagent will operate against.
+- **Filesystem** — implicit by being able to `Write` / `Edit` files.
+
+### When more than one is present, ask the user
+
+Before any project-mutating call, surface the choice:
+
+> I see both an MCP server (`keboola-test` → branch 35403) and kbagent (`new-branches` alias → project 3047, branch 37363) available, with filesystem access. Two viable paths:
+>
+> - **MCP-only**: compose source into `modify_data_app`, deploy via `deploy_data_app`, debug via platform logs.
+> - **kbagent + local iteration**: edit `streamlit_app.py` locally, run with `streamlit run` against the workspace, deploy via `kbagent data-app deploy` when it works.
+>
+> Which would you like? Note: these paths may resolve to different branches or projects.
+
+### Why kbagent + filesystem often beats MCP-only locally
+
+The trade-off is not just "which works" — it's iteration speed.
+
+| Path | Iteration loop | Best for |
+|---|---|---|
+| **MCP-only (Path A)** | Each edit → `modify_data_app` → `deploy_data_app` → wait for container spin-up → check logs via MCP → repeat | Small or quick apps where the first try is close. Demos. No filesystem assumed. |
+| **kbagent + filesystem (Path B/C)** | Edit `streamlit_app.py` locally → `streamlit run` against real workspace creds in `.env.local` → verify in browser → only then `kbagent data-app deploy` or `git push` | Non-trivial apps. You catch SQL errors, missing columns, layout bugs locally where the loop is seconds. Only ship a working version. |
+
+The MCP loop can be much slower for any app that needs more than one or two corrections — every cycle pays the platform's container spin-up cost (tens of seconds). The local-iterate-then-deploy loop runs at editor speed.
+
+### Commit to the chosen path
+
+Once the user picks, **don't use the others, not even for unrelated operations like data validation.** Mixed paths against potentially different branches lead to "the schema looked right when I checked but the deploy can't see the table" failure modes that are hard to diagnose. One tool surface per session.
+
 ## Path A — Claude Desktop / web (MCP-only, no filesystem)
 
 This is the constrained path: you have Keboola MCP and nothing else. No local files, no git, no shell. Everything happens through MCP tool calls against the Keboola project.
