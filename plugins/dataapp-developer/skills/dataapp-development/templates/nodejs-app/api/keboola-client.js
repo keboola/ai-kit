@@ -1,13 +1,17 @@
-import { readFileSync } from 'node:fs';
+// Centralized Keboola Query Service client for the Node.js data app.
+//
+// Uses @keboola/query-service which targets https://query.<stack>.keboola.com/api/v1/...
+// Do NOT POST to /v2/storage/.../workspaces/<id>/query — that's the legacy Storage API
+// workspace-query endpoint, it 404s on most Snowflake projects.
 
-let queryQueue = Promise.resolve();
+import { readFileSync, existsSync } from 'node:fs';
+import { Client } from '@keboola/query-service';
 
 function normalizeWorkspaceId(raw) {
   if (!raw) return null;
-  // Keboola exposes the Snowflake schema name (WORKSPACE_<id>) in some cases;
-  // strip the prefix so the Storage API workspace endpoint accepts it.
-  const m = raw.match(/^WORKSPACE_(\d+)$/i);
-  return m ? m[1] : raw;
+  // Keboola sometimes exposes the Snowflake schema name (WORKSPACE_<id>) — strip the prefix.
+  const m = String(raw).match(/^WORKSPACE_(\d+)$/i);
+  return m ? m[1] : String(raw);
 }
 
 function readTokenFromPath() {
@@ -18,6 +22,20 @@ function readTokenFromPath() {
   } catch {
     return null;
   }
+}
+
+function deriveQueryServiceUrl(kbcUrl) {
+  if (!kbcUrl) return null;
+  return kbcUrl.replace(/\/$/, '').replace('://connection.', '://query.');
+}
+
+function resolveWorkspaceId() {
+  const manifestPath = process.env.KBC_WORKSPACE_MANIFEST_PATH;
+  if (manifestPath && existsSync(manifestPath)) {
+    const parsed = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    if (parsed.workspaceId) return String(parsed.workspaceId);
+  }
+  return normalizeWorkspaceId(process.env.KBC_WORKSPACE_ID || process.env.WORKSPACE_ID);
 }
 
 export function resolveKeboolaEnv() {
@@ -33,56 +51,56 @@ export function resolveKeboolaEnv() {
     const fileToken = readTokenFromPath();
     if (fileToken) token = { value: fileToken, source: 'STORAGE_API_TOKEN_PATH (file)' };
   }
-  const workspaceRaw = pick('KBC_WORKSPACE_ID', 'WORKSPACE_ID');
+  const queryServiceUrl = pick('QUERY_SERVICE_URL');
   const branch = pick('KBC_BRANCH_ID', 'BRANCH_ID');
   return {
     url: url.value,
     token: token.value,
-    workspace: normalizeWorkspaceId(workspaceRaw.value),
-    workspaceRaw: workspaceRaw.value,
-    branch: branch.value || 'default',
+    queryServiceUrl: queryServiceUrl.value || deriveQueryServiceUrl(url.value),
+    workspace: resolveWorkspaceId(),
+    branch: branch.value,
   };
 }
 
-async function runQueryNow(sql, retriesLeft = 2) {
-  const { url, token, workspace, branch } = resolveKeboolaEnv();
+let _client = null;
+function getClient() {
+  if (_client) return _client;
+  const { queryServiceUrl, token } = resolveKeboolaEnv();
+  if (!queryServiceUrl || !token) {
+    throw new Error(
+      'Missing QUERY_SERVICE_URL (or KBC_URL to derive it) and KBC_TOKEN. ' +
+        'Ask the user to populate .env or .env.local.',
+    );
+  }
+  _client = new Client({ baseUrl: queryServiceUrl, token });
+  return _client;
+}
+
+// Returns rows as objects { column_name: value }, lowercased keys, with naive numeric
+// coercion. Query Service returns all cell values as strings — if your column types
+// matter, use column.type from the raw result instead (see references/storage-access.md
+// §Query Service return shape).
+export async function runQuery(sql) {
+  const { branch, workspace } = resolveKeboolaEnv();
   const missing = [];
-  if (!url) missing.push('KBC_URL');
-  if (!token) missing.push('KBC_TOKEN');
-  if (!workspace) missing.push('KBC_WORKSPACE_ID');
+  if (!branch) missing.push('BRANCH_ID');
+  if (!workspace) missing.push('KBC_WORKSPACE_ID (or KBC_WORKSPACE_MANIFEST_PATH)');
   if (missing.length > 0) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 
-  const endpoint = `${url}/v2/storage/branch/${branch}/workspaces/${workspace}/query`;
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'X-StorageApi-Token': token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: sql }),
+  const [result] = await getClient().executeQuery({
+    branchId: String(branch),
+    workspaceId: String(workspace),
+    statements: [sql],
   });
-
-  if (res.status >= 500 && retriesLeft > 0) {
-    await new Promise((r) => setTimeout(r, 800));
-    return runQueryNow(sql, retriesLeft - 1);
-  }
-  if (!res.ok) {
-    throw new Error(`Keboola query failed (HTTP ${res.status}): ${(await res.text()).slice(0, 500)}`);
-  }
-  const result = await res.json();
-  if (result.status === 'error') throw new Error(`SQL error: ${result.message || 'unknown'}`);
-
-  return (result.data?.rows || []).map((row) => {
+  const cols = result.columns.map((c) => c.name.toLowerCase());
+  return result.data.map((row) => {
     const out = {};
-    for (const [k, v] of Object.entries(row)) {
-      const key = k.toLowerCase();
-      if (v === null || v === undefined) out[key] = null;
-      else if (typeof v === 'string' && v !== '' && !isNaN(Number(v))) out[key] = Number(v);
-      else out[key] = v;
+    for (let i = 0; i < cols.length; i++) {
+      const v = row[i];
+      if (v === null || v === undefined) out[cols[i]] = null;
+      else if (typeof v === 'string' && v !== '' && !isNaN(Number(v))) out[cols[i]] = Number(v);
+      else out[cols[i]] = v;
     }
     return out;
   });
-}
-
-export function runQuery(sql) {
-  const next = queryQueue.catch(() => null).then(() => runQueryNow(sql));
-  queryQueue = next.catch(() => null);
-  return next;
 }

@@ -150,11 +150,28 @@ The `--server.port 8050` flag in the Streamlit supervisord command overrides Str
 kbagent data-app deploy --project P --app-id N --wait
 ```
 
+## `workspace.workspaceNotFound` 404 from `/v2/storage/branch/.../workspaces/<id>/query`
+
+**Symptom:** Calls to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<id>/query` return:
+
+```
+404 { "error": "Workspace \"<id>\" not found.", "code": "workspace.workspaceNotFound", ... }
+```
+
+**Cause:** You're calling the **legacy Storage API workspace-query endpoint** on a Snowflake project. That endpoint survives only for BigQuery projects today — Snowflake projects must use the Query Service instead.
+
+**Fix:** Switch to the Query Service:
+- Endpoint base: `{QUERY_SERVICE_URL}/api/v1/` (or `https://query.<stack>.keboola.com/api/v1/` derived from `KBC_URL` by swapping `connection.` → `query.`).
+- Use the official SDKs (`keboola-query-service` for Python, `@keboola/query-service` for JS/TS) — they handle the submit + poll + paginate flow.
+- See `references/storage-access.md` §Direct RO workspace queries for the SDK call shape.
+
+The skill's templates were migrated to the Query Service after this exact 404 surfaced in a live test — if you're starting from a template, you already have the SDK wiring.
+
 ## Workspace ID has "WORKSPACE_<id>" prefix
 
-**Symptom:** Calls to `/v2/storage/branch/.../workspaces/<id>/query` return 404. The workspace ID in the env var looks like `WORKSPACE_12345` (Snowflake schema name).
+**Symptom:** Query Service calls return errors about the workspace ID. The env var looks like `WORKSPACE_12345` (Snowflake schema name).
 
-**Cause:** Keboola sometimes exposes the Snowflake schema name as the workspace ID. The Storage API expects the numeric ID only.
+**Cause:** Keboola sometimes exposes the Snowflake schema name as the workspace ID. The Query Service (and the legacy Storage API workspace endpoint) expect the numeric ID only.
 
 **Fix:** Strip the prefix in your env-resolution code:
 

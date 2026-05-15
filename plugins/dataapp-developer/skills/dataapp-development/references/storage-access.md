@@ -114,20 +114,23 @@ Use this when:
 Two paths to call the workspace:
 
 - **MCP-injected `query_data`** — when `modify_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
-- **Direct API call** — for Python/JS apps without MCP injection, POST to `/v2/storage/branch/{branch}/workspaces/{workspace_id}/query` with `X-StorageApi-Token`.
+- **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/query-service` (JS/TS). The SDK handles submit + poll + paginate; you call `executeQuery({ branchId, workspaceId, statements })` and get back columns + rows.
 
-Required env vars (Keboola auto-injects on deploy):
-- `KBC_URL`, `KBC_TOKEN` — auth.
-- `KBC_WORKSPACE_ID` (or `WORKSPACE_ID`) — workspace identifier.
-- `BRANCH_ID` — Storage API branch.
+**Do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That was an older Storage API workspace-query endpoint that survives in some docs and templates, but it returns `workspace.workspaceNotFound` 404s on most Snowflake projects today. Use the Query Service.
+
+Required env vars (Keboola auto-injects on deploy when Storage Access is enabled):
+- `KBC_URL`, `KBC_TOKEN` — auth + base host.
+- `QUERY_SERVICE_URL` — Query Service host. If unset, derive from `KBC_URL` by swapping `connection.` → `query.` (`https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`).
+- `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Falls back to `KBC_WORKSPACE_ID` / `WORKSPACE_ID` (numeric).
+- `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
 
 Behind the scenes:
-- Snowflake projects → Query Service API.
-- BigQuery projects → Storage API (Query Service does not yet support BigQuery).
+- Snowflake projects → Query Service API (this is the path you'll be on >95% of the time).
+- BigQuery projects → Storage API workspace-query endpoint (Query Service does not yet support BigQuery — this is the legacy path's one remaining use case).
 
-The function signature is consistent across backends; the agent doesn't need to know which one it's hitting.
+The MCP-injected `query_data` function signature is consistent across backends; the SDK is also consistent. The agent doesn't need to know which one it's hitting unless they're on the BigQuery path explicitly.
 
-Usage pattern in a Streamlit app:
+Usage pattern in a Streamlit app (Snowflake project, Query Service path):
 
 ```python
 df = query_data('SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100')
@@ -136,67 +139,51 @@ st.dataframe(df)
 
 **Always use the full fully-qualified name** — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Get the exact string from `mcp__keboola__get_table`'s `fully_qualified_name` field (or the equivalent `fqn` field returned by other MCP tools). The database prefix is required: without it, the session default database only sees in-project tables, so any Data Catalog (cross-project linked) tables fail to resolve. Data apps always run in the production branch, so the FQN you get from MCP against main is the right one for the deployed app.
 
-Direct API call shape:
+### Query Service SDK call shape
 
-```
-POST {KBC_URL}/v2/storage/branch/{branch}/workspaces/{workspace_id}/query
-Header: X-StorageApi-Token: {KBC_TOKEN}
-Body: { "query": "<your SQL>" }
+Python (`keboola-query-service`):
+
+```python
+import os
+from keboola_query_service import Client
+
+base_url = os.environ.get("QUERY_SERVICE_URL") or os.environ["KBC_URL"].replace(
+    "://connection.", "://query.", 1
+)
+client = Client(base_url=base_url, token=os.environ["KBC_TOKEN"])
+
+results = client.execute_query(
+    branch_id=os.environ["BRANCH_ID"],   # numeric, not "default"
+    workspace_id=os.environ["KBC_WORKSPACE_ID"],
+    statements=['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
+)
+result = results[0]
+cols = [c.name for c in result.columns]
+rows = [dict(zip(cols, row)) for row in result.data]
 ```
 
-Robust JS implementation pattern:
-- Resolve env vars with multiple fallback names: `KBC_URL` / `KBC_STACK_API_URL` / `STORAGE_API_URL`; `KBC_TOKEN` / `KBC_STORAGEAPI_TOKEN` / `STORAGE_API_TOKEN`; `KBC_WORKSPACE_ID` / `WORKSPACE_ID`; `KBC_BRANCH_ID` / `BRANCH_ID` (defaults to `default`).
-- Normalize the workspace ID — Keboola sometimes exposes it as `WORKSPACE_<id>` (the Snowflake schema name). Strip that prefix; the Storage API expects the numeric ID. Regex: `/^WORKSPACE_(\d+)$/i`.
-- Retry on 5xx (e.g. 2 retries, 800ms backoff).
-- Queue queries so concurrent calls don't overwhelm the workspace.
+JS/TS (`@keboola/query-service`):
 
 ```javascript
-function resolveConfig() {
-  const baseUrl =
-    process.env.KBC_URL ||
-    process.env.KBC_STACK_API_URL ||
-    process.env.STORAGE_API_URL;
-  const token =
-    process.env.KBC_TOKEN ||
-    process.env.KBC_STORAGEAPI_TOKEN ||
-    process.env.STORAGE_API_TOKEN;
-  const branchId =
-    process.env.KBC_BRANCH_ID || process.env.BRANCH_ID || 'default';
+import { Client } from '@keboola/query-service';
 
-  let workspaceId =
-    process.env.KBC_WORKSPACE_ID || process.env.WORKSPACE_ID || '';
-  // Strip "WORKSPACE_" prefix — Storage API wants the numeric ID, not the schema name.
-  const m = workspaceId.match(/^WORKSPACE_(\d+)$/i);
-  if (m) workspaceId = m[1];
+const baseUrl =
+  process.env.QUERY_SERVICE_URL ||
+  process.env.KBC_URL.replace('://connection.', '://query.');
+const client = new Client({ baseUrl, token: process.env.KBC_TOKEN });
 
-  if (!baseUrl || !token || !workspaceId) {
-    throw new Error('Missing required Keboola env vars (URL, token, or workspace ID)');
-  }
-  return { baseUrl, token, branchId, workspaceId };
-}
-
-async function runQuery(sql, { retries = 2, backoffMs = 800 } = {}) {
-  const { baseUrl, token, branchId, workspaceId } = resolveConfig();
-  const url = `${baseUrl}/v2/storage/branch/${branchId}/workspaces/${workspaceId}/query`;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-StorageApi-Token': token,
-      },
-      body: JSON.stringify({ query: sql }),
-    });
-    if (res.ok) return res.json();
-    if (res.status >= 500 && attempt < retries) {
-      await new Promise((r) => setTimeout(r, backoffMs * (attempt + 1)));
-      continue;
-    }
-    throw new Error(`Workspace query failed: ${res.status} ${await res.text()}`);
-  }
-}
+const [result] = await client.executeQuery({
+  branchId: process.env.BRANCH_ID,           // numeric
+  workspaceId: process.env.KBC_WORKSPACE_ID,
+  statements: ['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
+});
+const cols = result.columns.map((c) => c.name);
+const rows = result.data.map((row) =>
+  Object.fromEntries(cols.map((name, i) => [name, row[i]])),
+);
 ```
+
+The SDKs handle the submit-job → poll-status → paginate-results dance internally. Don't hand-roll that — it's three endpoints, eventual consistency, and partial-page edge cases.
 
 ## Read-write direct access (Storage Access)
 
