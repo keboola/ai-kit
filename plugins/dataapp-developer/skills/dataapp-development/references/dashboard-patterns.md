@@ -17,7 +17,7 @@ query = f'''
         "category",
         COUNT(*) as count,
         AVG("value") as avg_value
-    FROM {get_table_name()}
+    FROM {table_fqn}
     WHERE "date" >= CURRENT_DATE - INTERVAL '90 days'
         AND {get_filter_clause()}
     GROUP BY "category"
@@ -25,7 +25,9 @@ query = f'''
 result = execute_query(query)
 ```
 
-Why: Snowflake (and similar warehouses) are optimised for this. Loading rows into Python serializes them over the network and burns app memory. SQL aggregation stays in the engine where the data already lives.
+`table_fqn` is the fully qualified name from `mcp__keboola__get_table`'s `fully_qualified_name` field — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Always use the full FQN with the database prefix; without it, Data Catalog (cross-project linked) tables don't resolve.
+
+Why aggregate in SQL: Snowflake (and similar warehouses) are optimised for this. Loading rows into Python serializes them over the network and burns app memory. SQL aggregation stays in the engine where the data already lives.
 
 Always include a date range filter on time-series queries — otherwise you risk scanning the entire table.
 
@@ -154,7 +156,7 @@ where_clause = ' AND '.join(where_parts)
 
 query = f'''
     SELECT ...
-    FROM {get_table_name()}
+    FROM {table_fqn}
     WHERE {where_clause}
 '''
 ```

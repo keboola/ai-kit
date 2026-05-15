@@ -16,15 +16,6 @@ def _get(name: str, default: str | None = None) -> str | None:
         return default
 
 
-def get_table_name(table_id: str) -> str:
-    """Return the fully quoted SQL identifier for a Keboola Storage table ID."""
-    last_dot = table_id.rfind(".")
-    if last_dot < 0:
-        return f'"{table_id}"'
-    bucket, table = table_id[:last_dot], table_id[last_dot + 1:]
-    return f'"{bucket}"."{table.replace("-", "_")}"'
-
-
 @st.cache_data(ttl=300)
 def execute_aggregation_query(sql: str) -> pd.DataFrame:
     """Execute SQL against the Keboola workspace and return a DataFrame."""

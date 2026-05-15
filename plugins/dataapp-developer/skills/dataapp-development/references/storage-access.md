@@ -114,9 +114,11 @@ The function signature is consistent across backends; the agent doesn't need to 
 Usage pattern in a Streamlit app:
 
 ```python
-df = query_data('SELECT * FROM "in.c-main"."customers" LIMIT 100')
+df = query_data('SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100')
 st.dataframe(df)
 ```
+
+**Always use the full fully-qualified name** — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Get the exact string from `mcp__keboola__get_table`'s `fully_qualified_name` field (or the equivalent `fqn` field returned by other MCP tools). The database prefix is required: without it, the session default database only sees in-project tables, so any Data Catalog (cross-project linked) tables fail to resolve. Data apps always run in the production branch, so the FQN you get from MCP against main is the right one for the deployed app.
 
 Direct API call shape:
 
@@ -227,7 +229,7 @@ client = Client(
 results = client.execute_query(
     branch_id=os.environ["BRANCH_ID"],
     workspace_id=workspace_id,
-    statements=['SELECT * FROM "in.c-main"."customers" LIMIT 100'],
+    statements=['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
 )
 rows = results[0].data
 ```
@@ -245,7 +247,7 @@ client.execute_query(
     branch_id=os.environ["BRANCH_ID"],
     workspace_id=workspace_id,
     statements=[f'''
-        UPDATE "in.c-main"."approvals"
+        UPDATE "KBC_REGION_PROJID"."in.c-main"."approvals"
         SET status = '{status}', updated_at = CURRENT_TIMESTAMP
         WHERE id = {record_id}
     '''],

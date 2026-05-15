@@ -1,7 +1,12 @@
 """Streamlit data app — minimal template for Keboola deployment."""
 import streamlit as st
 import plotly.express as px
-from utils.data_loader import execute_aggregation_query, get_table_name
+from utils.data_loader import execute_aggregation_query
+
+# Fully qualified table name. Copy from mcp__keboola__get_table's
+# `fully_qualified_name` field — the database prefix is required so
+# Data Catalog (cross-project linked) tables also resolve.
+TABLE_FQN = '"KBC_REGION_PROJID"."out.c-bucket"."table_name"'
 
 st.set_page_config(page_title="Keboola App", layout="wide")
 st.title("Keboola Data App")
@@ -26,7 +31,7 @@ where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
 query = f"""
     SELECT "category", COUNT(*) AS count
-    FROM {get_table_name("out.c-bucket.table")}
+    FROM {TABLE_FQN}
     WHERE {where_clause}
     GROUP BY "category"
     ORDER BY count DESC
