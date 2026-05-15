@@ -4,9 +4,18 @@
 
 ## Getting the env vars for local development
 
-Production: Keboola auto-injects these as env vars from `dataApp.secrets` when the app deploys. Local dev: you set them yourself, once per machine, from values in the Keboola project UI.
+Production: Keboola auto-injects these as env vars from `dataApp.secrets` when the app deploys. Local dev: the **user** sets them yourself, once per machine, from values in the Keboola project UI.
 
 The Python/JS templates load local env vars from `.env` or `.env.local` (both supported; `.env.local` overrides `.env` if both exist). Pick whichever fits your project. Both filenames must be gitignored. The Streamlit template uses `.streamlit/secrets.toml` instead, matching the Streamlit convention.
+
+**Agent: don't try to discover credentials on your own.** When the local file is missing or incomplete, **do NOT grep the filesystem, search shell history, or probe environment variables for tokens.** Those approaches are a security smell, error-prone, and almost never find what you need. Instead:
+
+1. List the exact env vars the app needs (from the subsections below).
+2. Tell the user where to find each value (link to the relevant subsection — they show the UI navigation).
+3. Ask the user to populate `.env` / `.env.local` (or `.streamlit/secrets.toml`).
+4. Wait for confirmation that the file is filled before attempting to run the app.
+
+This is non-negotiable for local-dev credentials regardless of which path the user chose (MCP, kbagent, or git).
 
 ### KBC_URL
 
