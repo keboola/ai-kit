@@ -65,6 +65,11 @@ You only need to set `BRANCH_ID` explicitly if:
 
 For every other case → omit `BRANCH_ID` (or set it to `default`) and the app reads production tables.
 
+**Local dev with direct Query Service calls needs a numeric `BRANCH_ID`.** The string `"default"` is rejected by the Query Service with a parse error. Don't construct an HTTP call to `/v2/storage/dev-branches` — call `mcp__keboola__get_project_info` and read:
+
+- `branch_id` — the numeric ID to paste into `.env.local`.
+- `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` and the app will read dev-branch tables locally.
+
 ## Preferred default for read-only apps: DuckDB-cached RO
 
 For any read-only dashboarding app, this is the default. Don't query the warehouse on every render — cache once into an in-memory DuckDB and serve every dashboard query from local memory.
