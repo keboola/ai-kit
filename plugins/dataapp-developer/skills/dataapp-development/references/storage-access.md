@@ -223,52 +223,190 @@ Library:
 - Python: `keboola-query-service`
 - JS/TS: `@keboola/query-service`
 
-Minimal Python read example:
+### Wrap the SDK in a single module
+
+Concentrate all env-var reads and SDK construction in one wrapper module. The rest of the app calls `select(sql)` / `execute(sql)` — it never touches `os.environ` or the raw `Client`. Module-level singleton initialisation fails fast on missing env vars, before the first request.
+
+**Python** (`storage.py`):
 
 ```python
-import json, os
+"""Thin wrapper around keboola-query-service Client."""
+import json
+import os
+from typing import Any
+
+try:  # dev-only — silently ignored in container
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except ImportError:
+    pass
+
 from keboola_query_service import Client
 
-with open(os.environ["KBC_WORKSPACE_MANIFEST_PATH"]) as f:
-    workspace_id = json.load(f)["workspaceId"]
 
-client = Client(
-    base_url=os.environ["QUERY_SERVICE_URL"],
-    token=os.environ["KBC_TOKEN"],
-)
+class Storage:
+    def __init__(self) -> None:
+        self.branch_id = os.environ["BRANCH_ID"]
+        with open(os.environ["KBC_WORKSPACE_MANIFEST_PATH"]) as f:
+            self.workspace_id = json.load(f)["workspaceId"]
+        self.client = Client(
+            base_url=os.environ["QUERY_SERVICE_URL"],
+            token=os.environ["KBC_TOKEN"],
+        )
 
-results = client.execute_query(
-    branch_id=os.environ["BRANCH_ID"],
-    workspace_id=workspace_id,
-    statements=['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
-)
-rows = results[0].data
+    def select(self, sql: str) -> list[dict[str, Any]]:
+        result = self.client.execute_query(
+            branch_id=self.branch_id,
+            workspace_id=self.workspace_id,
+            statements=[sql],
+        )[0]
+        cols = [c.name for c in result.columns]
+        return [dict(zip(cols, row)) for row in result.data]
+
+    def execute(self, sql: str) -> None:
+        self.client.execute_query(
+            branch_id=self.branch_id,
+            workspace_id=self.workspace_id,
+            statements=[sql],
+        )
+
+
+storage = Storage()  # module-level singleton
 ```
 
-Minimal write example with allowlisted input — sanitized for SQL injection:
+**Node.js / TypeScript** (`storage.ts`):
+
+```typescript
+import { readFileSync } from 'node:fs';
+import { Client } from '@keboola/query-service';
+
+const branchId = process.env.BRANCH_ID!;
+const workspaceId = JSON.parse(
+  readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
+).workspaceId as string;
+
+const client = new Client({
+  baseUrl: process.env.QUERY_SERVICE_URL!,
+  token: process.env.KBC_TOKEN!,
+});
+
+export async function select<T = Record<string, unknown>>(sql: string): Promise<T[]> {
+  const [result] = await client.executeQuery({ branchId, workspaceId, statements: [sql] });
+  const cols = result.columns.map((c) => c.name);
+  return result.data.map((row: unknown[]) =>
+    Object.fromEntries(cols.map((name, i) => [name, row[i]])) as T,
+  );
+}
+
+export async function execute(sql: string): Promise<void> {
+  await client.executeQuery({ branchId, workspaceId, statements: [sql] });
+}
+```
+
+Load `.env` once in your app entrypoint (`server.ts` / `server.js`) **before** importing `storage.ts` — keeping dotenv out of the wrapper makes it portable across ESM and CJS:
+
+```typescript
+import 'dotenv/config';
+import { select, execute } from './storage.js';
+```
+
+Usage from the rest of the app:
 
 ```python
-ALLOWED_STATUSES = {"pending", "approved", "rejected"}
-status = user_input
-if status not in ALLOWED_STATUSES:
-    raise ValueError(f"Invalid status: {status}")
-record_id = int(user_input_id)  # int() coerces; raises if not numeric
-
-client.execute_query(
-    branch_id=os.environ["BRANCH_ID"],
-    workspace_id=workspace_id,
-    statements=[f'''
-        UPDATE "KBC_REGION_PROJID"."in.c-main"."approvals"
-        SET status = '{status}', updated_at = CURRENT_TIMESTAMP
-        WHERE id = {record_id}
-    '''],
-)
+# Python
+rows = storage.select('SELECT "id", "name" FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100')
+storage.execute('INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES (\'abc-123\',\'Click\')')
 ```
 
-**Critical caveat — SQL injection:** the Query Service accepts raw SQL and does NOT support parameterized queries / bind variables. The application MUST validate every untrusted value before interpolating:
-- Numeric values: coerce with `int(...)` / `Number(...)` — raises/NaN on bad input.
-- String enums: use an allowlist set; reject anything not in it.
-- Arbitrary strings: don't interpolate. Wait for the planned `SQL.literal()` helpers in the Python and JS SDKs.
+```typescript
+// TypeScript
+const rows = await select<{ id: string; name: string }>(
+  'SELECT "id", "name" FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100',
+);
+await execute(`INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES ('abc-123','Click')`);
+```
+
+### SQL injection — validate every interpolated value
+
+The Query Service accepts raw SQL and does **NOT** support parameterized queries / bind variables. Every value the app interpolates into SQL must be validated and escaped explicitly. Concentrate validation in one module so route handlers can't accidentally bypass it.
+
+**Python** (`validation.py`):
+
+```python
+"""Validate and escape every value that goes into SQL."""
+from typing import Final
+
+ALLOWED_STATUSES: Final[frozenset[str]] = frozenset({"pending", "approved", "rejected"})
+MAX_TEXT_LEN: Final[int] = 200
+
+
+class ValidationError(ValueError):
+    pass
+
+
+def parse_int(v, field: str) -> int:
+    try:
+        return int(v)
+    except (TypeError, ValueError) as e:
+        raise ValidationError(f"{field} must be an integer") from e
+
+
+def parse_status(v) -> str:
+    s = (v or "").strip().lower()
+    if s not in ALLOWED_STATUSES:
+        raise ValidationError(f"status must be one of {sorted(ALLOWED_STATUSES)}")
+    return s
+
+
+def escape_sql_text(v, field: str) -> str:
+    """Returns inner content; caller wraps in single quotes."""
+    if not isinstance(v, str):
+        raise ValidationError(f"{field} must be a string")
+    if len(v) > MAX_TEXT_LEN:
+        raise ValidationError(f"{field} exceeds {MAX_TEXT_LEN} characters")
+    return v.replace("'", "''")
+```
+
+**TypeScript** (`validation.ts`):
+
+```typescript
+export class ValidationError extends Error {}
+
+const ALLOWED_STATUSES = new Set(['pending', 'approved', 'rejected']);
+const MAX_TEXT_LEN = 200;
+
+export function parseInt32(v: unknown, field: string): number {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < -2_147_483_648 || n > 2_147_483_647) {
+    throw new ValidationError(`${field} must be a 32-bit integer`);
+  }
+  return n;
+}
+
+export function parseStatus(v: unknown): string {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (!ALLOWED_STATUSES.has(s)) {
+    throw new ValidationError(`status must be one of ${[...ALLOWED_STATUSES].join(', ')}`);
+  }
+  return s;
+}
+
+export function escapeSqlText(v: unknown, field: string): string {
+  if (typeof v !== 'string') throw new ValidationError(`${field} must be a string`);
+  if (v.length > MAX_TEXT_LEN) throw new ValidationError(`${field} exceeds ${MAX_TEXT_LEN} characters`);
+  return v.replace(/'/g, "''");
+}
+```
+
+### Rules of thumb for SQL values
+
+Apply in any language:
+
+- **Numeric fields** — coerce to a native number (Python `int()` / `float()`, JS `Number()` + `Number.isFinite` / `Number.isInteger`), then interpolate as a bare numeric. Don't quote.
+- **Dates / times** — parse strictly (Python `datetime.date.fromisoformat`, JS `new Date(iso)` + `isNaN(d.getTime())` rejection), then format to whatever the column expects.
+- **Categorical fields** — enforce against a hard-coded allow-list (Python `frozenset`, JS `Set`). Reject anything not in it.
+- **Free-text fields** — length-cap, then double single quotes (`'` → `''`). Wrap in single quotes at interpolation site.
+- **Generated IDs** — use a UUID (`uuid.uuid4().hex` in Python, `crypto.randomUUID()` in Node ≥ 14.17). Never `MAX(id)+1` — race conditions, plus Storage columns are typically `STRING` anyway.
 
 First-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers are in development in the Python and JS Query Service SDKs. Once shipped, prefer them over manual sanitization. SDK source repos are listed in [glossary.md](glossary.md) §Libraries.
 
