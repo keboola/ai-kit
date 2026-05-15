@@ -19,13 +19,17 @@ List aliases and ask if not provided. Use the **setup recipe** from the `semanti
 from concurrent.futures import ThreadPoolExecutor
 import urllib.request, json
 
+# API helpers — canonical defs in semantic-layer SKILL.md API Primitives
+def api_get(path):
+    req = urllib.request.Request(f"{METASTORE}{path}",
+                                  headers={'X-StorageAPI-Token': TOKEN})
+    return json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+
 TYPES = ['semantic-dataset','semantic-metric','semantic-relationship',
          'semantic-glossary','semantic-constraint']
 
 def fetch(t):
-    req = urllib.request.Request(f"{METASTORE}/api/v1/repository/{t}",
-                                  headers={'X-StorageAPI-Token': TOKEN})
-    items = json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+    items = api_get(f"/api/v1/repository/{t}")
     return t, [i['attributes'] for i in items
                if i.get('attributes', {}).get('modelUUID') == MODEL_UUID]
 

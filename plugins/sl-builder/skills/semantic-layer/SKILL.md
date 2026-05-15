@@ -22,7 +22,7 @@ the full CRUD procedures below. No slash command needed.
 
 ## Auth & Setup
 
-Resolve `TOKEN` and `METASTORE` using this fallback chain — stop at the first that works:
+Resolve `TOKEN`, `STACK`, and `METASTORE` using this fallback chain — stop at the first that works:
 
 **1. Environment variables** (no kbagent needed):
 ```python
@@ -34,6 +34,7 @@ if token and stack_url:
     region = m.group(1) if m else 'us-east4'
     cloud  = m.group(2) if m else 'gcp'
     TOKEN     = token
+    STACK     = f'https://connection.{region}.{cloud}.keboola.com'
     METASTORE = f'https://metastore.{region}.{cloud}.keboola.com'
 ```
 
@@ -49,6 +50,7 @@ if os.path.exists(cfg_path):
     region = m.group(1) if m else 'us-east4'
     cloud  = m.group(2) if m else 'gcp'
     TOKEN     = p['token']
+    STACK     = f'https://connection.{region}.{cloud}.keboola.com'
     METASTORE = f'https://metastore.{region}.{cloud}.keboola.com'
 ```
 
@@ -57,7 +59,7 @@ Ask for:
 - **Storage API token** — Keboola UI → Settings → API Tokens
 - **Connection URL** — e.g. `connection.europe-west3.gcp.keboola.com`
 
-Derive METASTORE from the region and cloud in the connection URL.
+Derive STACK and METASTORE from the region and cloud in the connection URL.
 
 Once resolved: `H = {'X-StorageAPI-Token': TOKEN, 'Content-Type': 'application/json'}`
 
@@ -85,6 +87,24 @@ def api_post(path, body):
 def api_delete(path):
     req = urllib.request.Request(f"{METASTORE}{path}", headers=H, method='DELETE')
     urllib.request.urlopen(req, timeout=15)
+
+def db_name():
+    """Resolve Snowflake DB for the current project: KEBOOLA_<projectId>.
+    Caches to /tmp/sl_db_name.txt for the run. Falls back to 'KEBOOLA' on failure."""
+    import sys
+    cache = '/tmp/sl_db_name.txt'
+    if os.path.exists(cache):
+        return open(cache).read().strip()
+    try:
+        req = urllib.request.Request(f"{STACK}/v2/storage/tokens/verify",
+                                      headers={'X-StorageApi-Token': TOKEN})
+        pid = json.loads(urllib.request.urlopen(req, timeout=15).read())['owner']['id']
+        name = f'KEBOOLA_{pid}'
+    except Exception as e:
+        print(f"⚠ db_name resolve failed ({e}); falling back to KEBOOLA", file=sys.stderr)
+        name = 'KEBOOLA'
+    open(cache, 'w').write(name)
+    return name
 ```
 
 **Endpoints:**
@@ -115,7 +135,7 @@ on the returned list — the `?modelId` query param is unreliable.
 ```json
 {
   "name": "<model name>",
-  "data": { "name": "<model name>", "description": "...", "sql_dialect": "Snowflake" },
+  "data": { "name": "<model name>", "description": "...", "sqlDialect": "Snowflake" },
   "branch": "main",
   "schemaVersion": "1.0.0",
   "scope": "project"
@@ -131,7 +151,7 @@ on the returned list — the `?modelId` query param is unreliable.
 {
   "name": "fact_revenue",
   "tableId": "out.c-gold.FACT_REVENUE",
-  "fqn": "\"KEBOOLA\".\"out.c-gold\".\"FACT_REVENUE\"",
+  "fqn": "\"KEBOOLA_293\".\"out.c-gold\".\"FACT_REVENUE\"",
   "description": "...",
   "grain": "one row per transaction",
   "primaryKey": ["PK_REVENUE"],
@@ -144,13 +164,18 @@ on the returned list — the `?modelId` query param is unreliable.
 }
 ```
 
-**FQN** — split tableId on last dot only:
+**FQN** — split tableId on last dot only; first segment is the project-specific Snowflake DB:
 ```python
-def fqn(tid):
+def fqn(tid, db):
     t = tid.split('.')
-    return f'"KEBOOLA"."{".".join(t[:-1])}"."{t[-1]}"'
-# out.c-gold.FACT_REVENUE → "KEBOOLA"."out.c-gold"."FACT_REVENUE"
+    return f'"{db}"."{".".join(t[:-1])}"."{t[-1]}"'
+# fqn("out.c-gold.FACT_REVENUE", db_name())
+# → "KEBOOLA_293"."out.c-gold"."FACT_REVENUE"
 ```
+Resolve the DB once per run via `db_name()` (defined in API Primitives above) — it queries
+the storage token-verify endpoint and caches `KEBOOLA_<projectId>` to `/tmp/sl_db_name.txt`.
+**Never hardcode `KEBOOLA`** — real projects use `KEBOOLA_<projectId>` (e.g. `KEBOOLA_293`)
+and a bare `KEBOOLA` reference will fail at Snowflake query time.
 
 **Field roles:**
 - `PK_*/FK_*` → `key`
@@ -173,7 +198,21 @@ def fqn(tid):
 - `dataset` field is the **tableId**, not the dataset name
 - `SUM`/`AVG`/`COUNT(DISTINCT)` on real columns only
 - Never `SUM` a `_PCT`/ratio column — use `AVG`
-- VERSION tables: use `SUM(CASE WHEN "T"."VERSION" = 'Actual' THEN "T"."COL" END)`
+- VERSION tables: only generate `SUM(CASE WHEN "T"."<col>" = '<value>' THEN ...)` metrics
+  **after probing the column's actual distinct values**. Use the kbagent SQL probe from
+  `/sl-build` Step 2.5 (writes `/tmp/sl_version_samples.json`) — or for ad-hoc use:
+  ```python
+  import subprocess, json
+  r = subprocess.run(['kbagent','--json','workspace','sql','--project',PROJECT,
+                      '--query',f'SELECT DISTINCT "{COL}" FROM "{SCHEMA}"."{TABLE}" LIMIT 20'],
+                     capture_output=True, text=True)
+  samples = {row[COL] for row in json.loads(r.stdout).get('rows', [])}
+  ```
+  Apply the VERSION rule **only if** `samples` contains a recognized literal — case-insensitive
+  match against `{actual, budget, plan, forecast, baseline, target}`. Substitute the actual
+  literal value from `samples` (preserve case) into the SQL. **If none match**, skip the
+  VERSION-conditional metric and note in the model description: *"VERSION-style breakdown
+  not generated for `<col>` — distinct values were `<samples>`."*
 
 ### semantic-relationship
 ```json
@@ -238,9 +277,10 @@ Always resolve TOKEN, METASTORE, and MODEL_UUID first (see Auth & Setup above).
 ### Add an entity
 
 Build the payload using the shapes above. Show the user the payload before POSTing.
+**All CRUD blocks assume `api_get`/`api_post`/`api_delete` from API Primitives are defined.**
 
 ```python
-import urllib.request, json, urllib.error
+import urllib.error
 
 TYPE = 'semantic-metric'   # replace with actual type
 ITEM = { }                 # replace with actual payload
@@ -250,10 +290,8 @@ body = {
     "data": {**ITEM, "modelUUID": MODEL_UUID},
     "branch": "main", "schemaVersion": "1.0.0", "scope": "project"
 }
-req = urllib.request.Request(f"{METASTORE}/api/v1/repository/{TYPE}",
-                              json.dumps(body).encode(), H, method='POST')
 try:
-    r = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    r = api_post(f"/api/v1/repository/{TYPE}", body)
     print(f"✓ Created {r['data']['id']}")
 except urllib.error.HTTPError as e:
     print(f"✗ {e.code}: {e.read().decode()[:300]}")
@@ -268,14 +306,15 @@ The metastore has no PATCH — editing is DELETE old + POST updated.
 Always show the diff to the user and get confirmation before proceeding.
 
 ```python
-import urllib.request, json, urllib.error, re
+import urllib.error, re
+
+def envelope(name, data):
+    return {"name": name, "data": {**data, "modelUUID": MODEL_UUID},
+            "branch": "main", "schemaVersion": "1.0.0", "scope": "project"}
 
 # 1. Fetch and find item
 TYPE = 'semantic-metric'   # replace with actual type
-all_items = json.loads(urllib.request.urlopen(
-    urllib.request.Request(f"{METASTORE}/api/v1/repository/{TYPE}",
-                            headers={'X-StorageAPI-Token': TOKEN}), timeout=15
-).read()).get('data', [])
+all_items = api_get(f"/api/v1/repository/{TYPE}")
 items  = [i for i in all_items if i.get('attributes', {}).get('modelUUID') == MODEL_UUID]
 target = next((i for i in items
                if i['attributes'].get('name','').lower() == TARGET_NAME.lower()), None)
@@ -293,10 +332,7 @@ NEW_NAME = NEW_ATTRS.get('name', '')
 is_rename = TYPE == 'semantic-metric' and OLD_NAME != NEW_NAME
 affected_constraints = []
 if is_rename:
-    all_c = json.loads(urllib.request.urlopen(
-        urllib.request.Request(f"{METASTORE}/api/v1/repository/semantic-constraint",
-                                headers={'X-StorageAPI-Token': TOKEN}), timeout=15
-    ).read()).get('data', [])
+    all_c = api_get("/api/v1/repository/semantic-constraint")
     affected_constraints = [
         c for c in all_c
         if c.get('attributes', {}).get('modelUUID') == MODEL_UUID
@@ -309,32 +345,18 @@ if is_rename:
         print(f"Constraints to auto-update: {[c['attributes']['name'] for c in affected_constraints]}")
 
 # 4. Delete old + POST updated (rollback on POST failure)
-urllib.request.urlopen(
-    urllib.request.Request(f"{METASTORE}/api/v1/repository/{TYPE}/{target['id']}",
-                            headers=H, method='DELETE'), timeout=15)
-body = {
-    "name": NEW_ATTRS.get('name') or NEW_ATTRS.get('term'),
-    "data": {**NEW_ATTRS, "modelUUID": MODEL_UUID},
-    "branch": "main", "schemaVersion": "1.0.0", "scope": "project"
-}
-req = urllib.request.Request(f"{METASTORE}/api/v1/repository/{TYPE}",
-                              json.dumps(body).encode(), H, method='POST')
+api_delete(f"/api/v1/repository/{TYPE}/{target['id']}")
+new_name = NEW_ATTRS.get('name') or NEW_ATTRS.get('term')
 try:
-    r = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    r = api_post(f"/api/v1/repository/{TYPE}", envelope(new_name, NEW_ATTRS))
     print(f"✓ Updated: {r['data']['id']}")
 except urllib.error.HTTPError as e:
     print(f"✗ POST failed ({e.code}) — attempting rollback...")
-    rollback = {
-        "name": original_attrs.get('name') or original_attrs.get('term'),
-        "data": {**original_attrs, "modelUUID": MODEL_UUID},
-        "branch": "main", "schemaVersion": "1.0.0", "scope": "project"
-    }
+    orig_name = original_attrs.get('name') or original_attrs.get('term')
     try:
-        urllib.request.urlopen(
-            urllib.request.Request(f"{METASTORE}/api/v1/repository/{TYPE}",
-                                    json.dumps(rollback).encode(), H, method='POST'), timeout=30)
+        api_post(f"/api/v1/repository/{TYPE}", envelope(orig_name, original_attrs))
         print("✓ Rollback succeeded — original restored")
-    except:
+    except Exception:
         print("✗ Rollback also failed — check metastore manually")
     raise
 
@@ -342,16 +364,10 @@ except urllib.error.HTTPError as e:
 for c in affected_constraints:
     c_attrs = {**c['attributes']}
     c_attrs['metrics'] = [NEW_NAME if m == OLD_NAME else m for m in c_attrs.get('metrics', [])]
-    urllib.request.urlopen(
-        urllib.request.Request(f"{METASTORE}/api/v1/repository/semantic-constraint/{c['id']}",
-                                headers=H, method='DELETE'), timeout=15)
-    c_req = urllib.request.Request(
-        f"{METASTORE}/api/v1/repository/semantic-constraint",
-        json.dumps({"name": c_attrs['name'], "data": {**c_attrs, "modelUUID": MODEL_UUID},
-                    "branch": "main", "schemaVersion": "1.0.0", "scope": "project"}).encode(),
-        H, method='POST')
+    api_delete(f"/api/v1/repository/semantic-constraint/{c['id']}")
     try:
-        json.loads(urllib.request.urlopen(c_req, timeout=30).read())
+        api_post("/api/v1/repository/semantic-constraint",
+                 envelope(c_attrs['name'], c_attrs))
         print(f"  ✓ Constraint updated: {c_attrs['name']}")
     except urllib.error.HTTPError as e:
         print(f"  ✗ {c_attrs['name']}: {e.code}")
@@ -366,17 +382,12 @@ for c in affected_constraints:
 Always confirm with the user before deleting. For metrics, check constraint references first.
 
 ```python
-import urllib.request, json
-
 TYPE = 'semantic-metric'   # replace with actual type
 # (find target same as Edit step 1 above)
 
 # Check constraint references before deleting a metric
 if TYPE == 'semantic-metric':
-    all_c = json.loads(urllib.request.urlopen(
-        urllib.request.Request(f"{METASTORE}/api/v1/repository/semantic-constraint",
-                                headers={'X-StorageAPI-Token': TOKEN}), timeout=15
-    ).read()).get('data', [])
+    all_c = api_get("/api/v1/repository/semantic-constraint")
     refs = [c['attributes']['name'] for c in all_c
             if target['attributes']['name'] in (c.get('attributes', {}).get('metrics') or [])]
     if refs:
@@ -385,9 +396,7 @@ if TYPE == 'semantic-metric':
         # Ask user to confirm before continuing
 
 # Delete
-urllib.request.urlopen(
-    urllib.request.Request(f"{METASTORE}/api/v1/repository/{TYPE}/{target['id']}",
-                            headers=H, method='DELETE'), timeout=15)
+api_delete(f"/api/v1/repository/{TYPE}/{target['id']}")
 print(f"✓ Deleted: {target['attributes'].get('name')}")
 ```
 

@@ -19,9 +19,24 @@ Schema discovery → SQL context → business questions → generate → validat
 export KBAGENT_CONVERSATION_ID="$(uuidgen)"
 ```
 
-Use the **setup recipe** from the `semantic-layer` skill to get `TOKEN` and `METASTORE`
-(env vars → kbagent config → ask user). Store the resolved values as `TOKEN`, `METASTORE`,
-and the chosen project alias as `PROJECT`. **Never auto-select a project.**
+Use the **setup recipe** from the `semantic-layer` skill to get `TOKEN`, `STACK`, and `METASTORE`
+(env vars → kbagent config → ask user). Store the resolved values, and the chosen project
+alias as `PROJECT`. **Never auto-select a project.**
+
+Then resolve the Snowflake DB name once and cache it for the run:
+```python
+import urllib.request, json, os, sys
+try:
+    req = urllib.request.Request(f"{STACK}/v2/storage/tokens/verify",
+                                  headers={'X-StorageApi-Token': TOKEN})
+    pid = json.loads(urllib.request.urlopen(req, timeout=15).read())['owner']['id']
+    DB_NAME = f'KEBOOLA_{pid}'
+except Exception as e:
+    print(f"⚠ DB resolve failed ({e}); falling back to KEBOOLA", file=sys.stderr)
+    DB_NAME = 'KEBOOLA'
+open('/tmp/sl_db_name.txt', 'w').write(DB_NAME)
+print(f"DB: {DB_NAME}")
+```
 
 Detect kbagent and check for existing models in parallel:
 
@@ -39,10 +54,14 @@ fi
 ```python
 # Check for existing models (use the resolved TOKEN and METASTORE from setup recipe)
 import json, urllib.request
-req = urllib.request.Request(
-    f"{METASTORE}/api/v1/repository/semantic-model",
-    headers={'X-StorageAPI-Token': TOKEN})
-existing = json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+
+# API helpers — canonical defs in semantic-layer SKILL.md API Primitives
+def api_get(path):
+    req = urllib.request.Request(f"{METASTORE}{path}",
+                                  headers={'X-StorageAPI-Token': TOKEN})
+    return json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+
+existing = api_get('/api/v1/repository/semantic-model')
 for m in existing:
     print(m['id'], m.get('attributes', {}).get('name', '?'))
 ```
@@ -110,6 +129,54 @@ Extract SQL from `keboola.snowflake-transformation` configs and use it to inform
 
 ---
 
+## Step 2.5 — Probe VERSION-candidate columns
+
+Skip this step if kbagent is not available. For each table, scan its schema for columns
+whose name matches `^(VERSION|SCENARIO|PERIOD_TYPE|TYPE|VARIANT)$` (case-insensitive)
+and probe their distinct values. The result drives Step 3's VERSION-rule decision —
+without it, the LLM cannot know whether `'Actual'`/`'Budget'` literals are valid.
+
+```python
+import subprocess, json, os, re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+schemas = json.load(open('/tmp/sl_schemas.json'))
+ENV = {**os.environ}
+CANDIDATE_RE = re.compile(r'^(VERSION|SCENARIO|PERIOD_TYPE|TYPE|VARIANT)$', re.I)
+
+def probe(tid_col):
+    tid, col = tid_col
+    schema, table = tid.split('.', 1)[1].rsplit('.', 1) if tid.count('.') >= 2 else (tid.split('.')[0], tid.split('.')[-1])
+    q = f'SELECT DISTINCT "{col}" AS V FROM "{schema}"."{table}" LIMIT 20'
+    r = subprocess.run(
+        ['kbagent','--json','workspace','sql','--project', PROJECT, '--query', q],
+        capture_output=True, text=True, env=ENV, timeout=30)
+    try:
+        rows = json.loads(r.stdout).get('rows', [])
+        return tid, col, [row.get('V') for row in rows if row.get('V') is not None]
+    except Exception:
+        return tid, col, []
+
+candidates = [(tid, c['name'])
+              for tid, d in schemas.items()
+              for c in d.get('column_details', [])
+              if CANDIDATE_RE.match(c.get('name',''))]
+
+samples = {}
+if candidates:
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        for tid, col, values in (f.result() for f in
+                                  as_completed({ex.submit(probe, tc): tc for tc in candidates})):
+            samples.setdefault(tid, {})[col] = values
+json.dump(samples, open('/tmp/sl_version_samples.json','w'), indent=2)
+print(f"Probed {len(candidates)} candidate VERSION-like columns; results in /tmp/sl_version_samples.json")
+```
+
+If kbagent SQL probing fails or returns empty for every candidate, write `{}` to the
+samples file — Step 3 will then skip all VERSION-conditional metrics.
+
+---
+
 ## Step 3 — Generate
 
 Build `/tmp/sl_model.json` with keys:
@@ -120,6 +187,13 @@ Build `/tmp/sl_model.json` with keys:
 
 Use **payload shapes, field roles, VERSION rule, and constraint encoding** from the `semantic-layer` skill.
 Prefer SQL formulas found in transformation context over guesses.
+
+**For the VERSION rule**: read `/tmp/sl_version_samples.json` first. For each `(tableId, column)`,
+only emit a `SUM(CASE WHEN "<col>" = '<literal>' THEN ...)` metric if the column's distinct
+values (from the probe) include any of `{actual, budget, plan, forecast, baseline, target}`
+case-insensitively. Substitute the *actual literal* from the probe (preserve case) into the SQL.
+Otherwise skip the VERSION-conditional metric and note in the model description which columns
+were skipped and what their distinct values were.
 
 ---
 
@@ -198,6 +272,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 model     = json.load(open('/tmp/sl_model.json'))
 UPDATE_ID = open('/tmp/sl_update_id.txt').read().strip() or None
+DB_NAME   = open('/tmp/sl_db_name.txt').read().strip()
 H         = {'X-StorageAPI-Token': TOKEN, 'Content-Type': 'application/json'}
 
 def api_post(path, body):
@@ -208,7 +283,7 @@ def push_item(type_path, item, name_key, uuid, retries=3):
     data = {**item, 'modelUUID': uuid}
     if type_path == 'semantic-dataset':
         t = item['tableId'].split('.')
-        data['fqn'] = f'"KEBOOLA"."{".".join(t[:-1])}"."{t[-1]}"'
+        data['fqn'] = f'"{DB_NAME}"."{".".join(t[:-1])}"."{t[-1]}"'
     for attempt in range(retries):
         try:
             api_post(f'/api/v1/repository/{type_path}',
@@ -224,7 +299,7 @@ if UPDATE_ID:
 else:
     uuid = api_post('/api/v1/repository/semantic-model', {
         'name': model['name'],
-        'data': {'name': model['name'], 'description': model['description'], 'sql_dialect': 'Snowflake'},
+        'data': {'name': model['name'], 'description': model['description'], 'sqlDialect': 'Snowflake'},
         'branch': 'main', 'schemaVersion': '1.0.0', 'scope': 'project'
     })['data']['id']
     print(f'✓ model created {uuid}')

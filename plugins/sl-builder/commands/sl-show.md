@@ -28,9 +28,15 @@ If kbagent is not installed, ask for token + connection URL directly (see setup 
 
 ```python
 import urllib.request, json
-req = urllib.request.Request(f"{METASTORE}/api/v1/repository/semantic-model",
-                              headers={'X-StorageAPI-Token': TOKEN})
-models = json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+from concurrent.futures import ThreadPoolExecutor
+
+# API helpers — canonical defs in semantic-layer SKILL.md API Primitives
+def api_get(path):
+    req = urllib.request.Request(f"{METASTORE}{path}",
+                                  headers={'X-StorageAPI-Token': TOKEN})
+    return json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+
+models = api_get('/api/v1/repository/semantic-model')
 for m in models: print(m['id'], m.get('attributes', {}).get('name', '?'))
 ```
 Use the only model if one exists; ask if multiple. Store as `MODEL_UUID`.
@@ -38,15 +44,11 @@ Use the only model if one exists; ask if multiple. Store as `MODEL_UUID`.
 ## 3. Fetch all entity types in parallel
 
 ```python
-from concurrent.futures import ThreadPoolExecutor
-
 TYPES = ['semantic-dataset','semantic-metric','semantic-relationship',
          'semantic-glossary','semantic-constraint']
 
 def fetch(t):
-    req = urllib.request.Request(f"{METASTORE}/api/v1/repository/{t}",
-                                  headers={'X-StorageAPI-Token': TOKEN})
-    items = json.loads(urllib.request.urlopen(req, timeout=15).read()).get('data', [])
+    items = api_get(f"/api/v1/repository/{t}")
     return t, [i['attributes'] for i in items
                if i.get('attributes', {}).get('modelUUID') == MODEL_UUID]
 
