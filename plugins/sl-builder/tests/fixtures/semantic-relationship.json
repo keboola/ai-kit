@@ -1,0 +1,14 @@
+{
+  "name": "fact_revenue_to_time",
+  "data": {
+    "name": "fact_revenue_to_time",
+    "from": "out.c-gold.FACT_REVENUE",
+    "to": "out.c-gold.DIM_DATE",
+    "on": "\"FACT_REVENUE\".\"PERIOD\" = \"DIM_DATE\".\"PK_DATE\"",
+    "type": "left",
+    "modelUUID": "00000000-0000-0000-0000-000000000001"
+  },
+  "branch": "main",
+  "schemaVersion": "1.0.0",
+  "scope": "project"
+}

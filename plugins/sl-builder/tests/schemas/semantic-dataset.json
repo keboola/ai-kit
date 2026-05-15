@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "semantic-dataset.data",
+  "type": "object",
+  "required": ["name", "tableId", "fqn", "fields", "modelUUID"],
+  "additionalProperties": true,
+  "properties": {
+    "name":        {"type": "string", "minLength": 1},
+    "tableId":     {"type": "string", "pattern": "^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+\\.[A-Z0-9_-]+$"},
+    "fqn":         {"type": "string", "pattern": "^\"KEBOOLA(_[0-9]+)?\"\\.\"[^\"]+\"\\.\"[^\"]+\"$"},
+    "description": {"type": "string"},
+    "grain":       {"type": "string"},
+    "primaryKey":  {"type": "array", "items": {"type": "string"}},
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "role"],
+        "properties": {
+          "name":        {"type": "string"},
+          "type":        {"type": "string", "enum": ["string", "integer", "decimal", "boolean", "datetime", "date", "json"]},
+          "role":        {"type": "string", "enum": ["key", "measure", "dimension", "timestamp"]},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "modelUUID":   {"type": "string", "minLength": 1}
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Revenue Analytics",
+  "data": {
+    "name": "Revenue Analytics",
+    "description": "Greenfield model for revenue tracking",
+    "sqlDialect": "Snowflake"
+  },
+  "branch": "main",
+  "schemaVersion": "1.0.0",
+  "scope": "project"
+}
