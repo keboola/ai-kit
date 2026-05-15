@@ -213,6 +213,8 @@ Env vars set when Storage Access is enabled:
 - `KBC_WORKSPACE_MANIFEST_PATH` — path to a JSON manifest with `workspaceId` and other metadata. **Preferred source for the workspace ID.**
 - `WORKSPACE_ID`, `BRANCH_ID`, `QUERY_SERVICE_URL`, `KBC_TOKEN`.
 
+`QUERY_SERVICE_URL` is the project's Query Service host — `https://query.<stack>.keboola.com`, derived from `KBC_URL` by replacing the `connection.` subdomain prefix with `query.` (e.g. `https://connection.keboola.com` → `https://query.keboola.com`, `https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`). In production Keboola injects this directly. In local dev you can either set it explicitly in `.env.local` or compute it from `KBC_URL` in code.
+
 Library:
 - Python: `keboola-query-service`
 - JS/TS: `@keboola/query-service`
