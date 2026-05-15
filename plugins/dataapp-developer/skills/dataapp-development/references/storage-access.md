@@ -185,6 +185,76 @@ const rows = result.data.map((row) =>
 
 The SDKs handle the submit-job → poll-status → paginate-results dance internally. Don't hand-roll that — it's three endpoints, eventual consistency, and partial-page edge cases.
 
+### How to know which backend you're on
+
+Call `mcp__keboola__get_project_info` and read the `sql_dialect` field:
+- `"Snowflake"` → use the **Query Service** as shown above. This is the default path for >95% of projects.
+- `"BigQuery"` → use the **Storage API workspace-query endpoint** shown below. Query Service does not support BigQuery yet.
+
+There are no other dialects today. If `sql_dialect` is missing or returns something else, stop and ask the user before guessing.
+
+### BigQuery path — Storage API workspace-query endpoint
+
+For BigQuery projects, the Query Service warnings above don't apply — you DO post to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<workspace>/query`. That endpoint is the only way to query a BigQuery workspace today. The call is synchronous (no submit/poll/paginate) and returns rows as dicts with native types — no string coercion needed.
+
+Required env vars: `KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (can be the string `"default"` here — the Storage API accepts it, unlike Query Service).
+
+Python:
+
+```python
+import os
+import pandas as pd
+import requests
+
+def query_data(sql: str) -> pd.DataFrame:
+    endpoint = (
+        f"{os.environ['KBC_URL']}/v2/storage/branch/"
+        f"{os.environ.get('BRANCH_ID', 'default')}/workspaces/"
+        f"{os.environ['KBC_WORKSPACE_ID']}/query"
+    )
+    response = requests.post(
+        endpoint,
+        headers={"X-StorageAPI-Token": os.environ["KBC_TOKEN"]},
+        json={"query": sql},
+        timeout=60,
+    )
+    response.raise_for_status()
+    body = response.json()
+    if body.get("status") == "error":
+        raise ValueError(body.get("message"))
+    return pd.DataFrame(body["data"]["rows"])
+```
+
+JS/TS:
+
+```javascript
+async function runQuery(sql) {
+  const endpoint =
+    `${process.env.KBC_URL}/v2/storage/branch/` +
+    `${process.env.BRANCH_ID || 'default'}/workspaces/` +
+    `${process.env.KBC_WORKSPACE_ID}/query`;
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-StorageAPI-Token': process.env.KBC_TOKEN,
+    },
+    body: JSON.stringify({ query: sql }),
+  });
+  if (!res.ok) throw new Error(`Workspace query failed: ${res.status} ${await res.text()}`);
+  const body = await res.json();
+  if (body.status === 'error') throw new Error(body.message);
+  return body.data.rows;  // array of { column_name: value } with native types
+}
+```
+
+A few things worth noting on the BQ path that differ from Query Service:
+
+- **Rows arrive as objects keyed by column name**, not arrays + separate columns metadata. Iterate directly.
+- **Cell values are native types** (numbers, booleans, ISO strings for timestamps) — the string-cell coercion you do on the Query Service path is unnecessary here.
+- **No submit/poll/paginate.** The endpoint returns the full result in one synchronous response. For very large result sets, add a `LIMIT` on the SQL side; the response doesn't paginate.
+- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for Snowflake / Query Service.** If you start from a template on a BigQuery project, you'll need to swap `data_loader.py` / `keboola-client.js` to use the pattern above and remove the `keboola-query-service` / `@keboola/query-service` dependency.
+
 ## Read-write direct access (Storage Access)
 
 Real-time read AND write to Keboola Storage. **Snowflake only.** BigQuery support is planned. No caching — every read must reflect the latest state.
