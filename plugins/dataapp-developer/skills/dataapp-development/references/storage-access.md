@@ -261,6 +261,58 @@ client.execute_query(
 
 First-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers are in development in the Python and JS Query Service SDKs. Once shipped, prefer them over manual sanitization. SDK source repos are listed in [glossary.md](glossary.md) §Libraries.
 
+## Query Service return shape — cells come back as strings
+
+Applies to the Snowflake Query Service path — both direct RO workspace queries to the Query Service and Storage Access reads/writes via `keboola-query-service` / `@keboola/query-service`. BigQuery responses (via the Storage API workspace endpoint) return native types and don't need this conversion.
+
+The shape:
+
+- `result.columns: [{ name, type, nullable, length? }]` — column metadata.
+- `result.data: T[][]` — rows are **arrays of cells**, not objects. The cells are paired with `columns` by index.
+- **Every cell value is a string regardless of SQL `CAST`.** A `COUNT(*)` result comes through as `"42"`, not `42`. A boolean as `"true"`. A timestamp as a string in the underlying database's serialization format.
+
+This is documented behavior of the MCP-injected `query_data` function. Hand the raw strings to a chart library that expects numbers (e.g. `value.toFixed()`) and it crashes — usually as a silent white screen in React without an ErrorBoundary, or a less obvious type error in Streamlit.
+
+**Python (recommended pattern for the MCP-injected `query_data`):**
+
+```python
+df = query_data('SELECT "id", "value", "created_at" FROM "KBC_REGION_PROJID"."in.c-main"."events"')
+df['value'] = pd.to_numeric(df['value'], errors='coerce').fillna(0)
+df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
+```
+
+The DataFrame's dtype stays `object` (string) until you explicitly convert. Convert at the boundary — once, right after the query — not inside every chart.
+
+**JavaScript (when using `@keboola/query-service` directly):** zip `result.data` with `result.columns` to produce objects, and coerce numeric columns. Inspect the actual `column.type` values returned by the API for your project — they're driver-dependent (lowercase internal Snowflake names like `"text"`, `"fixed"`, `"real"`, `"timestamp_ntz"` have been observed). Don't hand the raw `result.data` straight to the UI layer.
+
+```javascript
+function toObjects(result) {
+  const columns = result?.columns ?? [];
+  const rows = result?.data ?? [];
+  // Whitelist of column-type substrings that mean "this is numeric, coerce".
+  // Inspect column.type from your actual API responses and expand as needed.
+  const NUMERIC_TYPE = /^(fixed|real|number|float|double|decimal|integer|int|bigint|smallint|tinyint|numeric)$/i;
+  const isNumeric = columns.map((c) => NUMERIC_TYPE.test(c?.type ?? ''));
+  return rows.map((row) => {
+    const out = {};
+    for (let i = 0; i < columns.length; i++) {
+      const raw = row[i];
+      if (raw == null) {
+        out[columns[i].name] = null;
+      } else if (isNumeric[i] && typeof raw === 'string' && raw !== '') {
+        const n = Number(raw);
+        out[columns[i].name] = Number.isFinite(n) ? n : raw;
+      } else {
+        out[columns[i].name] = raw;
+      }
+    }
+    return out;
+  });
+}
+```
+
+Over-coercing (calling `Number(raw)` on every cell) is just as bad as under-coercing — a zero-padded string like `"00"` becomes the number `0`, and any downstream `.localeCompare()` call crashes because numbers don't have it. Coerce only the columns you know are numeric.
+
 ## Input mapping — discouraged for new apps
 
 Snapshot at deploy time. Files appear at `/data/in/tables/<table-name>.csv`. NO write-back. NO fresh data until redeploy.
