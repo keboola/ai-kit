@@ -40,9 +40,11 @@ The MCP loop can be much slower for any app that needs more than one or two corr
 
 Once the user picks, **don't use the others, not even for unrelated operations like data validation.** Mixed paths against potentially different branches lead to "the schema looked right when I checked but the deploy can't see the table" failure modes that are hard to diagnose. One tool surface per session.
 
-## Path A — Claude Desktop / web (MCP-only, no filesystem)
+## Path A — Claude Desktop / web (MCP-only to reach Keboola)
 
-This is the constrained path: you have Keboola MCP and nothing else. No local files, no git, no shell. Everything happens through MCP tool calls against the Keboola project.
+The defining constraint of this path is **the only channel to Keboola is MCP**. The agent may have a sandbox filesystem (Claude Desktop now does), a Python runner, a Bash tool — but none of those connect to your Keboola project. They run in the agent's local workspace, isolated. Anything that needs to reach Keboola — source code, deploy commands, log reads — has to go through an MCP tool call.
+
+This matters most for the `modify_data_app` flow: the `source_code` argument **is** the deployment artifact. Writing the same code to the sandbox FS first and then re-emitting it as the tool argument doubles output tokens for no benefit. The sandbox FS is useful for scratchpad iteration (cheap `str_replace` edits before a single expensive emit) but the artifact lives in the tool call, not the file.
 
 Available tools:
 
