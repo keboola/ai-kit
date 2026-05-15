@@ -12,6 +12,20 @@ This reference assumes the local server is already running. The change loop belo
 
 ## Validate
 
+### Semantic layer check (when available)
+
+If the project has a semantic layer, check it **before** writing SQL. Most analytical apps benefit from grounding queries in shared metric / dataset definitions rather than reinventing the calculation.
+
+1. `mcp__keboola__search_semantic_context(patterns=[...])` — find metrics, datasets, glossary terms matching the user's intent.
+2. If something relevant exists: `mcp__keboola__get_semantic_context` to read the metric's SQL, the dataset's FQN, and the join paths between datasets.
+3. Use those definitions **verbatim** — don't reinvent the calculation. If revenue is defined as `SUM(amount) / COUNT(DISTINCT customer_id)` in the semantic layer, that exact formula goes into the app's query.
+4. `mcp__keboola__validate_semantic_query(semantic_model_id, sql, expected_semantic_objects=[...])` to catch mismatches against the semantic layer before embedding the SQL.
+5. Only then run `mcp__keboola__query_data` to verify the query returns the expected shape (the standard validate step below).
+
+If no semantic model exists, or none of the existing models matches the user's intent, say so explicitly and proceed with the standard validate steps below using raw tables.
+
+### Schema and data validation
+
 Before writing any code, use Keboola MCP to confirm assumptions about the data:
 
 ```text
