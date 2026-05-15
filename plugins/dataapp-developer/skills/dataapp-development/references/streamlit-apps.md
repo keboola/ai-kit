@@ -201,3 +201,41 @@ KBC_WORKSPACE_ID = "1234567"
 ```
 
 For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right Playwright + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).
+
+## Capturing errors for platform logs
+
+**Streamlit silently swallows uncaught exceptions into its UI.** It shows the traceback to the user in the browser but does NOT write it to `stdout` / `stderr` by default. Platform-side log readers (the Terminal Log tab, `mcp__keboola__get_data_apps([cfg_id]).deployment_info.logs`) therefore see nothing — making remote debugging impossible.
+
+Wrap `main()` in a logging decorator that catches, logs, then re-raises so Streamlit still shows the error in the UI:
+
+```python
+import functools
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def log_exceptions(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Unhandled exception: {e}", exc_info=True)
+            raise  # re-raise so Streamlit still shows it in the UI
+    return wrapper
+
+
+@log_exceptions
+def main():
+    # all your Streamlit code here
+    ...
+
+
+main()
+```
+
+Apply the same wrapper to long-running callback functions, background threads, or any code path that runs outside of Streamlit's main rerun loop. Python/JS apps (Flask, FastAPI, Express) don't need this — their frameworks already log uncaught exceptions to `stderr`, which supervisord forwards to platform logs.
+
+For reading the logs once they're emitted, see [troubleshooting.md](troubleshooting.md) §Reading logs.

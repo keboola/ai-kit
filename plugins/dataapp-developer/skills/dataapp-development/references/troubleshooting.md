@@ -199,6 +199,14 @@ Remember: secret names get `#`-prefix stripped, dashes→underscores, uppercased
 
 Three options for reading logs from a deployed data app:
 
-- **Keboola UI Terminal Log tab** — near-real-time view of container stdout/stderr. Available while the app is running. "Download Logs" button gives the full log file. Logs are deleted when the app stops.
-- **MCP `get_data_apps([cfg_id])`** — returns the latest 20 log lines via `deployment_info.logs`. Good for quick checks from Claude Desktop.
-- **kbagent** — a dedicated `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+- **MCP `mcp__keboola__get_data_apps(configuration_ids=[cfg_id])`** — returns the latest 20 log lines via `deployment_info.logs`. This is the preferred path from an agent / Claude Code session: no UI navigation, the lines come back in the response. Pair with redeploy via `mcp__keboola__deploy_data_app` for a full edit → deploy → inspect-logs debug loop.
+- **Keboola UI Terminal Log tab** — near-real-time view of container `stdout`/`stderr`. Available while the app is running. "Download Logs" button gives the full log file. Logs are deleted when the app stops. Use this when the MCP tail isn't enough or you need to grep across the full session.
+- **kbagent CLI** — a dedicated `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+
+### Streamlit-specific footgun: silent exceptions
+
+Streamlit catches uncaught exceptions and renders them in the UI, but **does NOT propagate them to `stdout`/`stderr` by default**. The MCP `get_data_apps` log tail and the Terminal Log tab will show NOTHING for an error that's clearly visible to the user in their browser. If your remote debugging session looks "clean" but the app is obviously broken, this is the cause.
+
+Fix: wrap `main()` in a logging decorator that catches, logs to `stderr`, then re-raises so Streamlit still shows the error in the UI. See [streamlit-apps.md](streamlit-apps.md) §Capturing errors for platform logs for the pattern.
+
+Python/JS apps (Flask, FastAPI, Express) don't have this issue — their frameworks log uncaught exceptions to `stderr` automatically and supervisord forwards them.
