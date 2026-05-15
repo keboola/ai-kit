@@ -39,19 +39,20 @@ You only need to create a token for **local development**:
 
 ### KBC_WORKSPACE_ID
 
-A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-backed projects). Required for the workspace-query endpoint that powers RO reads.
+A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-backed projects). The right way to obtain one depends on whether the app reads or also writes.
 
-How to provision:
-1. Open the project → **Workspaces** (or "Sandboxes" / "Transformations → Workspaces" depending on UI version).
-2. Click **New Workspace** (or "Create Workspace").
-3. Choose the backend (Snowflake or BigQuery — matches your project).
-4. Pick a size (XS or S is enough for an app cache pull).
-5. Open the created workspace detail. The numeric `id` is shown in the URL (`.../workspaces/12345`) and in the workspace detail panel.
-6. Use that numeric value — `12345`, not `WORKSPACE_12345` (the latter is the Snowflake schema name; the Storage API needs the numeric form; see [troubleshooting.md](troubleshooting.md) for the prefix-stripping pattern).
+**Read-only data app — reuse the MCP session's workspace.** Call `mcp__keboola__get_project_info` and read the `workspace_id` field. That's the workspace the agent's MCP session is already using; it has read access to everything in the project. Paste it into `.env.local` and you're done. No need to create a new workspace just for local dev.
+
+**Read-write data app — create a dedicated workspace.** The platform provisions an ephemeral, permission-scoped workspace at deploy time, but that workspace doesn't exist locally. For local testing of writes, you need to create your own workspace with grants matching the production setup:
+
+- Via the UI: project → **Workspaces** → **New Workspace** → Snowflake/BigQuery → pick a size (XS or S is enough). Open the workspace detail and grant it write access on the same tables the app's `direct-grant` output mapping covers.
+- Via kbagent (if you're already on that path): `kbagent workspace create ...` then grant the same tables.
+
+In both cases, use the numeric ID (e.g. `12345`), not the Snowflake schema name (e.g. `WORKSPACE_12345`). See [troubleshooting.md](troubleshooting.md) for the prefix-stripping pattern if you ever encounter the latter.
 
 Notes:
-- One workspace can serve multiple local-dev sessions; you don't need a new one per developer.
-- For RW apps, do NOT use a generic workspace — the platform provisions an ephemeral, permission-scoped workspace at deploy time (see "Read-write direct access" below).
+- One read-only workspace can serve multiple local-dev sessions across developers — no need to provision per-person.
+- Never reuse a write-enabled local workspace for production data app deployment. The platform owns workspace provisioning for deployed apps and uses ephemeral, fresh-on-each-start workspaces with `direct-grant` output mappings (see "Read-write direct access" below).
 
 ### BRANCH_ID
 
@@ -207,6 +208,8 @@ Setup:
     }
   }
   ```
+
+**Bucket stage doesn't restrict writes.** The destination can be in any stage — `out.`, `in.`, or otherwise — as long as the workspace has write privileges on it. The `out.` examples here are convention; writing back into an `in.` bucket your workspace owns is equally valid. The `direct-grant` strategy is what makes the grant work; the bucket-name prefix is just a label.
 
 Workspace lifecycle: **ephemeral**. A fresh workspace is created each time the app starts or wakes from sleep. The previous workspace is deleted. Permission changes take effect on the next start.
 
