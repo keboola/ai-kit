@@ -4,7 +4,7 @@ Plain list of every source used during the consolidation. Provenance only — no
 
 ## Brief
 
-- Linear [AI-3147](https://linear.app/keboola/issue/AI-3147/extend-data-app-development-skill-to-cover-full-lifecycle-storage-git)
+- Linear [AI-3147](https://linear.app/keboola/issue/AI-3147/extend-data-app-development-skill-to-cover-full-lifecycle-storage-git) (issue body + comments — suggestions from Max Ottomansky and Miro)
 - Internal Obsidian note that scoped the merge (areas, client-path matrix, materials list)
 
 ## Prior skills in this plugin (consolidated and removed)
