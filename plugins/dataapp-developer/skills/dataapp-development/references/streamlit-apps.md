@@ -183,6 +183,8 @@ If you reach this question, you usually want both — `@st.cache_resource` for t
 
 ## Local development
 
+**This section applies to git-deployed apps (Path B / C in [deployment-paths.md](deployment-paths.md)) and to humans iterating on a checkout.** If you're an agent deploying via `modify_data_app` (Path A), skip — the tool argument is the deployment artifact, there's no local-vs-prod parity to maintain, and even Claude Desktop's sandbox filesystem doesn't change that. Compose the source code directly into the tool call.
+
 Running the app on your laptop should look like Keboola without trying to be Keboola. Same code, same secrets shape, same `streamlit_app.py` entrypoint -- only the source of the credentials changes.
 
 ```bash

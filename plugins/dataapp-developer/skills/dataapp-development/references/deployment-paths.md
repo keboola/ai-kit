@@ -24,6 +24,12 @@ For new apps, pass `configuration_id=""`. For updates, pass the existing configu
 
 **Limitations:** Streamlit type only. No Git deployment mode via MCP. No Python/JS type via MCP today (planned — see [python-js-apps.md](python-js-apps.md) "Deployment via MCP — PLACEHOLDER").
 
+**Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
+
+The one legitimate exception: if the source is large enough that you genuinely need cheap iterative edits before a single expensive emit (e.g. via `str_replace` against a sandboxed file), use the local copy as a scratchpad — but only that, and only if the iteration savings beat the redundant emit. For small apps (<100 lines), compose-in-tool is always cheaper.
+
+Local files only become deployment artifacts on Paths B and C (git push or kbagent). The "local development" instructions in [streamlit-apps.md](streamlit-apps.md) and [python-js-apps.md](python-js-apps.md) apply to those paths, not to Path A.
+
 **Debug loop:** if the app fails to start or behaves wrong after deploy, call `get_data_apps(<cfg_id>)` for the latest 20 log lines, fix the `source_code`, call `modify_data_app` again with a `change_description`, then `deploy_data_app(action="deploy")`. Repeat. There is no way to attach to a shell or read arbitrary log files from this path.
 
 Minimal example call signature (annotated, not executable):
@@ -137,7 +143,7 @@ kbagent data-app password --app-id N    # if basic-auth
 
 | Your client                                | Recommended path                                                       |
 | ------------------------------------------ | ---------------------------------------------------------------------- |
-| Claude Desktop / claude.ai (no filesystem) | Path A (MCP-only) — Streamlit only                                     |
+| Claude Desktop / claude.ai (no filesystem or with sandbox) | Path A (MCP-only) — Streamlit only. Compose code in-tool; don't drift into "local dev" mode even when a sandbox FS is available. |
 | Claude Code or local IDE agent             | Path B (filesystem + MCP) for Streamlit; Path C (kbagent) for Python/JS |
 | Agentic CLI without MCP                    | Path C (kbagent) for everything                                        |
 | CI/CD pipeline                             | Path C (kbagent) — non-interactive, scriptable                         |
