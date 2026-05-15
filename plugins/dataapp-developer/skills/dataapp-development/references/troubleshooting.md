@@ -195,6 +195,27 @@ def normalize_workspace_id(raw: str) -> str | None:
 
 Remember: secret names get `#`-prefix stripped, dashes→underscores, uppercased. `#my-key` → env var `MY_KEY`.
 
+## `KeyError: 'BRANCH_ID'` (or any Storage Access env var) on app start
+
+**Symptom:** App fails at import / startup with `KeyError: 'BRANCH_ID'` / `KeyError: 'QUERY_SERVICE_URL'` / `KeyError: 'KBC_WORKSPACE_MANIFEST_PATH'`. Same for `process.env.<NAME>` returning `undefined` in Node apps.
+
+**Cause:** Storage Access isn't enabled on the data app's component config (production), or the local `.env` / `.env.local` is missing the variable (local dev). The platform only injects these four env vars when the Storage Access feature is toggled on and the app has at least one `direct-grant` output mapping.
+
+**Fix:**
+- **Production:** in the Keboola UI, open the data app config → Advanced Settings → enable Storage Access and add the writable tables with `unload_strategy: "direct-grant"`. Redeploy.
+- **Local dev:** add the four variables to `.env` / `.env.local` per `references/storage-access.md` §Getting the env vars for local development. The Storage wrapper module reads them at import time, so missing values fail before the first request — which is what you want.
+
+## `Insufficient privileges` / write blocked by the Query Service
+
+**Symptom:** A `SELECT` works but `INSERT` / `UPDATE` / `DELETE` returns "Insufficient privileges" or similar from the Query Service.
+
+**Cause:** The destination table isn't in `storage.output.tables` with `"unload_strategy": "direct-grant"` (production), or the local workspace doesn't have write grants on the table (local dev).
+
+**Fix:**
+- **Production:** add the table to the data app config's output mapping with `direct-grant`. Redeploy — the ephemeral workspace is re-provisioned with the new grants on the next start. Confirm in the Keboola UI that the data app config lists the table.
+- **Local dev:** the production ephemeral workspace doesn't exist locally. Create a dedicated workspace via UI or kbagent and grant it write access on the same tables. See `references/storage-access.md` §`KBC_WORKSPACE_ID`.
+- **Bucket stage isn't the issue.** `in.` vs `out.` doesn't restrict writes — the workspace grant does. If you've granted write on an `in.c-...` table, writes to it work.
+
 ## Reading logs
 
 Three options for reading logs from a deployed data app:

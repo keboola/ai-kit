@@ -154,6 +154,33 @@ For the full pattern -- which workspace gets mounted, how RO/RW differs across S
 
 Short version: by default a Streamlit data app gets a read-only workspace. On Snowflake projects you query it through the Query Service; on BigQuery projects you go through the Storage API. The runtime injects three environment variables that the SDKs consume directly: `KBC_URL`, `KBC_TOKEN`, and `KBC_WORKSPACE_ID`. In production these come from the platform; for local development you set them in `.streamlit/secrets.toml` and read them via the env-parity pattern below.
 
+### Cache the Storage client across reruns
+
+Streamlit reruns the script top-to-bottom on every user interaction. If you construct your Storage / SDK client inside the script body, you'll re-read env vars, re-parse the workspace manifest, and re-open an HTTP client on every interaction. Wrap construction with `@st.cache_resource` so the client persists across reruns:
+
+```python
+import streamlit as st
+from storage import Storage  # the wrapper from storage-access.md §Wrap the SDK in a single module
+
+@st.cache_resource
+def get_storage() -> Storage:
+    return Storage()
+
+storage = get_storage()
+rows = storage.select('SELECT * FROM "KBC_REGION_PROJID"."out.c-data-app"."mvc-crashes" LIMIT 100')
+st.dataframe(rows)
+```
+
+`@st.cache_resource` is for connection-like objects (DB clients, ML models) that should never be re-created. For caching the rows themselves across reruns within a session, wrap the read with `@st.cache_data(ttl=60)` instead:
+
+```python
+@st.cache_data(ttl=60)
+def load_recent_crashes() -> list[dict]:
+    return storage.select('SELECT * FROM "..."."..." ORDER BY "created_at" DESC LIMIT 100')
+```
+
+If you reach this question, you usually want both — `@st.cache_resource` for the client, `@st.cache_data` for the result data with a TTL appropriate to how stale the user can tolerate.
+
 ## Local development
 
 Running the app on your laptop should look like Keboola without trying to be Keboola. Same code, same secrets shape, same `streamlit_app.py` entrypoint -- only the source of the credentials changes.
