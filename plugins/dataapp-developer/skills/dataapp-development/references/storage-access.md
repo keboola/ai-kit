@@ -22,19 +22,18 @@ Stack examples (replace `<stack>` with your actual stack):
 
 ### KBC_TOKEN
 
-Storage API token. **Do NOT use the master token from your user account.** Create a dedicated, scoped token for the app.
+Storage API token. **In production, the platform injects this automatically** — `KBC_TOKEN` is a reserved env var name and you **must NOT add `#KBC_TOKEN`** to `dataApp.secrets` (it would collide with the platform value).
 
-How to create one:
+You only need to create a token for **local development**:
+
 1. Open the project → **Settings → API Tokens** (or the equivalent "Users & Settings" → "API Tokens" depending on UI version).
-2. Click **New Token** (or "Create New Token").
+2. Click **New Token** (or "Create New Token"). Don't use the master token from your user account.
 3. Give it a descriptive name (e.g. `my-app-local-dev`).
 4. Scope it minimally:
    - **Read-only apps:** read access to the buckets/tables the app needs. Don't grant write or admin permissions.
    - **RW apps (Storage Access):** the app's workspace is provisioned with its own DB user, so the token only needs read access — write permissions on tables come from the workspace grant.
 5. Copy the token immediately — Keboola shows it once.
-6. Treat it like a password: never commit it, never paste it in screenshots / chat.
-
-For production, the same value goes into `dataApp.secrets` as `#KBC_TOKEN` (the `#` prefix marks it encrypted at rest).
+6. Paste it into `.env.local` as `KBC_TOKEN=...`. Treat it like a password: never commit it, never paste it in screenshots / chat.
 
 ### KBC_WORKSPACE_ID
 
