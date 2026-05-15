@@ -10,13 +10,15 @@ When more than one path is available — typical of Claude Code in a Keboola wor
 
 ### Detect available paths at session start
 
-- **Any Keboola MCP** — scan the available tool surface for tools matching `mcp__*[Kk]eboola*` (typically `mcp__keboola-*` for project-local servers, `mcp__claude_ai_Keboola_*` for hosted ones). The config could come from project-local `.mcp.json`, user-level Claude settings, or an org-level marketplace install — all three surface tools the same way. Don't condition detection on `.mcp.json` alone.
-- **kbagent CLI** — `which kbagent && kbagent project list` succeeds. Note the project alias, project ID, and branch that kbagent will operate against.
-- **Filesystem** — implicit by being able to `Write` / `Edit` files.
+Run **both** checks in order — don't stop after the first hit. Many agents will see MCP tools and forget kbagent is also there.
 
-### When more than one is present, ask the user
+1. **kbagent CLI** — run `which kbagent` (Bash). If it returns a path, run `kbagent project list` and capture every alias + project ID + branch. Each alias is a separate candidate path.
+2. **Any Keboola MCP** — scan the available tool surface for tools matching `mcp__*[Kk]eboola*` (typically `mcp__keboola-*` for project-local servers, `mcp__claude_ai_Keboola_*` for hosted ones). The config could come from project-local `.mcp.json`, user-level Claude settings, or an org-level marketplace install — all three surface tools the same way. Each distinct prefix is a separate candidate path. Don't condition detection on `.mcp.json` alone.
+3. **Filesystem** — implicit by being able to `Write` / `Edit` files. Not a separate path on its own, but it enables kbagent and the local-iteration workflow.
 
-Before any project-mutating call, surface the choice:
+### When more than one is present, ask the user — and list ALL of them
+
+Before any project-mutating call, surface the choice. If kbagent and an MCP are both available, the question MUST include both. Don't silently drop kbagent because you found the MCP first.
 
 > I see both an MCP server (`keboola-test` → branch 35403) and kbagent (`new-branches` alias → project 3047, branch 37363) available, with filesystem access. Two viable paths:
 >
