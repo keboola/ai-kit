@@ -8,14 +8,14 @@ Production: Keboola auto-injects these as env vars from `dataApp.secrets` when t
 
 The Python/JS templates load local env vars from `.env` or `.env.local` (both supported; `.env.local` overrides `.env` if both exist). Pick whichever fits your project. Both filenames must be gitignored. The Streamlit template uses `.streamlit/secrets.toml` instead, matching the Streamlit convention.
 
-**Agent: don't try to discover credentials on your own.** When the local file is missing or incomplete, **do NOT grep the filesystem, search shell history, or probe environment variables for tokens.** Those approaches are a security smell, error-prone, and almost never find what you need. Instead:
+**Agent: pre-fill what you can, ask for what's missing, then offer to run.** When the local file is missing or incomplete, **do NOT grep the filesystem, scan shell history, or probe unrelated environment variables hoping to find something that looks like a token.** That's a security smell. Do this proactively instead:
 
-1. List the exact env vars the app needs (from the subsections below).
-2. Tell the user where to find each value (link to the relevant subsection — they show the UI navigation).
-3. Ask the user to populate `.env` / `.env.local` (or `.streamlit/secrets.toml`).
-4. Wait for confirmation that the file is filled before attempting to run the app.
+1. **Pre-create `.env.local`** (or `.streamlit/secrets.toml` for Streamlit) with every required key. Resolve the values you can yourself: `mcp__keboola__get_project_info` returns `branch_id`, `workspace_id`, and the project URL (which gives you `KBC_URL` and lets you derive `QUERY_SERVICE_URL` by swapping `connection.` → `query.`). Use those to populate the file. Only the user's Storage API token (`KBC_TOKEN`) is genuinely user-input.
+2. **Check whether `KBC_TOKEN` is already set** in the shell environment, in `.env.local`, or in `.streamlit/secrets.toml`. Looking up a specific named variable is fine; scanning every env var is not. If it's already there, skip the next step.
+3. **If `KBC_TOKEN` is missing**, tell the user exactly which value you still need and point them at §`KBC_TOKEN` for where to fetch it in the Keboola UI. Wait for confirmation that they've filled it in.
+4. **Once `.env.local` is complete, offer to start the app** with the right command for the framework so the user can preview it (`uv run streamlit run streamlit_app.py`, `npm run dev`, `node --watch server.js`, `uv run uvicorn ...`). Don't auto-start without asking — the user might want to inspect first.
 
-This is non-negotiable for local-dev credentials regardless of which path the user chose (MCP, kbagent, or git).
+This is non-negotiable for local-dev credentials regardless of which path the user chose (MCP, kbagent, or git). The goal is: user provides the one secret value, the agent does everything else.
 
 ### KBC_URL
 
