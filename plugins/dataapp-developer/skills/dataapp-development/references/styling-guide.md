@@ -386,4 +386,11 @@ Override paths:
 - **Bundled Tailwind (Python+Node):** change the values in `tailwind.config.ts`.
 - **Streamlit:** change `[theme]` values in `.streamlit/config.toml` (or the JSON config string for Code-deployed apps), or use the Keboola Theming UI's "Custom" option.
 
+**Also remove or replace the default "Powered by Keboola" footer.** It is template scaffolding, not a styling token — changing palette values leaves it untouched. When applying a customer brand:
+
+- **HTML templates:** delete the `<footer>...keboola-logo.svg...</footer>` block in `index.html`, or swap the `<img src>` for the customer's logo and update the surrounding text. The bundled `keboola-logo.svg` asset can be deleted too once nothing references it.
+- **Streamlit:** delete (or replace) the `st.markdown` footer block and the `_LOGO_PATH` / `_LOGO_DATA_URI` lines at the top of `streamlit_app.py`. Remove `static/keboola-logo.svg` if unused.
+
+Don't ship a customer app with both brands stacked — that's worse than no attribution at all.
+
 If a separate company-styling or theme-factory skill exists in the user's setup, defer to it — that's where customer brand defaults belong. This skill ships only the Keboola default.
