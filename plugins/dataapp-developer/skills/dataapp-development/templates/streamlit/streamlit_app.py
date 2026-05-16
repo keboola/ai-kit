@@ -1,7 +1,14 @@
 """Streamlit data app — minimal template for Keboola deployment."""
+import base64
+import os
+
 import streamlit as st
 import plotly.express as px
 from utils.data_loader import execute_aggregation_query
+
+_LOGO_PATH = os.path.join(os.path.dirname(__file__), "static", "keboola-logo.svg")
+with open(_LOGO_PATH, "rb") as _f:
+    _LOGO_DATA_URI = "data:image/svg+xml;base64," + base64.b64encode(_f.read()).decode()
 
 # Fully qualified table name. Copy from mcp__keboola__get_table's
 # `fully_qualified_name` field — the database prefix is required so
@@ -50,3 +57,14 @@ else:
 
     fig = px.bar(df, x="category", y="count", title="Distribution by Category")
     st.plotly_chart(fig, use_container_width=True)
+
+st.markdown(
+    f"""
+    <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;
+                padding:1.5rem 0 0.5rem;font-size:0.75rem;color:#94a3b8;opacity:0.85;">
+      <span>Powered by</span>
+      <img src="{_LOGO_DATA_URI}" alt="Keboola" style="height:1rem;width:auto;" />
+    </div>
+    """,
+    unsafe_allow_html=True,
+)

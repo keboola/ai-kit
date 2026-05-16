@@ -18,6 +18,45 @@ The palette:
 
 No custom typeface, no design-system overlay, no shadcn theme. Plain Tailwind defaults (system font stack) with the palette above for color tokens. Same values across all three stacks.
 
+## Default "Powered by Keboola" footer
+
+Every app produced from this skill's templates ships with a small, low-contrast "Powered by Keboola" footer. The point is gentle attribution that doesn't fight the app's own UI — small text, muted slate color, fades to full opacity on hover.
+
+The asset is the Keboola wordmark SVG (`keboola-logo.svg`), bundled into each template's static directory. Don't redraw or recolor it; it's the official mark.
+
+**Single-Node + static (CDN Tailwind):**
+
+```html
+<footer class="max-w-5xl mx-auto px-8 py-6 flex items-center justify-center gap-2 text-xs text-slate-400 opacity-80 hover:opacity-100 transition-opacity">
+  <span>Powered by</span>
+  <img src="/keboola-logo.svg" alt="Keboola" class="h-4 w-auto" />
+</footer>
+```
+
+Adjust the `max-w-*` to match the page's main content width.
+
+**Streamlit:** read the SVG once at import time and embed it as a base64 data URI inside `st.markdown(..., unsafe_allow_html=True)` — that avoids needing Streamlit's static-serving config flag and works identically in local dev and production.
+
+```python
+import base64, os
+_LOGO_PATH = os.path.join(os.path.dirname(__file__), "static", "keboola-logo.svg")
+with open(_LOGO_PATH, "rb") as f:
+    _LOGO_DATA_URI = "data:image/svg+xml;base64," + base64.b64encode(f.read()).decode()
+
+st.markdown(
+    f"""
+    <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;
+                padding:1.5rem 0 0.5rem;font-size:0.75rem;color:#94a3b8;opacity:0.85;">
+      <span>Powered by</span>
+      <img src="{_LOGO_DATA_URI}" alt="Keboola" style="height:1rem;width:auto;" />
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+```
+
+Keep the footer on every page of multi-page apps — render it from a shared helper rather than copying the markup. The user can remove or replace it (e.g. for a customer brand override), but the templates ship with it by default.
+
 ## Streamlit
 
 Set the theme via either:
@@ -69,7 +108,7 @@ Streamlit-specific UI extras:
   )
   ```
 
-- **Footer pattern:** custom HTML/CSS injected via `st.markdown` with a flex container, copyright on the left, version on the right.
+- **Footer:** the default "Powered by Keboola" footer (see above) ships in the template. For an additional copyright / version line, render a second `st.markdown` block above it using the same muted slate color.
 
 ## Single Node + static frontend (CDN Tailwind)
 
