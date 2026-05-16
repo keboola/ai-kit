@@ -35,16 +35,14 @@ Stack examples (replace `<stack>` with your actual stack):
 
 Storage API token. **In production, the platform injects this automatically** — `KBC_TOKEN` is a reserved env var name and you **must NOT add `#KBC_TOKEN`** to `dataApp.secrets` (it would collide with the platform value).
 
-You only need to create a token for **local development**:
+For **local development** the token has to be project-wide. Narrow-scoped (single-bucket / single-table) Storage API tokens **do not work with the Query Service** — calls fail with auth errors. The Query Service evaluates access at the workspace level, and only project-wide tokens carry the required grants.
 
-1. Open the project → **Settings → API Tokens** (or the equivalent "Users & Settings" → "API Tokens" depending on UI version).
-2. Click **New Token** (or "Create New Token"). Don't use the master token from your user account.
-3. Give it a descriptive name (e.g. `my-app-local-dev`).
-4. Scope it minimally:
-   - **Read-only apps:** read access to the buckets/tables the app needs. Don't grant write or admin permissions.
-   - **RW apps (Storage Access):** the app's workspace is provisioned with its own DB user, so the token only needs read access — write permissions on tables come from the workspace grant.
-5. Copy the token immediately — Keboola shows it once.
-6. Paste it into `.env.local` as `KBC_TOKEN=...`. Treat it like a password: never commit it, never paste it in screenshots / chat.
+Two ways to obtain a usable token:
+
+1. **Master token of your user account.** Refresh it via the Keboola UI (Settings → API Tokens → your own token → Refresh) or grab the current value via the **Keboola Dev Tools** Chrome extension. This token is full-power and tied to your identity; treat it like a password.
+2. **Dedicated project-wide Storage API token.** Settings → API Tokens → New Token → check **Full Access** to all buckets and components. Give it a descriptive name (e.g. `my-app-local-dev`) so you can revoke it later without touching anyone else's tokens. Copy the value immediately — Keboola shows it once.
+
+Whichever you pick, paste the value into `.env.local` as `KBC_TOKEN=...`. Treat it like a password: never commit it, never paste it in screenshots / chat / Slack. Add `.env.local` to `.gitignore` if it isn't already.
 
 ### KBC_WORKSPACE_ID
 

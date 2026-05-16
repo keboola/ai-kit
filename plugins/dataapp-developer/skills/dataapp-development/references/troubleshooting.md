@@ -222,6 +222,18 @@ Remember: secret names get `#`-prefix stripped, dashes→underscores, uppercased
 - **Production:** in the Keboola UI, open the data app config → Advanced Settings → enable Storage Access and add the writable tables with `unload_strategy: "direct-grant"`. Redeploy.
 - **Local dev:** add the four variables to `.env` / `.env.local` per `references/storage-access.md` §Getting the env vars for local development. The Storage wrapper module reads them at import time, so missing values fail before the first request — which is what you want.
 
+## Query Service auth error with a narrow-scoped Storage API token
+
+**Symptom:** Query Service calls fail with auth errors (401, 403, or generic "authentication failed") in local dev. The token works for direct Storage API reads, but the Query Service rejects it.
+
+**Cause:** The token is scoped to specific buckets or tables. The Query Service evaluates access at the workspace level and rejects narrow-scoped tokens regardless of whether the SQL touches data inside their scope.
+
+**Fix:** Replace with a project-wide token. Two options:
+- **Your user's master token** — Settings → API Tokens → your own row → Refresh; or grab the current value via the Keboola Dev Tools Chrome extension.
+- **Dedicated Storage API token with Full Access** — Settings → API Tokens → New Token → check Full Access. Name it after the app (e.g. `my-app-local-dev`) for easy revocation later.
+
+Paste the new value into `.env.local` as `KBC_TOKEN=...` and restart the app. See `references/storage-access.md` §`KBC_TOKEN` for the full guidance.
+
 ## `Insufficient privileges` / write blocked by the Query Service
 
 **Symptom:** A `SELECT` works but `INSERT` / `UPDATE` / `DELETE` returns "Insufficient privileges" or similar from the Query Service.
