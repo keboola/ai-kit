@@ -199,14 +199,24 @@ and a bare `KEBOOLA` reference will fail at Snowflake query time.
 - `SUM`/`AVG`/`COUNT(DISTINCT)` on real columns only
 - Never `SUM` a `_PCT`/ratio column — use `AVG`
 - VERSION tables: only generate `SUM(CASE WHEN "T"."<col>" = '<value>' THEN ...)` metrics
-  **after probing the column's actual distinct values**. Use the kbagent SQL probe from
-  `/sl-build` Step 2.5 (writes `/tmp/sl_version_samples.json`) — or for ad-hoc use:
+  **after probing the column's actual distinct values**. Use the kbagent `query_data` MCP
+  tool from `/sl-build` Step 2.5 (writes `/tmp/sl_version_samples.json`) — or for ad-hoc use:
   ```python
-  import subprocess, json
-  r = subprocess.run(['kbagent','--json','workspace','sql','--project',PROJECT,
-                      '--query',f'SELECT DISTINCT "{COL}" FROM "{SCHEMA}"."{TABLE}" LIMIT 20'],
+  import subprocess, json, csv, io
+  payload = json.dumps({'query_name': f'probe {COL}',
+      'sql_query': f'SELECT DISTINCT "{COL}" AS V FROM "{SCHEMA}"."{TABLE}" LIMIT 20'})
+  r = subprocess.run(['kbagent','--json','tool','call','query_data',
+                      '--project', PROJECT, '--input', payload],
                      capture_output=True, text=True)
-  samples = {row[COL] for row in json.loads(r.stdout).get('rows', [])}
+  d = json.loads(r.stdout)['data']
+  samples = set()
+  for res in d.get('results', []):
+      if res.get('isError'): continue
+      for piece in res.get('content', []):
+          p = json.loads(piece) if isinstance(piece, str) else piece
+          csv_text = p.get('csv_data', '') if isinstance(p, dict) else ''
+          for row in csv.DictReader(io.StringIO(csv_text)):
+              if row.get('V'): samples.add(row['V'])
   ```
   Apply the VERSION rule **only if** `samples` contains a recognized literal — case-insensitive
   match against `{actual, budget, plan, forecast, baseline, target}`. Substitute the actual

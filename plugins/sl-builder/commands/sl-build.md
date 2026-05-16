@@ -131,31 +131,52 @@ Extract SQL from `keboola.snowflake-transformation` configs and use it to inform
 
 ## Step 2.5 — Probe VERSION-candidate columns
 
-Skip this step if kbagent is not available. For each table, scan its schema for columns
-whose name matches `^(VERSION|SCENARIO|PERIOD_TYPE|TYPE|VARIANT)$` (case-insensitive)
-and probe their distinct values. The result drives Step 3's VERSION-rule decision —
-without it, the LLM cannot know whether `'Actual'`/`'Budget'` literals are valid.
+Skip this step if kbagent is not available. Scan each table's schema for candidate
+columns and probe their distinct Snowflake values. The probe drives Step 3's
+VERSION-rule decision — without it, the LLM cannot know whether `'Actual'`/`'Budget'`
+literals are valid. Probing uses kbagent's `query_data` MCP tool, which runs SQL
+against the project's Snowflake warehouse via the keboola-mcp-server query service.
+
+Candidate naming covers both flat (`VERSION`, `SCENARIO`) and prefixed
+(`DIM_*_VERSION`, `TYPE_*`) conventions used across customer projects:
 
 ```python
-import subprocess, json, os, re
+import subprocess, json, os, re, csv, io
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 schemas = json.load(open('/tmp/sl_schemas.json'))
 ENV = {**os.environ}
-CANDIDATE_RE = re.compile(r'^(VERSION|SCENARIO|PERIOD_TYPE|TYPE|VARIANT)$', re.I)
+
+CANDIDATE_RE = re.compile(
+    r'^((?:DIM_|TYPE_|CODE_)?(?:VERSION|SCENARIO|VARIANT|PERIOD_TYPE)'
+    r'|TYPE_[A-Z_]+|[A-Z_]+_(?:VERSION|SCENARIO|VARIANT))$', re.I)
 
 def probe(tid_col):
     tid, col = tid_col
-    schema, table = tid.split('.', 1)[1].rsplit('.', 1) if tid.count('.') >= 2 else (tid.split('.')[0], tid.split('.')[-1])
+    # tableId shape: out.c-bucket.TABLE → schema "out.c-bucket", table "TABLE"
+    schema, table = tid.rsplit('.', 1)
     q = f'SELECT DISTINCT "{col}" AS V FROM "{schema}"."{table}" LIMIT 20'
+    payload = json.dumps({'query_name': f'sl-build probe {col}', 'sql_query': q})
     r = subprocess.run(
-        ['kbagent','--json','workspace','sql','--project', PROJECT, '--query', q],
-        capture_output=True, text=True, env=ENV, timeout=30)
+        ['kbagent','--json','tool','call','query_data',
+         '--project', PROJECT, '--input', payload],
+        capture_output=True, text=True, env=ENV, timeout=60)
     try:
-        rows = json.loads(r.stdout).get('rows', [])
-        return tid, col, [row.get('V') for row in rows if row.get('V') is not None]
+        d = json.loads(r.stdout).get('data', {})
+        # Response: {"results":[{"content":[{"csv_data":"V\r\nA\r\nB\r\n"}],"isError":false}]}
+        for res in d.get('results', []):
+            if res.get('isError'): continue
+            for piece in res.get('content', []):
+                if isinstance(piece, str):
+                    try: piece = json.loads(piece)
+                    except Exception: continue
+                csv_text = piece.get('csv_data') if isinstance(piece, dict) else None
+                if csv_text:
+                    rows = list(csv.DictReader(io.StringIO(csv_text)))
+                    return tid, col, [row['V'] for row in rows if row.get('V')]
     except Exception:
-        return tid, col, []
+        pass
+    return tid, col, []
 
 candidates = [(tid, c['name'])
               for tid, d in schemas.items()
@@ -169,7 +190,7 @@ if candidates:
                                   as_completed({ex.submit(probe, tc): tc for tc in candidates})):
             samples.setdefault(tid, {})[col] = values
 json.dump(samples, open('/tmp/sl_version_samples.json','w'), indent=2)
-print(f"Probed {len(candidates)} candidate VERSION-like columns; results in /tmp/sl_version_samples.json")
+print(f"Probed {len(candidates)} VERSION-like columns; results in /tmp/sl_version_samples.json")
 ```
 
 If kbagent SQL probing fails or returns empty for every candidate, write `{}` to the
