@@ -2,6 +2,15 @@
 
 **Use this when:** building a read-only dashboarding app that reads from Keboola Storage. This is the default storage-access pattern — caching avoids re-querying Snowflake on every page render and cuts data-warehouse costs significantly.
 
+## Contents
+- Why
+- When DuckDB caching IS the right default
+- When to skip DuckDB caching
+- Node.js pattern (module-level singleton, auto-refresh, admin endpoint)
+- Python pattern
+- Streamlit caching alternative (`@st.cache_data`)
+- Template
+
 ## Why
 
 DWH cost containment is the primary motivation. Querying Snowflake on every render burns credits for data that changed once:

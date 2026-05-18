@@ -2,6 +2,15 @@
 
 **Use this when:** the app reads from or writes to Keboola Storage tables.
 
+## Contents
+- Getting the env vars for local development (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`, `BRANCH_ID`)
+- Preferred default for read-only apps: DuckDB-cached RO
+- Direct RO workspace queries (Query Service SDK + BigQuery legacy endpoint)
+- Read-write direct access (Storage Access wrapper + SQL injection validation)
+- Query Service return shape — cells come back as strings
+- Input mapping — discouraged for new apps
+- Data access management — PLACEHOLDER
+
 ## Getting the env vars for local development
 
 Production: Keboola auto-injects these as env vars from `dataApp.secrets` when the app deploys. Local dev: the **user** sets them yourself, once per machine, from values in the Keboola project UI.

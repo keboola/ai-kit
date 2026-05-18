@@ -4,6 +4,16 @@
 
 This reference covers Keboola-specific concerns for Streamlit apps: how they get deployed, what's already in the image, how secrets and themes work, and how to keep local dev in parity with production. For the iterative change loop (validate -> build -> verify) on an existing app, see [dev-workflow.md](dev-workflow.md).
 
+## Contents
+- Deployment modes (Code mode vs Git Repository mode)
+- Base image and packages
+- Secrets (UI upload vs repo-based `.streamlit/secrets.toml`)
+- Theming
+- AgGrid Enterprise
+- Storage access from Streamlit
+- Local development
+- Capturing errors for platform logs
+
 ## Deployment modes
 
 Keboola supports two ways to ship Streamlit code into a data app slot. The choice is a one-line decision in the configuration UI, but it changes how you manage code, dependencies, and secrets.
@@ -67,52 +77,22 @@ Two more rules apply regardless of upload path:
 
 ## Theming
 
-Two paths to a custom theme, depending on how much control you want and which deployment mode you're in.
+Two paths to a custom theme:
 
-**1. Theming UI.** The configuration has a Theming tab with a small palette of presets -- Keboola, Light Red, Light Purple, Light Blue, Dark Green, Dark Amber, Dark Orange -- plus color pickers for the four customizable channels (primary, background, secondary background, text). This is the right tool for picking a brand color and moving on.
+1. **Theming UI** in the Keboola app configuration — presets (Keboola, Light Red, Light Purple, Light Blue, Dark Green, Dark Amber, Dark Orange) plus color pickers for the four customizable channels.
+2. **Raw `config.toml`** — committed `.streamlit/config.toml` for git-deployed apps; `parameters.dataApp.streamlit.config.toml` as a TOML-formatted string in the JSON config editor for Code-deployed apps.
 
-**2. Raw `config.toml`.** For finer control:
+The default Keboola palette and the canonical theme `config.toml` snippets live in [styling-guide.md](styling-guide.md) §Streamlit.
 
-- **Git-deployed apps** commit `.streamlit/config.toml` to the repo. Streamlit reads it normally.
-- **Code-deployed apps** set `parameters.dataApp.streamlit.config.toml` in the JSON config editor as a TOML-formatted string.
-
-The default **Keboola** theme uses:
-
-- Primary color: `#1F8FFF`
-- Background: `#FFFFFF`
-- Secondary background: `#E6F2FF`
-- Text: `#222529`
-- Font: sans serif
-
-A minimal `.streamlit/config.toml` for the Keboola theme looks like:
+**One Theming UI behavior worth knowing:** it overwrites the `[theme]` section on save but **preserves other sections** like `[server]` or `[browser]`. You can safely keep server-side options alongside the theme — they survive a colleague tweaking colors in the UI:
 
 ```toml
-[theme]
-primaryColor = "#1F8FFF"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#E6F2FF"
-textColor = "#222529"
-font = "sans serif"
-```
-
-One important behavior: **the Theming UI overwrites the `[theme]` section on save, but preserves other sections** like `[server]` or `[browser]`. So you can safely set server-side options alongside the theme without losing them when a colleague tweaks colors in the UI:
-
-```toml
-[theme]
-primaryColor = "#1F8FFF"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#E6F2FF"
-textColor = "#222529"
-font = "sans serif"
-
 [server]
 maxUploadSize = 500
 
 [browser]
 gatherUsageStats = false
 ```
-
-The 500 MB upload limit and the analytics opt-out survive a Theming UI save -- only `[theme]` gets rewritten.
 
 ## AgGrid Enterprise
 

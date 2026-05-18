@@ -46,27 +46,11 @@ If unsure → `references/choosing-app-type.md`. Short version:
 | Reading from / writing to Keboola Storage (RO default uses DuckDB cache) | `references/storage-access.md` + `references/duckdb-caching.md` |
 | Securing the app (login, SSO, OAuth) | `references/authentication.md` |
 | Cutting DWH costs and speeding up read-only dashboards (default for RO apps) | `references/duckdb-caching.md` |
-| Styling — default look or brand override | `references/styling-guide.md` |
+| Styling — default Keboola palette and footer | `references/styling-guide.md` |
+| Styling — bundled React+Vite+shadcn stack | `references/styling-react-bundled.md` |
 | Building a dashboarding-style app | `references/dashboard-patterns.md` |
 | Adding a natural-language assistant to the app | `references/kai-integration.md` |
-
-## Reference index
-
-| File | Use when |
-|---|---|
-| `references/choosing-app-type.md` | You don't yet know which app type to build. |
-| `references/streamlit-apps.md` | You're building a Streamlit app (Code or Git deployment). |
-| `references/python-js-apps.md` | You're building a Python/JS app (single Node, single Python, or combined). |
-| `references/deployment-paths.md` | You need to know which tool to use (MCP / Claude Code / kbagent). |
-| `references/storage-access.md` | The app reads from or writes to Keboola Storage. |
-| `references/authentication.md` | You need to pick or configure an auth method. |
-| `references/duckdb-caching.md` | Building any read-only app — this is the default pattern for keeping DWH costs in check. |
-| `references/styling-guide.md` | You need brand-default styling or a customer override. |
-| `references/dashboard-patterns.md` | You're building a dashboarding app (sidebar filters, charts, metrics). |
-| `references/kai-integration.md` | You want to embed Kai chat in the app. |
-| `references/dev-workflow.md` | You're modifying an existing app and want the validate→build→verify loop. |
-| `references/troubleshooting.md` | The app is failing, returning errors, or behaving unexpectedly. |
-| `references/glossary.md` | You need the source repo / canonical docs URL for a tool, library, or platform feature mentioned elsewhere. |
+| Source repos / canonical docs / UI navigation | `references/glossary.md` |
 
 ## Templates index
 
@@ -90,16 +74,6 @@ The Keboola MCP server exposes a `docs_query` tool that searches the official Ke
 4. **No `pip install` in Python apps.** The base image blocks PEP 668. Use `uv sync` driven by `pyproject.toml`. All Python supervisord commands must use `uv run`.
 5. **Never declare `[program:nginx]`** in `keboola-config/supervisord/`. Nginx is managed by the base image.
 6. **Validate data first, code second.** When using Keboola MCP, call `get_table` and `query_data` to confirm schema before writing SQL. If the project has a semantic layer, check it first via `search_semantic_context` / `get_semantic_context` and ground the query in those definitions rather than inventing the calculation. See `references/dev-workflow.md`.
-7. **Pick one Keboola path per session.** Before any project-mutating call, run BOTH detection checks and enumerate every result:
-   1. **`which kbagent` (Bash).** If it returns a path, run `kbagent project list` and note every alias + branch as a candidate path. Don't skip this step just because you've already noticed MCP tools — kbagent is a separate path the user may prefer for local iteration.
-   2. **Scan your tool surface** for `mcp__*[Kk]eboola*` prefixes. Each distinct prefix is a candidate path (project-local `.mcp.json`, user-level, or org-level marketplace — all surface the same way).
-
-   If the combined list has more than one item, **ask the user which to use** — and list ALL of them, including kbagent. Don't silently pick. Don't omit kbagent just because you found MCP first. The paths may resolve to different branches or projects, and mixing them produces silent inconsistencies. Locally with filesystem, kbagent + `streamlit run` iteration often beats MCP-only `modify_data_app` cycles for non-trivial apps — but it expects CLI comfort (local env management, shell debugging, occasional CLI errors). Surface that trade-off honestly in the question and let the user decide. Don't pre-pick MCP "to be safe" — the user knows their own context. See `references/deployment-paths.md` §Pick one path per session.
-8. **MCP-only flows: compose source directly into the tool call — don't pre-write a local copy.** When the chosen path is MCP-only (`modify_data_app`), the `source_code` argument **is** the deployment artifact. Writing the same code to a sandbox file first and then re-emitting it via the tool call doubles output tokens for no benefit. The sandbox FS is isolated from Keboola — only MCP reaches the project. Use a local file only as a scratchpad for cheap iterative edits (e.g. `str_replace`) before a single expensive emit, never as the default workflow. See `references/deployment-paths.md` Path A.
-9. **For local-dev credentials: pre-fill what you can, ask for what's missing, then offer to run.** When the chosen path runs the app locally (Path B/C, `streamlit run`, `kbagent` flows), the app needs Storage tokens, workspace IDs, and other credentials. **NEVER grep the filesystem or shell history for tokens, or scan unrelated environment variables hoping to find something that looks like a token** — that's a security smell. Do this proactively instead:
-   1. **Pre-create `.env.local`** (or `.streamlit/secrets.toml` for Streamlit) with every required key. Fill in the values you can resolve yourself from MCP: `KBC_URL`, `BRANCH_ID`, `WORKSPACE_ID`, and (optionally) `QUERY_SERVICE_URL` all come from `mcp__keboola__get_project_info`. The token (`KBC_TOKEN`) is normally the only value the user has to provide.
-   2. **Check whether `KBC_TOKEN` is already set** in the shell environment, in `.env.local`, or in `.streamlit/secrets.toml`. (Looking up a specific named variable is fine; scanning indiscriminately is not.) If it's already there, skip step 3.
-   3. **If `KBC_TOKEN` is missing**, tell the user exactly which value is missing, point them at `references/storage-access.md` §`KBC_TOKEN` for where to find it in the Keboola UI, and wait for them to confirm they've filled it in.
-   4. **Once `.env.local` is complete, offer to start the app** with the right command for the framework (`uv run streamlit run streamlit_app.py`, `npm run dev`, `node --watch server.js`, `uv run uvicorn ...`) so the user can preview it in the browser.
-
-   See `references/storage-access.md` §Getting the env vars for local development for the full set of env vars and where each comes from.
+7. **Pick one Keboola path per session.** Before any project-mutating call, run BOTH detection checks (`which kbagent` + scan for `mcp__*[Kk]eboola*` tools) and ask the user which to use if more than one is present. Don't silently pick. See `references/deployment-paths.md` §Pick one path per session.
+8. **MCP-only flows: compose source directly into the tool call.** When the chosen path is `modify_data_app`, the `source_code` argument **is** the deployment artifact — don't pre-write a local copy. See `references/deployment-paths.md` Path A.
+9. **For local-dev credentials: pre-fill what you can, ask for what's missing, then offer to run.** Never grep the filesystem or scan unrelated env vars for tokens. See `references/storage-access.md` §Getting the env vars for local development.

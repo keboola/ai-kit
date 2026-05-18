@@ -2,6 +2,16 @@
 
 **Use this when:** you want to embed a natural-language assistant inside the app, grounded in the project's data.
 
+## Contents
+- When to add Kai
+- Library (`kai-client`)
+- Service discovery
+- Authentication
+- Pattern A — Streamlit embed
+- Pattern B — JS data-app embed (SSE proxy)
+- Pre-built skills
+- DIY alternative — Anthropic SDK directly
+
 ## When to add Kai
 
 Optional integration. Use Kai when:
@@ -218,16 +228,7 @@ location /api/chat {
 
 ## Pre-built skills
 
-The `kai-client` library ships its own pre-built skills covering deeper integration work — full chat UI, history management, voting, and tool-approval UX patterns.
-
-What the dedicated skills add on top of the patterns above:
-- Conversation history persistence (server-side via Kai's chat-id, plus client-side caching for fast re-render).
-- Tool-approval modal UX — paired buttons, denial reasons, and resume-on-response.
-- Vote-up / vote-down feedback wired to Kai's feedback endpoint.
-- Suggested-prompt chips and follow-up suggestions extracted from Kai's response metadata.
-- Error and reconnection handling for dropped SSE streams.
-
-This reference here covers awareness + the minimum embed pattern. For production-quality integration, install the `kai-client` plugin and use its dedicated skills.
+This reference covers awareness + the minimum embed pattern. For production-quality integration (full chat UI, history, voting, tool-approval UX, SSE reconnection), install the `kai-client` plugin's dedicated `kai-streamlit` / `kai-js` skills.
 
 ## DIY alternative — Anthropic SDK directly
 

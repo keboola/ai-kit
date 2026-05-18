@@ -2,6 +2,15 @@
 
 **Use this when:** you're building a dashboarding-style app with sidebar filters, charts, metrics, and tables.
 
+## Contents
+- SQL-first aggregation
+- Sidebar global filters (Streamlit `st.session_state` / Node URL search params)
+- Project structure
+- Charts
+- Empty / loading / error states
+- Number / currency / percent formatting
+- Sortable tables
+
 ## SQL-first aggregation
 
 Push computation to the database; never load raw data into the app. Show good vs bad side-by-side:

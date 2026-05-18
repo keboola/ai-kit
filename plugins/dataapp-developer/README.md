@@ -1,6 +1,6 @@
 # Data App Developer Plugin
 
-Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataapp-development`, that covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 12 topical references and 5 runnable templates.
+Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataapp-development`, that covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 14 topical references and 5 runnable templates.
 
 ## Available Skills
 
@@ -55,7 +55,7 @@ plugins/dataapp-developer/
 ├── skills/
 │   └── dataapp-development/
 │       ├── SKILL.md          # router
-│       ├── references/       # 12 topical references
+│       ├── references/       # 14 topical references
 │       └── templates/        # 5 runnable starter templates
 └── README.md
 ```

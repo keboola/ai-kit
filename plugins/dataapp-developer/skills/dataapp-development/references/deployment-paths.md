@@ -4,6 +4,13 @@
 
 There are three deployment paths, distinguished by what the agent has access to: MCP tools only, MCP plus a local filesystem, or a CLI-driven flow without (or alongside) MCP. Pick the path that matches your client, then pick the tools within that path.
 
+## Contents
+- Pick one path per session — don't mix (detection + ask-the-user flow)
+- Path A — Claude Desktop / web (MCP-only)
+- Path B — Claude Code / local agent with filesystem + MCP
+- Path C — CLI agent (kbagent)
+- How to choose
+
 ## Pick one path per session — don't mix
 
 When more than one path is available — typical of Claude Code in a Keboola working directory — the agent may have multiple ways to talk to the same Keboola project, and they may point at **different branches or even different projects**. Mixing them within one session is a recipe for silent inconsistency: validating against branch X via MCP, then deploying via kbagent that's wired to branch Y, will produce confusing failures.
@@ -64,7 +71,7 @@ After `modify_data_app`, ALWAYS call `deploy_data_app(action="deploy")` — with
 
 For new apps, pass `configuration_id=""`. For updates, pass the existing configuration ID and a non-empty `change_description`.
 
-**Authentication note:** new apps default to basic-auth. On UPDATE, pass `authentication_type="default"` to preserve the existing setup — `basic-auth` would silently downgrade an OIDC app.
+For `authentication_type` defaults and the OIDC-downgrade footgun on updates, see [authentication.md](authentication.md) §MCP defaults.
 
 **Limitations:** Streamlit type only. No Git deployment mode via MCP. No Python/JS type via MCP today (planned — see [python-js-apps.md](python-js-apps.md) "Deployment via MCP — PLACEHOLDER").
 

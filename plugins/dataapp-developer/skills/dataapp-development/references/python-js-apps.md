@@ -2,6 +2,20 @@
 
 **Use this when:** you're building, modifying, or debugging a Python/JS app on Keboola — single Node, single Python, or combined Python+Node.
 
+## Contents
+- The /app contract (`keboola-config/` layout)
+- Nginx (port 8888, WebSocket / SSE snippets)
+- Supervisord (`uv run`, no `[program:nginx]`)
+- POST handling on /
+- Python dependencies (`uv sync`, no `pip install`)
+- Preferred shape for dashboarding: single Node + static frontend
+- Multi-server pattern (Python backend + JS frontend)
+- Local development
+- Keboola-hosted dev mode (`KBC_APP_MODE=dev`)
+- Git commit locking
+- Bootstrap hook (advanced)
+- Deployment via MCP — PLACEHOLDER
+
 ## The /app contract
 
 The base image clones your repo to `/app` at container startup. That directory is the entire surface the platform looks at. Two files (or sets of files) are required:
@@ -275,16 +289,7 @@ Exit code **153** means the locked commit no longer exists in the remote (force-
 
 ## Bootstrap hook (advanced)
 
-Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh` runs at container startup and is the only customizable stage of the entrypoint flow. Default behavior: shell out to `git-clone.sh /app`.
-
-Derived images can replace the hook to:
-
-- Bake a fixed `keboola-config/` into the image at build time.
-- Skip git clone entirely (app baked into the image).
-- Fetch source from non-git sources (S3, registry, etc.).
-- Materialise app source from `/data/config.json` (inline-script mode).
-
-See the base image's bootstrap documentation.
+Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh` is the only customizable stage of the entrypoint flow — derived images can replace it to bake `keboola-config/` into the image, skip git clone, or materialise source from non-git locations. See the base image docs ([glossary.md](glossary.md) §base image).
 
 ## Deployment via MCP (Keboola-managed git) — PLACEHOLDER
 
