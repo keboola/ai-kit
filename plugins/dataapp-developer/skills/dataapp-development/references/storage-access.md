@@ -48,8 +48,6 @@ Whichever you pick, paste the value into `.env.local` as `KBC_TOKEN=...`. Treat 
 
 A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-backed projects). The right way to obtain one depends on whether the app reads or also writes.
 
-**Note on naming:** the platform-injected env var is `WORKSPACE_ID` — **without** a `KBC_` prefix. (The manifest path env var is `KBC_WORKSPACE_MANIFEST_PATH`, which **does** carry the prefix — Keboola's naming isn't consistent here, this is just the convention.) Older code or earlier drafts of this skill may show `KBC_WORKSPACE_ID`; that's wrong. Use `WORKSPACE_ID` everywhere — local `.env` / `.streamlit/secrets.toml`, production `dataApp.secrets`, and code.
-
 **Read-only data app — reuse the MCP session's workspace.** Call `mcp__keboola__get_project_info` and read the `workspace_id` field. That's the workspace the agent's MCP session is already using; it has read access to everything in the project. Paste it into `.env.local` and you're done. No need to create a new workspace just for local dev.
 
 **Read-write data app — create a dedicated workspace.** The platform provisions an ephemeral, permission-scoped workspace at deploy time, but that workspace doesn't exist locally. For local testing of writes, you need to create your own workspace with grants matching the production setup:
