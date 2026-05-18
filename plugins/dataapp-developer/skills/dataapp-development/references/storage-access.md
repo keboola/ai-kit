@@ -44,9 +44,11 @@ Two ways to obtain a usable token:
 
 Whichever you pick, paste the value into `.env.local` as `KBC_TOKEN=...`. Treat it like a password: never commit it, never paste it in screenshots / chat / Slack. Add `.env.local` to `.gitignore` if it isn't already.
 
-### KBC_WORKSPACE_ID
+### WORKSPACE_ID
 
 A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-backed projects). The right way to obtain one depends on whether the app reads or also writes.
+
+**Note on naming:** the platform-injected env var is `WORKSPACE_ID` — **without** a `KBC_` prefix. (The manifest path env var is `KBC_WORKSPACE_MANIFEST_PATH`, which **does** carry the prefix — Keboola's naming isn't consistent here, this is just the convention.) Older code or earlier drafts of this skill may show `KBC_WORKSPACE_ID`; that's wrong. Use `WORKSPACE_ID` everywhere — local `.env` / `.streamlit/secrets.toml`, production `dataApp.secrets`, and code.
 
 **Read-only data app — reuse the MCP session's workspace.** Call `mcp__keboola__get_project_info` and read the `workspace_id` field. That's the workspace the agent's MCP session is already using; it has read access to everything in the project. Paste it into `.env.local` and you're done. No need to create a new workspace just for local dev.
 
@@ -119,7 +121,7 @@ Two paths to call the workspace:
 Required env vars (Keboola auto-injects on deploy when Storage Access is enabled):
 - `KBC_URL`, `KBC_TOKEN` — auth + base host.
 - `QUERY_SERVICE_URL` — Query Service host. If unset, derive from `KBC_URL` by swapping `connection.` → `query.` (`https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`).
-- `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Falls back to `KBC_WORKSPACE_ID` / `WORKSPACE_ID` (numeric).
+- `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
 
 Behind the scenes:
@@ -152,7 +154,7 @@ client = Client(base_url=base_url, token=os.environ["KBC_TOKEN"])
 
 results = client.execute_query(
     branch_id=os.environ["BRANCH_ID"],   # numeric, not "default"
-    workspace_id=os.environ["KBC_WORKSPACE_ID"],
+    workspace_id=os.environ["WORKSPACE_ID"],
     statements=['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
 )
 result = results[0]
@@ -172,7 +174,7 @@ const client = new Client({ baseUrl, token: process.env.KBC_TOKEN });
 
 const [result] = await client.executeQuery({
   branchId: process.env.BRANCH_ID,           // numeric
-  workspaceId: process.env.KBC_WORKSPACE_ID,
+  workspaceId: process.env.WORKSPACE_ID,
   statements: ['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
 });
 const cols = result.columns.map((c) => c.name);
@@ -195,7 +197,7 @@ There are no other dialects today. If `sql_dialect` is missing or returns someth
 
 For BigQuery projects, the Query Service warnings above don't apply — you DO post to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<workspace>/query`. That endpoint is the only way to query a BigQuery workspace today. The call is synchronous (no submit/poll/paginate) and returns rows as dicts with native types — no string coercion needed.
 
-Required env vars: `KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (can be the string `"default"` here — the Storage API accepts it, unlike Query Service).
+Required env vars: `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (can be the string `"default"` here — the Storage API accepts it, unlike Query Service).
 
 Python:
 
@@ -208,7 +210,7 @@ def query_data(sql: str) -> pd.DataFrame:
     endpoint = (
         f"{os.environ['KBC_URL']}/v2/storage/branch/"
         f"{os.environ.get('BRANCH_ID', 'default')}/workspaces/"
-        f"{os.environ['KBC_WORKSPACE_ID']}/query"
+        f"{os.environ['WORKSPACE_ID']}/query"
     )
     response = requests.post(
         endpoint,
@@ -230,7 +232,7 @@ async function runQuery(sql) {
   const endpoint =
     `${process.env.KBC_URL}/v2/storage/branch/` +
     `${process.env.BRANCH_ID || 'default'}/workspaces/` +
-    `${process.env.KBC_WORKSPACE_ID}/query`;
+    `${process.env.WORKSPACE_ID}/query`;
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {

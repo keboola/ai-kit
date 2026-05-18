@@ -35,7 +35,7 @@ function resolveWorkspaceId() {
     const parsed = JSON.parse(readFileSync(manifestPath, 'utf8'));
     if (parsed.workspaceId) return String(parsed.workspaceId);
   }
-  return normalizeWorkspaceId(process.env.KBC_WORKSPACE_ID || process.env.WORKSPACE_ID);
+  return normalizeWorkspaceId(process.env.WORKSPACE_ID);
 }
 
 export function resolveKeboolaEnv() {
@@ -84,7 +84,7 @@ export async function runQuery(sql) {
   const { branch, workspace } = resolveKeboolaEnv();
   const missing = [];
   if (!branch) missing.push('BRANCH_ID');
-  if (!workspace) missing.push('KBC_WORKSPACE_ID (or KBC_WORKSPACE_MANIFEST_PATH)');
+  if (!workspace) missing.push('WORKSPACE_ID (or KBC_WORKSPACE_MANIFEST_PATH)');
   if (missing.length > 0) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 
   const [result] = await getClient().executeQuery({

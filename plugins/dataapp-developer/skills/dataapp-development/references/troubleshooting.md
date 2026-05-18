@@ -167,11 +167,11 @@ kbagent data-app deploy --project P --app-id N --wait
 
 The skill's templates were migrated to the Query Service after this exact 404 surfaced in a live test — if you're starting from a template, you already have the SDK wiring.
 
-## Workspace ID has "WORKSPACE_<id>" prefix
+## Workspace ID value has "WORKSPACE_<id>" prefix
 
-**Symptom:** Query Service calls return errors about the workspace ID. The env var looks like `WORKSPACE_12345` (Snowflake schema name).
+**Symptom:** Query Service calls return errors about the workspace ID. The value of the `WORKSPACE_ID` env var (or the value pulled from `KBC_WORKSPACE_MANIFEST_PATH`) looks like `WORKSPACE_12345` (Snowflake schema name), not the bare numeric `12345`.
 
-**Cause:** Keboola sometimes exposes the Snowflake schema name as the workspace ID. The Query Service (and the legacy Storage API workspace endpoint) expect the numeric ID only.
+**Cause:** Keboola sometimes exposes the Snowflake schema name as the workspace ID. The Query Service (and the legacy Storage API workspace endpoint) expect the numeric ID only. Note: the env var **name** is `WORKSPACE_ID`; this troubleshooting entry is about the **value** carrying a `WORKSPACE_` prefix.
 
 **Fix:** Strip the prefix in your env-resolution code:
 
@@ -242,7 +242,7 @@ Paste the new value into `.env.local` as `KBC_TOKEN=...` and restart the app. Se
 
 **Fix:**
 - **Production:** add the table to the data app config's output mapping with `direct-grant`. Redeploy — the ephemeral workspace is re-provisioned with the new grants on the next start. Confirm in the Keboola UI that the data app config lists the table.
-- **Local dev:** the production ephemeral workspace doesn't exist locally. Create a dedicated workspace via UI or kbagent and grant it write access on the same tables. See `references/storage-access.md` §`KBC_WORKSPACE_ID`.
+- **Local dev:** the production ephemeral workspace doesn't exist locally. Create a dedicated workspace via UI or kbagent and grant it write access on the same tables. See `references/storage-access.md` §`WORKSPACE_ID`.
 - **Bucket stage isn't the issue.** `in.` vs `out.` doesn't restrict writes — the workspace grant does. If you've granted write on an `in.c-...` table, writes to it work.
 
 ## Reading logs

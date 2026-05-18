@@ -152,7 +152,7 @@ Without `enable_enterprise_modules=True` the license key is ignored and you fall
 
 For the full pattern -- which workspace gets mounted, how RO/RW differs across Snowflake and BigQuery, and which Keboola SDK to use -- see [storage-access.md](storage-access.md).
 
-Short version: by default a Streamlit data app gets a read-only workspace. On Snowflake projects you query it through the Query Service; on BigQuery projects you go through the Storage API. The runtime injects three environment variables that the SDKs consume directly: `KBC_URL`, `KBC_TOKEN`, and `KBC_WORKSPACE_ID`. In production these come from the platform; for local development you set them in `.streamlit/secrets.toml` and read them via the env-parity pattern below.
+Short version: by default a Streamlit data app gets a read-only workspace. On Snowflake projects you query it through the Query Service; on BigQuery projects you go through the Storage API. The runtime injects three environment variables that the SDKs consume directly: `KBC_URL`, `KBC_TOKEN`, and `WORKSPACE_ID`. In production these come from the platform; for local development you set them in `.streamlit/secrets.toml` and read them via the env-parity pattern below.
 
 ### Cache the Storage client across reruns
 
@@ -194,7 +194,7 @@ uv sync
 
 # Set local credentials
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Edit secrets.toml with real KBC_URL, KBC_TOKEN, KBC_WORKSPACE_ID
+# Edit secrets.toml with real KBC_URL, KBC_TOKEN, WORKSPACE_ID
 
 # Run
 streamlit run streamlit_app.py
@@ -212,7 +212,7 @@ import streamlit as st
 
 kbc_token = os.environ.get('KBC_TOKEN') or st.secrets.get('KBC_TOKEN')
 kbc_url = os.environ.get('KBC_URL') or st.secrets.get('KBC_URL')
-kbc_workspace_id = os.environ.get('KBC_WORKSPACE_ID') or st.secrets.get('KBC_WORKSPACE_ID')
+workspace_id = os.environ.get('WORKSPACE_ID') or st.secrets.get('WORKSPACE_ID')
 ```
 
 In Keboola the env vars are populated from `dataApp.secrets` and the first lookup wins. Locally, env vars are typically unset, so the code falls through to `st.secrets`, which Streamlit loads from `.streamlit/secrets.toml`. Same module, both environments, no `if PRODUCTION:` branching.
@@ -226,7 +226,7 @@ A starter `.streamlit/secrets.toml.example` to commit:
 # Never commit secrets.toml -- it should be in .gitignore.
 KBC_URL = "https://connection.keboola.com"
 KBC_TOKEN = "your-storage-api-token"
-KBC_WORKSPACE_ID = "1234567"
+WORKSPACE_ID = "1234567"
 ```
 
 For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right Playwright + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).

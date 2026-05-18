@@ -24,7 +24,7 @@ node --watch server.js
 
 Open http://localhost:3000. The frontend's Express server proxies `/api/*` to the backend so you don't need a local nginx.
 
-Where to find each value (`KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID`): see `references/storage-access.md` §Getting the env vars for local development.
+Where to find each value (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`): see `references/storage-access.md` §Getting the env vars for local development.
 
 ## Deployment
 

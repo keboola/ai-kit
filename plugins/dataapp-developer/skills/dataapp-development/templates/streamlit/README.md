@@ -7,7 +7,7 @@ Minimal Keboola-deployable Streamlit data app.
 ```bash
 uv sync
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Fill in KBC_URL, KBC_TOKEN, KBC_WORKSPACE_ID
+# Fill in KBC_URL, KBC_TOKEN, WORKSPACE_ID
 streamlit run streamlit_app.py
 ```
 

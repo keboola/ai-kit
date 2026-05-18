@@ -38,7 +38,7 @@ def _resolve_workspace_id() -> str | None:
     if manifest_path and os.path.exists(manifest_path):
         with open(manifest_path) as f:
             return json.load(f).get("workspaceId")
-    return _get("KBC_WORKSPACE_ID") or _get("WORKSPACE_ID")
+    return _get("WORKSPACE_ID")
 
 
 @st.cache_resource
@@ -84,7 +84,7 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
     if not workspace_id:
         st.error(
             "Missing workspace ID. Set KBC_WORKSPACE_MANIFEST_PATH (Storage Access "
-            "production) or KBC_WORKSPACE_ID / WORKSPACE_ID (local dev)."
+            "production) or WORKSPACE_ID (local dev)."
         )
         return pd.DataFrame()
 

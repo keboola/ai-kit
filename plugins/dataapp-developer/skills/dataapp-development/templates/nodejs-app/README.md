@@ -6,7 +6,7 @@ The preferred shape for dashboarding apps: single Express server serving both `/
 
 ```bash
 npm install
-# Create .env (or .env.local) with KBC_URL, KBC_TOKEN, KBC_WORKSPACE_ID
+# Create .env (or .env.local) with KBC_URL, KBC_TOKEN, WORKSPACE_ID
 npm run dev
 ```
 
@@ -18,6 +18,6 @@ Where to find each value: see `references/storage-access.md` §Getting the env v
 
 ## Deployment
 
-Push this directory to a Git repo, then create a Python/JS App in Keboola pointing at the repo. Add `KBC_URL`, `KBC_TOKEN`, `KBC_WORKSPACE_ID` as `dataApp.secrets` (prefix each key with `#`).
+Push this directory to a Git repo, then create a Python/JS App in Keboola pointing at the repo. Add `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` as `dataApp.secrets` (prefix each key with `#`).
 
 See `references/python-js-apps.md`, `references/storage-access.md`, and `references/duckdb-caching.md` (when you're ready to add caching) in the dataapp-development skill.
