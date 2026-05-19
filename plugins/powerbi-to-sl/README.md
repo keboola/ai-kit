@@ -4,11 +4,11 @@ Migrate an existing Microsoft Power BI semantic model into a Keboola semantic
 layer model conforming to the metastore service schemas
 (`semantic-model_schema_1.0.0.json` + siblings).
 
-Brownfield companion to [`sl-builder`](../sl-builder/). Where `sl-builder`
+Brownfield companion to [`sl-toolkit`](../sl-toolkit/). Where `sl-toolkit`
 generates a new semantic layer from Keboola tables + business questions,
 `powerbi-to-sl` translates an existing Power BI model structurally — tables,
 columns, measures, relationships — and hands the resulting payloads to
-`sl-builder`'s push pipeline (or to direct REST).
+`sl-toolkit`'s push pipeline (or to direct REST).
 
 ## Inputs
 
@@ -34,7 +34,7 @@ out/
   WARNINGS.md                            # un-mapped types, complex DAX, etc.
 ```
 
-Push is **not** automatic. The skill produces files; `sl-builder` (or the
+Push is **not** automatic. The skill produces files; `sl-toolkit` (or the
 user directly) handles the push to the Keboola metastore.
 
 ## Run

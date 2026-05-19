@@ -1,11 +1,11 @@
-# sl-builder Plugin
+# sl-toolkit Plugin
 
 Semantic layer tools for Keboola — inspect, validate, and build models via the metastore API. Works with or without the Semantic Layer data app.
 
 ## Installation
 
 ```bash
-/plugin install sl-builder
+/plugin install sl-toolkit
 ```
 
 ## Commands
@@ -52,7 +52,8 @@ Supports GCP, AWS, and Azure stacks — metastore region derived automatically f
 
 ## Versioning
 
-Current version: **2.0.0**
+Current version: **3.0.0**
 
-- v1.0.0 — single monolithic `semantic-layer` build-wizard skill
-- v2.0.0 — 3 focused commands + CRUD in reference skill; multi-cloud auth; constraint push fix; cascade rename with rollback
+- v1.0.0 — single monolithic `semantic-layer` build-wizard skill (as `sl-builder`)
+- v2.0.0 — 3 focused commands + CRUD in reference skill; multi-cloud auth; constraint push fix; cascade rename with rollback (as `sl-builder`)
+- v3.0.0 — renamed `sl-builder` → `sl-toolkit` to reflect the expanded scope (build + show + validate + conversational CRUD). No functional changes from v2.0.0; reinstall under the new slug.

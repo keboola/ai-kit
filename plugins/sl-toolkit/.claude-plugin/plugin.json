@@ -1,6 +1,6 @@
 {
-  "name": "sl-builder",
-  "version": "2.0.0",
+  "name": "sl-toolkit",
+  "version": "3.0.0",
   "description": "Semantic layer tools for Keboola — inspect (/sl-show), validate (/sl-validate), and build (/sl-build) models via the metastore API. Add/edit/remove operations handled conversationally via the semantic-layer reference skill.",
   "author": {
     "name": "Keboola s.r.o.",

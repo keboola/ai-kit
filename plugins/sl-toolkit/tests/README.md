@@ -1,12 +1,12 @@
-# sl-builder tests
+# sl-toolkit tests
 
 Regression tests for the semantic-layer plugin. Catches the class of bug Jordan flagged in PR #72 (camelCase drift) and PR #74 (hardcoded KEBOOLA, missing constraint push, etc.).
 
 ## Run
 
 ```bash
-pip install -r plugins/sl-builder/tests/requirements.txt
-python -m pytest plugins/sl-builder/tests/ -v
+pip install -r plugins/sl-toolkit/tests/requirements.txt
+python -m pytest plugins/sl-toolkit/tests/ -v
 ```
 
 ## What's tested

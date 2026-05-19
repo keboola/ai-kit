@@ -32,7 +32,7 @@ claude-kit/
 │   ├── dataapp-developer/   # Data app development & deployment for Keboola
 │   ├── keboola-cli/         # Keboola project management and review
 │   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
-│   └── sl-builder/          # Semantic layer inspect, validate, build + conversational CRUD
+│   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
 ├── README.md                # This file
 └── LICENSE                  # MIT license
 ```
@@ -101,9 +101,9 @@ A project management and review toolkit for Keboola projects. Includes CLI sync 
 
 **[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
 
-### sl-builder Plugin
+### sl-toolkit Plugin
 
-**Location**: [`./plugins/sl-builder`](./plugins/sl-builder)
+**Location**: [`./plugins/sl-toolkit`](./plugins/sl-toolkit)
 
 Semantic layer tools for Keboola — inspect, validate, and build models via the metastore API. Works with or without the Semantic Layer data app.
 
@@ -116,7 +116,7 @@ Semantic layer tools for Keboola — inspect, validate, and build models via the
 - 🏗️ **Greenfield wizard**: `sl-build` does full schema discovery → SQL analysis → generate → validate → push
 - 🌐 **Multi-cloud**: supports GCP, AWS, and Azure stacks
 
-**[→ View sl-builder Plugin Documentation](./plugins/sl-builder/README.md)**
+**[→ View sl-toolkit Plugin Documentation](./plugins/sl-toolkit/README.md)**
 
 ## MCP Server Setup
 
