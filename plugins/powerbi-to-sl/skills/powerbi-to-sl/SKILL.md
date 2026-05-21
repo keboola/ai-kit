@@ -9,7 +9,7 @@ description: >-
   M steps). Maps Power BI tables → Keboola semantic-dataset, measures →
   semantic-metric (DAX preserved verbatim, flagged for SQL translation),
   relationships → semantic-relationship. Produces JSON files ready to push
-  to the Keboola metastore via `sl-builder` or the REST API.
+  to the Keboola metastore via `sl-toolkit` or the REST API.
   Use for: migrate PowerBI semantic model, convert Power BI to Keboola SL,
   translate TMDL, import PowerBI tables, powerbi-to-sl, pbi-migration,
   brownfield semantic layer. Trigger when the user has PowerBI artifacts
@@ -20,8 +20,8 @@ description: >-
 # powerbi-to-sl — Power BI → Keboola Semantic Layer Migration
 
 Read existing PowerBI artifacts → map to Keboola SL payloads → write JSON
-files → user confirms → push via `sl-builder` or direct REST. Companion to
-`sl-builder` (greenfield); this is the brownfield path.
+files → user confirms → push via `sl-toolkit` or direct REST. Companion to
+`sl-toolkit` (greenfield); this is the brownfield path.
 
 ---
 
@@ -139,15 +139,15 @@ JSON schemas.
 
 Confirm with the user before any write. Two paths:
 
-**Path A — via `sl-builder`** (preferred if that plugin is installed; it
+**Path A — via `sl-toolkit`** (preferred if that plugin is installed; it
 owns the canonical generate–validate–push pipeline):
 
-> "Hand off to `sl-builder`? It owns the canonical push pipeline for any
+> "Hand off to `sl-toolkit`? It owns the canonical push pipeline for any
 > SL model. Or push directly to the metastore REST API?"
 
-If `sl-builder` chosen, invoke its push step with `--source ./out/`.
+If `sl-toolkit` chosen, invoke its push step with `--source ./out/`.
 
-**Path B — direct REST** (when `sl-builder` is not available):
+**Path B — direct REST** (when `sl-toolkit` is not available):
 
 ```python
 import json, os, urllib.request, glob
@@ -219,15 +219,15 @@ for kind in ['dataset','metric','relationship']:
 
 ---
 
-## Why two skills exist (powerbi-to-sl vs. sl-builder)
+## Why two skills exist (powerbi-to-sl vs. sl-toolkit)
 
-| Aspect       | `sl-builder`                          | `powerbi-to-sl` (this)            |
+| Aspect       | `sl-toolkit`                          | `powerbi-to-sl` (this)            |
 |--------------|---------------------------------------|-----------------------------------|
 | Direction    | Greenfield (Keboola tables → SL)      | Brownfield (Power BI → SL)        |
 | Input        | Keboola storage + SQL transformations | TMDL folder or per-table JSON     |
 | Generation   | LLM-driven from schema + KPIs         | Mechanical structural translation |
 | Validation   | Auto-fix + LLM critique               | jsonschema validate + WARNINGS    |
-| Push         | Owns push pipeline                    | Hands off to `sl-builder` push    |
+| Push         | Owns push pipeline                    | Hands off to `sl-toolkit` push    |
 
 When both are installed, this skill *produces* SL payloads and *delegates*
-push to `sl-builder`. Reuse, not overlap.
+push to `sl-toolkit`. Reuse, not overlap.

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "semantic-glossary.data",
+  "type": "object",
+  "required": ["term", "definition", "modelUUID"],
+  "additionalProperties": true,
+  "properties": {
+    "term":       {"type": "string", "minLength": 1},
+    "definition": {"type": "string", "minLength": 1},
+    "modelUUID":  {"type": "string", "minLength": 1}
+  }
+}

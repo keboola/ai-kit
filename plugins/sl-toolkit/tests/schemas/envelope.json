@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "metastore-envelope",
+  "type": "object",
+  "required": ["name", "data", "branch", "schemaVersion", "scope"],
+  "additionalProperties": false,
+  "properties": {
+    "name":          {"type": "string", "minLength": 1},
+    "data":          {"type": "object"},
+    "branch":        {"type": "string", "enum": ["main"]},
+    "schemaVersion": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "scope":         {"type": "string", "enum": ["project"]}
+  }
+}

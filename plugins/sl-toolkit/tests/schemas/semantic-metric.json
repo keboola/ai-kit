@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "semantic-metric.data",
+  "type": "object",
+  "required": ["name", "sql", "dataset", "modelUUID"],
+  "additionalProperties": true,
+  "properties": {
+    "name":        {"type": "string", "minLength": 1},
+    "sql":         {"type": "string", "minLength": 1},
+    "dataset":     {"type": "string", "pattern": "^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+\\.[A-Z0-9_-]+$"},
+    "description": {"type": "string"},
+    "modelUUID":   {"type": "string", "minLength": 1}
+  }
+}

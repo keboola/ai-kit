@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "semantic-relationship.data",
+  "type": "object",
+  "required": ["name", "from", "to", "on", "type", "modelUUID"],
+  "additionalProperties": true,
+  "properties": {
+    "name":      {"type": "string", "minLength": 1},
+    "from":      {"type": "string", "pattern": "^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+\\.[A-Z0-9_-]+$"},
+    "to":        {"type": "string", "pattern": "^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+\\.[A-Z0-9_-]+$"},
+    "on":        {"type": "string", "minLength": 1},
+    "type":      {"type": "string", "enum": ["left", "inner"]},
+    "modelUUID": {"type": "string", "minLength": 1}
+  }
+}

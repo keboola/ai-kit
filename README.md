@@ -30,7 +30,9 @@ claude-kit/
 │   ├── developer/           # Developer toolkit plugin
 │   ├── component-developer/ # Keboola Python component development
 │   ├── dataapp-developer/   # Data app development & deployment for Keboola
-│   └── keboola-cli/         # Keboola project management and review
+│   ├── keboola-cli/         # Keboola project management and review
+│   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
+│   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
 ├── README.md                # This file
 └── LICENSE                  # MIT license
 ```
@@ -98,6 +100,23 @@ A project management and review toolkit for Keboola projects. Includes CLI sync 
 - 🔒 **Security Audit**: Credential scanning, PII detection, GDPR/CCPA compliance checks
 
 **[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
+
+### sl-toolkit Plugin
+
+**Location**: [`./plugins/sl-toolkit`](./plugins/sl-toolkit)
+
+Semantic layer tools for Keboola — inspect, validate, and build models via the metastore API. Works with or without the Semantic Layer data app.
+
+**Features:**
+- ⚡ **Commands**: `/sl-show`, `/sl-validate`, `/sl-build`
+- 🗣️ **Conversational CRUD**: add/edit/remove entities by just asking — the `semantic-layer` skill handles it
+- 🔑 **kbagent-free**: show, validate, and all CRUD require only a Storage API token
+- 🔄 **Cascade rename**: editing a metric name auto-updates all constraint references, with rollback on failure
+- ✅ **Deep validation**: phantom field and type-mismatch checks against actual Snowflake schemas
+- 🏗️ **Greenfield wizard**: `sl-build` does full schema discovery → SQL analysis → generate → validate → push
+- 🌐 **Multi-cloud**: supports GCP, AWS, and Azure stacks
+
+**[→ View sl-toolkit Plugin Documentation](./plugins/sl-toolkit/README.md)**
 
 ## MCP Server Setup
 

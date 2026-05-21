@@ -1,0 +1,14 @@
+{
+  "name": "net_margin_critical",
+  "data": {
+    "name": "net_margin_critical",
+    "constraintType": "range",
+    "metrics": ["Net Profit Margin"],
+    "ruleExpression": {"bounds": {"min": -2.0, "max": 0.05}},
+    "severity": "error",
+    "modelUUID": "00000000-0000-0000-0000-000000000001"
+  },
+  "branch": "main",
+  "schemaVersion": "1.0.0",
+  "scope": "project"
+}

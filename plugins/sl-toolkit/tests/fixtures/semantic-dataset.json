@@ -1,0 +1,21 @@
+{
+  "name": "fact_revenue",
+  "data": {
+    "name": "fact_revenue",
+    "tableId": "out.c-gold.FACT_REVENUE",
+    "fqn": "\"KEBOOLA_293\".\"out.c-gold\".\"FACT_REVENUE\"",
+    "description": "Per-transaction revenue facts",
+    "grain": "one row per transaction",
+    "primaryKey": ["PK_REVENUE"],
+    "fields": [
+      {"name": "PK_REVENUE", "type": "string",   "role": "key",       "description": "Surrogate key"},
+      {"name": "AMOUNT",     "type": "decimal",  "role": "measure",   "description": "Transaction amount"},
+      {"name": "PERIOD",     "type": "string",   "role": "dimension", "description": "Reporting period"},
+      {"name": "INS_DT",     "type": "datetime", "role": "timestamp", "description": "Inserted at"}
+    ],
+    "modelUUID": "00000000-0000-0000-0000-000000000001"
+  },
+  "branch": "main",
+  "schemaVersion": "1.0.0",
+  "scope": "project"
+}

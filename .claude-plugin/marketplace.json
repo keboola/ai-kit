@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.9.0",
+  "version": "1.11.0",
   "metadata": {
     "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
   },
@@ -40,9 +40,16 @@
     },
     {
       "name": "powerbi-to-sl",
-      "description": "Migrate an existing Microsoft Power BI semantic model (TMDL or per-table JSON) into a Keboola semantic layer model. Brownfield companion to sl-builder.",
+      "description": "Migrate an existing Microsoft Power BI semantic model (TMDL or per-table JSON) into a Keboola semantic layer model. Brownfield companion to sl-toolkit.",
       "version": "1.0.0",
       "source": "./plugins/powerbi-to-sl",
+      "category": "development"
+    },
+    {
+      "name": "sl-toolkit",
+      "description": "Semantic layer toolkit for Keboola — inspect, validate, and build models via the metastore API. CRUD operations handled conversationally via the semantic-layer skill. (Renamed from sl-builder in v3.0.0.)",
+      "version": "3.0.0",
+      "source": "./plugins/sl-toolkit",
       "category": "development"
     }
   ]

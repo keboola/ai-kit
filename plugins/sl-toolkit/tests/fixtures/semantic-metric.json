@@ -1,0 +1,13 @@
+{
+  "name": "Total Revenue",
+  "data": {
+    "name": "Total Revenue",
+    "sql": "SUM(\"FACT_REVENUE\".\"AMOUNT\")",
+    "dataset": "out.c-gold.FACT_REVENUE",
+    "description": "Sum of all transaction amounts",
+    "modelUUID": "00000000-0000-0000-0000-000000000001"
+  },
+  "branch": "main",
+  "schemaVersion": "1.0.0",
+  "scope": "project"
+}
