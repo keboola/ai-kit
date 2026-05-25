@@ -64,7 +64,7 @@ If the Datadog MCP fails with auth errors, stop and fix configuration before con
 Read on demand — do NOT pre-load both. They are large.
 
 - **`references/datadog.md`** — Region, env tag map, full Keboola Datadog service catalog, tag/attribute conventions, query templates, DDSQL gotchas. **Read in Phase 1** to map stack → `env` and identify the Datadog service handle.
-- **`references/internal-error.md`** — Decision tree for the "Internal Error" status: 4 known causes (FAILED_TO_START, daemon race, component error, pod disappeared) with detection queries each. **Read in Phase 4** when symptom is `error` on a component job.
+- **`references/internal-error.md`** — Decision tree for the "Internal Error" status on `job-queue` **component jobs running on `no-dind`-enabled projects**: 4 known causes (FAILED_TO_START, daemon race, component error, pod disappeared) with detection queries each. **Read in Phase 4** when the failed job matches that scope. Does NOT apply to storage jobs, DinD jobs, or sandboxes/apps lifecycle errors — see the file's "Scope" section for fallbacks.
 
 For per-service architecture (deployed components, inter-service edges, cloud resources, persistence, common failure surface), defer to the bundled **`developer:keboola-architecture` skill** — every service has its own `c4/l3/<service>.md` finding report there. Do not duplicate that content here.
 
@@ -191,9 +191,12 @@ Capture it concretely:
 
 ### 4.1 Match against known patterns
 
-If status is `error` / "Internal Error" on a component job → **read `references/internal-error.md`** and walk its decision tree (the 4 causes A/B/C/D).
+If status is `error` / "Internal Error" on a `job-queue` **component job** AND the project has the `no-dind` feature enabled (jobs run as `kube_namespace:job-queue-jobs` K8s pods) → **read `references/internal-error.md`** and walk its decision tree (the 4 causes A/B/C/D).
 
-For other symptoms, read the affected service's `c4/l3/<service>.md` in the `developer:keboola-architecture` skill to understand deployed components and inter-service edges, then formulate a hypothesis grounded in what could fail at each boundary.
+For:
+- **Storage jobs** (Storage API job IDs, processed by `connection-worker-main`) — the internal-error tree does NOT apply. Look at the worker logs and APM via `service:connection-worker-main @context.jobId:<id>`.
+- **DinD component jobs** (projects without `no-dind`) — the daemon race / pod-naming patterns do not apply. Inspect via the legacy `keboola/job-runner` host containers.
+- **Other service symptoms** (5xx, stuck workers, etc.) — read the affected service's `c4/l3/<service>.md` in the `developer:keboola-architecture` skill to understand deployed components and inter-service edges, then formulate a hypothesis grounded in what could fail at each boundary.
 
 ### 4.2 Pull in architecture context
 

@@ -1,6 +1,33 @@
 # "Internal Error" decision tree
 
-The most common opaque failure status in Keboola. It means one of four distinct things — disambiguate before reporting.
+## Scope — read first
+
+This decision tree applies **only** to:
+
+- **Component jobs** dispatched through `job-queue` (the public/internal API + daemon path)
+- **AND only on projects where the `no-dind` feature is enabled**, i.e. jobs that run as standalone K8s pods named `job-<jobId>` orchestrated by `job-queue-daemon-start` / `daemon-stop`
+
+`no-dind` is gated per project (or per stack, via the `nodindJobsEnabled` value in `apps/job-queue-daemon/templates/_helpers.tpl` → `NODIND_JOBS_ENABLED` env var). All causes below describe the K8s-pod lifecycle and the `daemon-start` / `daemon-stop` reconciler. They will NOT match if the job ran via the legacy Docker-in-Docker (DinD) execution path.
+
+### What this decision tree does NOT cover
+
+| Job type | Where to look instead |
+|---|---|
+| **DinD jobs** (component jobs on projects without `no-dind`) | Inspect the host DinD container directly; pod naming and lifecycle differ from this tree. The `Marking job as error` / `StateTerminalException` symptoms described below do not apply — DinD jobs surface errors through `keboola/job-runner` (legacy monolithic runner). |
+| **Storage jobs** (table loads, exports, backend operations triggered by Storage API) | Different lifecycle entirely. Look at `service:connection-worker-main` and join via `@context.jobId:<storageJobId>` in APM. Storage job state lives in `connection`'s MySQL, not `job-queue-internal-api`. The 4 causes below do not apply. |
+| **Sandboxes / Apps lifecycle errors** | Different control plane. See `c4/l3/sandboxes.md` in `developer:keboola-architecture` — JOB_QUEUE strategy uses DB locks, OPERATOR strategy uses CRD `.status`. |
+| **Other service 5xx** | These are not "Internal Error" job statuses — follow the Phase 1-5 flow in SKILL.md scoped to the affected `service`. |
+
+### How to tell quickly if the tree applies
+
+```
+env:<env> kube_app_instance:<jobId>
+```
+
+- **Pod logs exist with `kube_namespace:job-queue-jobs`** → no-dind component job → this tree applies, continue below.
+- **No pod with that name** → either FAILED_TO_START (cause A), OR a DinD job (this tree does not apply), OR a storage job (look in `connection-worker-main`).
+
+---
 
 ## The 4 causes
 
