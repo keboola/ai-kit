@@ -8,7 +8,13 @@ When adding new commands, agents, or skills to a plugin:
 3. Bump the version in `.claude-plugin/marketplace.json` for the corresponding plugin entry
 4. Update the root README.md feature list for the affected plugin (add/remove items from the list)
 
-## Skill Script Path Conventions
+## Skills
+
+### Skills Workflow
+
+- When creating or modifying skills in the AI kit, remember publishing requires a version bump in the skill manifest. Don't rename skills without explicit user approval.
+
+### Script Path Conventions
 
 - Scripts must detect their own location using `SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"` and derive `SKILL_DIR="$(dirname "$SCRIPT_DIR")"`
 - Scripts run from the user's **project root**, never from the skill directory
