@@ -247,16 +247,20 @@ For async hops (SQS / ServiceBus / PubSub), trace context **is** propagated thro
 | Datadog APM | Sentry (connection backend) | exception fingerprint + timestamp |
 | Datadog APM | LangSmith (Kai) | `conversation.id` / `thread_id` + timestamp (**OTEL trace ID does NOT propagate**) |
 | Datadog logs | K8s events | `kube_namespace` + `pod_name` + timestamp via `kubectl get events` |
-| Datadog logs | Snowflake query history | Telemetry Project 133 — see "Telemetry project 133" section below |
+| Datadog logs | Snowflake query history | Telemetry Data Discovery project — see "Telemetry Data Discovery" section below |
 
-## Telemetry project 133 — for cross-stack analytical questions
+## Telemetry Data Discovery — for cross-stack analytical questions
 
-When Datadog can't answer (e.g. "which customers ran most Snowflake credits last week?", "MCP tool call distribution"), the centralized Telemetry project lives at:
-- **Stack**: `connection.us-east4.gcp.keboola.com`
+When Datadog can't answer (e.g. "which customers ran most Snowflake credits last week?", "MCP tool call distribution"), the centralized **Telemetry Data Discovery** project on the `us-east4.gcp.keboola.com` stack holds the analytical data layer.
+
+- **URL**: <https://connection.us-east4.gcp.keboola.com/admin/projects/133>
 - **Project id**: `133`
+- **Stack**: `connection.us-east4.gcp.keboola.com` (GCP US-East4)
 - **Dialect**: Snowflake
-- **MCP**: `keboola-mcp-us-east4gcp` / `mcp__claude_ai_Keboola_MCP_AWS_US__*`
-- **Contents**: Snowflake sessions/queries, component usage, config metadata, MCP analytics, PAYG A/B tests, MFA/token audits, healthcheck data for storage jobs.
+- **MCP**: `mcp__claude_ai_Keboola_GCP_US__*` (the GCP US Keboola MCP — same project-ID as above)
+- **Contents**: Snowflake sessions / queries, component usage, config metadata, MCP analytics, PAYG A/B tests, MFA / token audits, healthcheck data for storage jobs and flow parallelism, customer-specific aggregates.
+
+Whenever the skill mentions "Telemetry project" or "project 133", it means this same project — always the URL above and the same MCP.
 
 ## Skill Mode
 

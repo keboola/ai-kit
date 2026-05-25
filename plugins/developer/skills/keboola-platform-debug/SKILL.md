@@ -45,7 +45,7 @@ These are NOT on any public marketplace. They are part of the Keboola SRE local 
 | Tool / skill | Triggers when |
 |---|---|
 | `kbc-stacks` CLI + repo access | You need `kubectl` against a Keboola stack: `./cli/kbc-stacks k8s <stack>` to set the kubeconfig context. Used for K8s events, pod inspection, manual pod cleanup. |
-| Telemetry project 133 access via Keboola MCP | Cross-stack analytical questions that Datadog can't answer (Snowflake costs, MCP analytics, customer aggregates). |
+| Telemetry Data Discovery project (project 133, `mcp__claude_ai_Keboola_GCP_US__*` MCP) | Cross-stack analytical questions that Datadog can't answer (Snowflake costs, MCP analytics, customer aggregates). See "Telemetry Data Discovery" section in `references/datadog.md` for URL and full context. |
 
 ### Sanity check before starting
 
