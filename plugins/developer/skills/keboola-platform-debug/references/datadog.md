@@ -1,6 +1,8 @@
 # Datadog reference for Keboola platform debugging
 
-Single source of truth for environment tags, service names, log/APM attributes, and query templates used when debugging Keboola platform incidents through the `datadog-mcp` server.
+Single source of truth for environment tags, service names, log/APM attributes, and query templates used when debugging Keboola platform incidents.
+
+The query syntax (`env:`, `service:`, `@attribute:`, DDSQL) is the same regardless of whether you reach Datadog via the `datadog-mcp` MCP server or via the `pup` CLI — only the invocation differs. See SKILL.md "Datadog access — two options" for the mapping.
 
 ## Region
 

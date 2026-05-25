@@ -21,10 +21,29 @@ These MUST be configured before any phase can run.
 
 | Prerequisite | Why | How to set up |
 |---|---|---|
-| **Datadog MCP server** (`mcp__datadog-mcp__*`) | Every phase pulls logs / APM via these tools | Add the Datadog MCP server to `.mcp.json` (or user-level MCP config). Requires Datadog **EU site** credentials: `DD-API-KEY` and `DD-APPLICATION-KEY`. The current canonical config lives in the Keboola SRE setup notes. |
-| **Keboola SSO / Datadog account** with read access to monitoring | Underlies all MCP queries | Internal — managed via Okta / Datadog role assignments. |
+| **Datadog access** — either the MCP server OR the `pup` CLI (pick one) | Every phase pulls logs / APM | See "Datadog access — two options" below. |
+| **Keboola SSO / Datadog account** with read access to monitoring | Underlies all queries (regardless of MCP vs CLI) | Internal — managed via Okta / Datadog role assignments. |
 
-At session start, call `mcp__datadog-mcp__list_datadog_skills` once, then `load_datadog_skill('datadog/logs')` (and `datadog/traces` if you'll touch APM).
+#### Datadog access — two options
+
+**Option A: Datadog MCP server (`mcp__datadog-mcp__*`)**
+- Add to `.mcp.json` (project) or user-level MCP config.
+- Requires Datadog **EU site** credentials: `DD-API-KEY` and `DD-APPLICATION-KEY`.
+- The canonical config lives in the Keboola SRE setup notes.
+- At session start, call `mcp__datadog-mcp__list_datadog_skills` once, then `load_datadog_skill('datadog/logs')` (and `datadog/traces` if you'll touch APM).
+- Query examples throughout this skill are written for this option.
+
+**Option B: `pup` Datadog API CLI (`brew install pup` / `pipx install datadog-pup`, etc.)**
+- Single binary; authenticate once with `pup auth login` (OAuth2) or set `DD_API_KEY` + `DD_APP_KEY` + `DD_SITE=datadoghq.eu`.
+- Has an explicit `--agent` mode auto-detected for AI coding assistants — emits structured JSON suitable for piping into `jq`.
+- Translate the MCP queries shown in this skill to `pup` subcommands:
+  - `mcp__datadog-mcp__search_datadog_logs(query=...)` → `pup logs search --query '...' --from now-24h --to now`
+  - `mcp__datadog-mcp__analyze_datadog_logs(sql=...)` → `pup logs analyze --sql '...'`
+  - `mcp__datadog-mcp__search_datadog_spans(query=...)` → `pup apm spans search --query '...'`
+  - Run `pup <cmd> --help` if the subcommand or flag isn't obvious — output is JSON-formatted schema.
+- Use this option when running the skill flow non-interactively, in CI, or when the MCP server isn't configured.
+
+Pick one and use it consistently within a session — don't interleave; the two surfaces handle pagination and result truncation differently.
 
 ### Bundled (ships with this plugin — nothing to install)
 
@@ -50,14 +69,19 @@ These are NOT on any public marketplace. They are part of the Keboola SRE local 
 ### Sanity check before starting
 
 ```bash
-# Datadog MCP reachable?
-mcp__datadog-mcp__list_datadog_skills  # should return a list, not auth error
+# Option A — Datadog MCP reachable?
+mcp__datadog-mcp__list_datadog_skills          # should return a list, not auth error
+
+# Option B — pup CLI reachable?
+pup auth whoami                                 # should print the authenticated user + org
+pup logs search --query 'env:kbc-eu-central-1' --from now-5m --limit 1
+                                                # should return at least one result
 
 # keboola-architecture available?
 # (Skill should appear in the available-skills list as `developer:keboola-architecture`.)
 ```
 
-If the Datadog MCP fails with auth errors, stop and fix configuration before continuing — every subsequent step depends on it.
+If neither Datadog surface works, stop and fix configuration before continuing — every subsequent step depends on it.
 
 ## Reference files
 
