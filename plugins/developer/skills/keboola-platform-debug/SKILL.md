@@ -27,9 +27,8 @@ These MUST be configured before any phase can run.
 #### Datadog access — two options
 
 **Option A: Datadog MCP server (`mcp__datadog-mcp__*`)**
-- Add to `.mcp.json` (project) or user-level MCP config.
-- Requires Datadog **EU site** credentials: `DD-API-KEY` and `DD-APPLICATION-KEY`.
-- The canonical config lives in the Keboola SRE setup notes.
+- Add to `.mcp.json` (project) or user-level MCP config — points at the Datadog **EU site**.
+- Authentication: **OAuth2** (browser-based SSO flow, the same Datadog login as the UI — no static keys to manage). The canonical config lives in the Keboola SRE setup notes.
 - At session start, call `mcp__datadog-mcp__list_datadog_skills` once, then `load_datadog_skill('datadog/logs')` (and `datadog/traces` if you'll touch APM).
 - Query examples throughout this skill are written for this option.
 
