@@ -168,11 +168,11 @@ kubectl --context <ctx> -n <project-ns> get appruns.apps.keboola.com
 |---|---|
 | Records lost / ingestion 5xx | `service:stream-http-source status:error` + check etcd health |
 | Slices stuck on disk | `service:stream-storage-coordinator "upload"` |
-| etcd CrashLoopBackOff | Use `etcd-restore` skill (`stream-etcd` StatefulSet) |
+| etcd CrashLoopBackOff | `stream-etcd` StatefulSet — follow the etcd recovery runbook in Confluence (`Keboola SRE > ETCD`) |
 | Storage upload to Snowflake failing | `service:stream-storage-coordinator "Snowflake"` |
 
 ### etcd specifically
-StatefulSet `stream-etcd` in stack namespace. Common issues require the dedicated **`etcd-restore` skill** — bootstrap failures, lost quorum, phantom members, `gke-gcsfuse-sidecar` init stuck.
+StatefulSet `stream-etcd` in stack namespace. Common failure modes — bootstrap failures, lost quorum, phantom members, `gke-gcsfuse-sidecar` init stuck — follow the dedicated SRE runbook: <https://keboola.atlassian.net/wiki/spaces/SUP/pages/4437901313/ETCD>.
 
 ---
 
@@ -299,7 +299,7 @@ StatefulSet `stream-etcd` in stack namespace. Common issues require the dedicate
 | LLM call errors, prompts, conversations | **LangSmith** (project `kai-assistant`, EU region `https://eu.api.smith.langchain.com`) |
 | Backend errors, stack traces, compaction | `service:kai-assistant` in Datadog |
 | MCP tool calls | `service:mcp-server-agent` filter by `@mcpServerContext.conversationId` |
-| E2B sandbox metrics | `e2b-monitor` skill |
+| E2B sandbox metrics | E2B dashboard (per-team usage, limits) — separate audit workflow |
 | Cross-correlation | Join LangSmith ↔ Datadog by `conversation.id` / `thread_id` + timestamp — **OTEL trace ID does NOT propagate** |
 
 ### Common failure modes

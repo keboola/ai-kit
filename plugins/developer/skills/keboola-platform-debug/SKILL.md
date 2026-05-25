@@ -45,11 +45,6 @@ These are NOT on any public marketplace. They are part of the Keboola SRE local 
 | Tool / skill | Triggers when |
 |---|---|
 | `kbc-stacks` CLI + repo access | You need `kubectl` against a Keboola stack: `./cli/kbc-stacks k8s <stack>` to set the kubeconfig context. Used for K8s events, pod inspection, manual pod cleanup. |
-| `etcd-restore` skill | Incident is on `stream-etcd` (StatefulSet quorum / bootstrap issues). |
-| `e2b-monitor` skill | Incident touches Kai sandboxes / E2B billing or limits. |
-| `kai-agent-e2b-onboard` skill | Fix requires provisioning E2B for a new stack. |
-| `sops-secret` skill | Resolution requires rotating a token in a stack's `secrets.yaml`. |
-| `slackcli:slackcli` skill (`fprochazka/slackcli` marketplace) | You need to pull context from `inc-*` Slack channels — first message there has the Datadog monitor + Confluence runbook link. |
 | Telemetry project 133 access via Keboola MCP | Cross-stack analytical questions that Datadog can't answer (Snowflake costs, MCP analytics, customer aggregates). |
 
 ### Sanity check before starting

@@ -235,7 +235,7 @@ Drive Keboola production incident investigations through a fixed 5-phase flow (I
 - `references/internal-error.md` — decision tree for "Internal Error" status with detection queries for 4 known causes (FAILED_TO_START / daemon race / component error / pod disappeared)
 - `references/service-catalog.md` — per-service lookup: Datadog handle, common failure modes, query examples, C4 path
 
-**Composes with:** `keboola-architecture` (impact analysis), `etcd-restore`, `e2b-monitor`, `sops-secret`, `slackcli`, `superpowers:systematic-debugging`.
+**Composes with:** `keboola-architecture` (impact analysis), `superpowers:systematic-debugging` (broader root-cause framework).
 
 ---
 
