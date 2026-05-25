@@ -231,9 +231,10 @@ Drive Keboola production incident investigations through a fixed 5-phase flow (I
 - Debugging requests across job-queue, connection, storage, sandboxes, apps, vault, encryption, scheduler, notification, billing, ai/kai, stream, editor
 
 **Reference files** (loaded on demand):
-- `references/datadog.md` — region, env tag map per stack, Datadog service catalog, tag/attribute conventions, query templates, DDSQL gotchas
+- `references/datadog.md` — region, env tag map per stack, full Keboola Datadog service catalog, tag/attribute conventions, query templates, DDSQL gotchas
 - `references/internal-error.md` — decision tree for "Internal Error" status with detection queries for 4 known causes (FAILED_TO_START / daemon race / component error / pod disappeared)
-- `references/service-catalog.md` — per-service lookup: Datadog handle, common failure modes, query examples, C4 path
+
+For per-service architecture (deployed components, inter-service edges, cloud resources), the skill defers to the bundled `developer:keboola-architecture` skill.
 
 **Composes with:** `keboola-architecture` (impact analysis), `superpowers:systematic-debugging` (broader root-cause framework).
 
@@ -435,8 +436,7 @@ plugins/developer/
 │       ├── SKILL.md
 │       └── references/
 │           ├── datadog.md
-│           ├── internal-error.md
-│           └── service-catalog.md
+│           └── internal-error.md
 └── README.md                   # This file
 ```
 

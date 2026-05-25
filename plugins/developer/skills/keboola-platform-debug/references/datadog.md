@@ -247,7 +247,7 @@ For async hops (SQS / ServiceBus / PubSub), trace context **is** propagated thro
 | Datadog APM | Sentry (connection backend) | exception fingerprint + timestamp |
 | Datadog APM | LangSmith (Kai) | `conversation.id` / `thread_id` + timestamp (**OTEL trace ID does NOT propagate**) |
 | Datadog logs | K8s events | `kube_namespace` + `pod_name` + timestamp via `kubectl get events` |
-| Datadog logs | Snowflake query history | Telemetry Project 133 — see `service-catalog.md` |
+| Datadog logs | Snowflake query history | Telemetry Project 133 — see "Telemetry project 133" section below |
 
 ## Telemetry project 133 — for cross-stack analytical questions
 

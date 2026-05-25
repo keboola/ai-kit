@@ -61,11 +61,12 @@ If the Datadog MCP fails with auth errors, stop and fix configuration before con
 
 ## Reference files
 
-Read on demand — do NOT pre-load all three. They are large.
+Read on demand — do NOT pre-load both. They are large.
 
-- **`references/datadog.md`** — Region, env tag map, Datadog service catalog, tag/attribute conventions, query templates, DDSQL gotchas. **Read in Phase 1** to map stack → `env` and identify the service handle.
+- **`references/datadog.md`** — Region, env tag map, full Keboola Datadog service catalog, tag/attribute conventions, query templates, DDSQL gotchas. **Read in Phase 1** to map stack → `env` and identify the Datadog service handle.
 - **`references/internal-error.md`** — Decision tree for the "Internal Error" status: 4 known causes (FAILED_TO_START, daemon race, component error, pod disappeared) with detection queries each. **Read in Phase 4** when symptom is `error` on a component job.
-- **`references/service-catalog.md`** — Per-service: Datadog handle, common failure modes, query templates, C4 path. **Read in Phase 1 or 4** when service is non-obvious or when scoping to a service other than job-queue.
+
+For per-service architecture (deployed components, inter-service edges, cloud resources, persistence, common failure surface), defer to the bundled **`developer:keboola-architecture` skill** — every service has its own `c4/l3/<service>.md` finding report there. Do not duplicate that content here.
 
 ## Phase 1 — Identify
 
@@ -96,7 +97,7 @@ Inspect the `env` field on returned logs.
 ### 1.3 Identify primary service
 
 For a job: usually `job-queue-runner` + `job-queue-service-container` + (possibly) `job-queue-daemon-*`.
-For other services: use `references/service-catalog.md` to look up the Datadog handle.
+For other services: look up the Datadog `service` handle in `references/datadog.md` (full per-domain catalog), and read `c4/l3/<service>.md` in the `developer:keboola-architecture` skill for the architectural context (deployed components, inter-service edges).
 
 ### 1.4 State a one-sentence hypothesis
 
@@ -192,7 +193,7 @@ Capture it concretely:
 
 If status is `error` / "Internal Error" on a component job → **read `references/internal-error.md`** and walk its decision tree (the 4 causes A/B/C/D).
 
-For other symptoms, check `references/service-catalog.md` for the affected service's common failure modes.
+For other symptoms, read the affected service's `c4/l3/<service>.md` in the `developer:keboola-architecture` skill to understand deployed components and inter-service edges, then formulate a hypothesis grounded in what could fail at each boundary.
 
 ### 4.2 Pull in architecture context
 
