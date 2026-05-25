@@ -19,8 +19,8 @@
     },
     {
       "name": "developer",
-      "description": "Developer toolkit with specialized agents for code review, security analysis, and GitHub PR review processing",
-      "version": "1.8.0",
+      "description": "Developer toolkit with specialized agents for code review, security analysis, GitHub PR review processing, and SRE-grade Keboola platform debugging",
+      "version": "1.9.0",
       "source": "./plugins/developer",
       "category": "development"
     },

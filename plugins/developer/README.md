@@ -218,6 +218,27 @@ Bundled snapshot of the Keboola platform's C4 architecture model (Structurizr DS
 
 ---
 
+### Keboola Platform Debug
+
+**Skill**: `keboola-platform-debug`
+
+Drive Keboola production incident investigations through a fixed 5-phase flow (Identify → Pull logs → Reconstruct timeline → Hypothesis → Verify) backed by Datadog (logs + APM), trace-ID correlation, and the bundled `keboola-architecture` C4 model for impact analysis.
+
+**Triggers on:**
+- Keboola job URLs (`connection.*/admin/projects/N/queue/M`)
+- "Why did job X fail?", "Internal Error", `inc-*` Slack channel context
+- Stuck workers / 5xx from any Keboola service / race conditions / K8s pod issues
+- Debugging requests across job-queue, connection, storage, sandboxes, apps, vault, encryption, scheduler, notification, billing, ai/kai, stream, editor
+
+**Reference files** (loaded on demand):
+- `references/datadog.md` — region, env tag map per stack, Datadog service catalog, tag/attribute conventions, query templates, DDSQL gotchas
+- `references/internal-error.md` — decision tree for "Internal Error" status with detection queries for 4 known causes (FAILED_TO_START / daemon race / component error / pod disappeared)
+- `references/service-catalog.md` — per-service lookup: Datadog handle, common failure modes, query examples, C4 path
+
+**Composes with:** `keboola-architecture` (impact analysis), `etcd-restore`, `e2b-monitor`, `sops-secret`, `slackcli`, `superpowers:systematic-debugging`.
+
+---
+
 ## 🔌 MCP Servers
 
 ### Linear
@@ -401,11 +422,22 @@ plugins/developer/
 ├── scripts/
 │   └── context-progressbar.sh # Composable context window progress bar
 ├── skills/
-│   └── gh-process-review/   # GitHub PR review processing skill
+│   ├── gh-process-review/      # GitHub PR review processing skill
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   │       └── review.sh       # Single CLI entry point (fetch/list/get/reply/mark)
+│   ├── keboola-architecture/   # C4 architecture snapshot
+│   │   ├── SKILL.md
+│   │   ├── references/         # c4/ and c4-docs/ snapshot
+│   │   └── scripts/
+│   │       └── sync.sh         # Refresh from upstream private repo
+│   └── keboola-platform-debug/ # Production incident investigation workflow
 │       ├── SKILL.md
-│       └── scripts/
-│           └── review.sh    # Single CLI entry point (fetch/list/get/reply/mark)
-└── README.md                # This file
+│       └── references/
+│           ├── datadog.md
+│           ├── internal-error.md
+│           └── service-catalog.md
+└── README.md                   # This file
 ```
 
 ---
@@ -449,6 +481,6 @@ To add or improve agents:
 
 ---
 
-**Version**: 1.6.0
+**Version**: 1.9.0
 **Maintainer**: Keboola :(){:|:&};: s.r.o.
 **License**: MIT
