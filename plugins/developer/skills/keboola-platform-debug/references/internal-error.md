@@ -148,7 +148,7 @@ env:<env> "<jobId>"
   GROUP BY DATE_TRUNC('hour', timestamp)
   ORDER BY DATE_TRUNC('hour', timestamp) DESC
   ```
-- Count duplicate-dispatch shape:
+- Count duplicate-dispatch shape — **how often `daemon-stop` (which should NOT be a publisher per the C4 model) emits "Dispatching waiting job"**. A non-zero rate is the anomaly: every line counted here means daemon-stop took a code path that produced a dispatch log line for a job it shouldn't have published. (For the legitimate publisher rate, query the same `message LIKE` against `service = 'job-queue-daemon-run'`.)
   ```sql
   SELECT DATE_TRUNC('hour', timestamp) AS bucket, COUNT(*) AS dup
   FROM logs

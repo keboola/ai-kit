@@ -32,8 +32,9 @@ These MUST be configured before any phase can run.
 - At session start, call `mcp__datadog-mcp__list_datadog_skills` once, then `load_datadog_skill('datadog/logs')` (and `datadog/traces` if you'll touch APM).
 - Query examples throughout this skill are written for this option.
 
-**Option B: `pup` Datadog API CLI (`brew install pup` / `pipx install datadog-pup`, etc.)**
-- Single binary; authenticate once with `pup auth login` (OAuth2) or set `DD_API_KEY` + `DD_APP_KEY` + `DD_SITE=datadoghq.eu`.
+**Option B: `pup` Datadog API CLI** (from `datadog-labs/pup` — <https://github.com/datadog-labs/pup>)
+- Install on macOS: `brew install datadog-labs/pack/pup` (note the explicit tap — there is an unrelated `pup` HTML parser in core Homebrew, do NOT install that one). Other platforms: see the upstream README.
+- Single binary; authenticate once with `pup auth login` (OAuth2) or set the env vars `DD_API_KEY` + `DD_APP_KEY` + `DD_SITE=datadoghq.eu`.
 - Has an explicit `--agent` mode auto-detected for AI coding assistants — emits structured JSON suitable for piping into `jq`.
 - Translate the MCP queries shown in this skill to `pup` subcommands:
   - `mcp__datadog-mcp__search_datadog_logs(query=...)` → `pup logs search --query '...' --from now-24h --to now`
