@@ -11,18 +11,58 @@ Drive Keboola incident investigations through a fixed 5-phase flow. Each phase h
 
 **Why a fixed flow?** Keboola logs are retained for 7 days, APM for 1-2 months, and the platform spans dozens of services with different log/tag conventions. Random exploration burns time and the conversation context. The flow front-loads scoping (env, service, IDs) so subsequent queries are surgical.
 
-## Required tools
+## Prerequisites
 
-| Capability | Tool |
+This skill is **Keboola-internal SRE tooling**. It assumes access to Keboola's production observability stack and is not intended for external use.
+
+### Hard required
+
+These MUST be configured before any phase can run.
+
+| Prerequisite | Why | How to set up |
+|---|---|---|
+| **Datadog MCP server** (`mcp__datadog-mcp__*`) | Every phase pulls logs / APM via these tools | Add the Datadog MCP server to `.mcp.json` (or user-level MCP config). Requires Datadog **EU site** credentials: `DD-API-KEY` and `DD-APPLICATION-KEY`. The current canonical config lives in the Keboola SRE setup notes. |
+| **Keboola SSO / Datadog account** with read access to monitoring | Underlies all MCP queries | Internal — managed via Okta / Datadog role assignments. |
+
+At session start, call `mcp__datadog-mcp__list_datadog_skills` once, then `load_datadog_skill('datadog/logs')` (and `datadog/traces` if you'll touch APM).
+
+### Bundled (ships with this plugin — nothing to install)
+
+| Skill | Used in | Notes |
+|---|---|---|
+| `developer:keboola-architecture` | Phase 4.2 explicitly reads `references/c4/l3/<service>.md` | Same plugin (`developer@1.9.0+`). If you have this skill, you have it. |
+
+### Recommended (different marketplace, public)
+
+| Skill | Marketplace | Used for |
+|---|---|---|
+| `superpowers:systematic-debugging` | `obra/claude-plugins-official` (or fork) | Provides the broader root-cause-investigation mental model that Phase 4 builds on. Install with `/plugin marketplace add obra/superpowers` + `/plugin install superpowers`. |
+
+### Optional (only relevant for specific incident types — Keboola SRE tools)
+
+These are NOT on any public marketplace. They are part of the Keboola SRE local setup. Skip them if you don't have them; the skill degrades gracefully.
+
+| Tool / skill | Triggers when |
 |---|---|
-| Read logs | `mcp__datadog-mcp__search_datadog_logs` |
-| Aggregate logs | `mcp__datadog-mcp__analyze_datadog_logs` (DDSQL) |
-| Read traces | `mcp__datadog-mcp__search_datadog_spans` / `aggregate_spans` |
-| Architecture | `developer:keboola-architecture` skill (C4 model) |
-| K8s (optional) | `kubectl` via `kbc-stacks` CLI (`./cli/kbc-stacks k8s <stack>`) |
-| Cross-stack analytics (optional) | Telemetry project 133 via Keboola MCP |
+| `kbc-stacks` CLI + repo access | You need `kubectl` against a Keboola stack: `./cli/kbc-stacks k8s <stack>` to set the kubeconfig context. Used for K8s events, pod inspection, manual pod cleanup. |
+| `etcd-restore` skill | Incident is on `stream-etcd` (StatefulSet quorum / bootstrap issues). |
+| `e2b-monitor` skill | Incident touches Kai sandboxes / E2B billing or limits. |
+| `kai-agent-e2b-onboard` skill | Fix requires provisioning E2B for a new stack. |
+| `sops-secret` skill | Resolution requires rotating a token in a stack's `secrets.yaml`. |
+| `slackcli:slackcli` skill (`fprochazka/slackcli` marketplace) | You need to pull context from `inc-*` Slack channels — first message there has the Datadog monitor + Confluence runbook link. |
+| Telemetry project 133 access via Keboola MCP | Cross-stack analytical questions that Datadog can't answer (Snowflake costs, MCP analytics, customer aggregates). |
 
-Load Datadog domain skills at the start: call `mcp__datadog-mcp__list_datadog_skills` once, then `load_datadog_skill('datadog/logs')` (and `datadog/traces` if you'll touch APM).
+### Sanity check before starting
+
+```bash
+# Datadog MCP reachable?
+mcp__datadog-mcp__list_datadog_skills  # should return a list, not auth error
+
+# keboola-architecture available?
+# (Skill should appear in the available-skills list as `developer:keboola-architecture`.)
+```
+
+If the Datadog MCP fails with auth errors, stop and fix configuration before continuing — every subsequent step depends on it.
 
 ## Reference files
 
@@ -265,12 +305,6 @@ Avoid these — they appear in real debug transcripts and waste tokens / time:
 | Marking "Internal Error" as user error without walking the decision tree | 3 of 4 root causes are platform issues, not user issues |
 | Reading `sops -d <secrets.yaml>` to "check config" without piping to `\| yq 'keys'` | Leaks decrypted secrets into the transcript (see ~/.claude/CLAUDE.md) |
 
-## Skills that compose with this one
+## Related skills
 
-- `developer:keboola-architecture` — required for cross-service impact analysis (Phase 4.2)
-- `etcd-restore` — when the issue is `stream-etcd` quorum / bootstrap
-- `e2b-monitor` — when Kai/E2B sandbox metrics or limits are implicated
-- `kai-agent-e2b-onboard` — when fixing per-stack E2B onboarding is in scope
-- `sops-secret` — when the resolution requires rotating a token in `secrets.yaml`
-- `slackcli` — to read context from `inc-*` channels
-- `superpowers:systematic-debugging` — broader mental model for non-Keboola debugging
+See **Prerequisites** above for a categorized list with marketplace sources. In short: `developer:keboola-architecture` is bundled and used in Phase 4.2; `superpowers:systematic-debugging` is the broader debugging framework; everything else is incident-type-specific Keboola SRE tooling that this skill defers to when the scope warrants it.
