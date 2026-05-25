@@ -15,7 +15,7 @@ Alternatively, install via the Claude Code plugin marketplace:
 After installation, enable the plugins you need:
 
 ```bash
-/plugin install developer
+/plugin install component-developer
 ```
 
 ## Repository Structure
@@ -27,7 +27,6 @@ claude-kit/
 ├── .claude-plugin/
 │   └── marketplace.json     # Marketplace configuration
 ├── plugins/
-│   ├── developer/           # Developer toolkit plugin
 │   ├── component-developer/ # Keboola Python component development
 │   ├── dataapp-developer/   # Data app development & deployment for Keboola
 │   ├── keboola-cli/         # Keboola project management and review
@@ -38,21 +37,6 @@ claude-kit/
 ```
 
 ## Available Plugins
-
-### Developer Plugin
-
-**Location**: [`./plugins/developer`](./plugins/developer)
-
-A comprehensive toolkit for developers including specialized agents for code review, security analysis, code quality management, and workflow automation.
-
-**Features:**
-- 🤖 **Agents**: Code review, security analysis, code mess detection & fixing
-- ⚡ **Commands**: Task management, PR creation, merge conflict resolution, GitHub PR review processing
-- 📚 **Skills**: Keboola Architecture (C4 model bundled for impact analysis & dependency questions)
-- 📊 **Scripts**: Context window progress bar for statusline
-- 🔌 **MCP Server**: Linear integration
-
-**[→ View Developer Plugin Documentation](./plugins/developer/README.md)**
 
 ### Component Developer Plugin
 

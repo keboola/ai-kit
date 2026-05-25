@@ -1,9 +1,9 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "metadata": {
-    "description": "Comprehensive Claude Kit marketplace for Keboola workflows including developer tools, component development, and data app building with specialized agents and best practices"
+    "description": "Client-facing Claude Kit marketplace for Keboola workflows — component development, data app building, project management and review, and semantic layer toolkit"
   },
   "owner": {
     "name": "Keboola :(){:|:&};: s.r.o.",
@@ -15,13 +15,6 @@
       "description": "Comprehensive toolkit for building Keboola Python components with Agent Skills format",
       "version": "3.3.0",
       "source": "./plugins/component-developer",
-      "category": "development"
-    },
-    {
-      "name": "developer",
-      "description": "Developer toolkit with specialized agents for code review, security analysis, and GitHub PR review processing",
-      "version": "1.8.0",
-      "source": "./plugins/developer",
       "category": "development"
     },
     {
