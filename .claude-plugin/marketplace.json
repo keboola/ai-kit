@@ -32,6 +32,13 @@
       "category": "operations"
     },
     {
+      "name": "keboola-git",
+      "description": "Access Keboola-managed Git (Forgejo) repos for python-js data apps via the kbagent CLI — provision repos, mint push credentials, and copy source between GitHub and Keboola git with the 15MB/build-at-deploy path handled",
+      "version": "1.0.0",
+      "source": "./plugins/keboola-git",
+      "category": "development"
+    },
+    {
       "name": "powerbi-to-sl",
       "description": "Migrate an existing Microsoft Power BI semantic model (TMDL or per-table JSON) into a Keboola semantic layer model. Brownfield companion to sl-toolkit.",
       "version": "1.0.0",
