@@ -136,21 +136,32 @@ offending file** — the user must decide how to externalize it (it can't be spl
 kbagent --json tool call deploy_data_app --project <alias> \
   --input '{"action":"deploy","configuration_id":"<cfg>"}'
 ```
-Watch the build (~90s for `npm ci` + `next build`):
+**Verify from the logs — they are the authoritative signal** (build is ~90s+ for `npm ci` + `next build`; `setup_sh` can take ~2min total):
 ```bash
-kbagent --allow-env-manage-token data-app logs --project <alias> --app-id <data_app_id> --lines 200
+kbagent --allow-env-manage-token data-app logs --project <alias> --app-id <data_app_id> --lines 300
 ```
-Get the app password and probe the frontend:
+Look for, in order: `✓ Compiled successfully` and `Generating static pages` (the `next build`
+finished), `Completed: setup_sh` (the static-asset `cp` succeeded — under `set -e` a wrong
+copy path would abort here), then `success: node-frontend entered RUNNING state` and
+`✓ Ready in …ms` (the standalone server is up on :3000). The python service shows
+`success: python-api entered RUNNING state`. If a deeper window is dominated by one service's
+restart loop, raise `--lines` to see the other service's earlier startup.
+
+**Do NOT rely on an HTTP probe to confirm the frontend.** An unauthenticated `GET /` returns
+the **Keboola platform login gate** (HTTP 200, `<title>Login</title>`, no `_next/static`
+references) — that's the platform auth proxy *in front of* the container, not your app. And
+`POST /` returns 200 from the nginx `location = /` health rule regardless of app state. Real
+proof that the built frontend serves is `node-frontend entered RUNNING` + `Ready in` in the
+logs (optionally: authenticate with the app password, then check the HTML references
+`/_next/static/…`).
+
+Get the app password / set secrets + redeploy as needed:
 ```bash
 kbagent --json --allow-env-manage-token data-app password --project <alias> --app-id <data_app_id>
-# A 200 from POST / means the frontend is serving (the platform POSTs / on startup)
-```
-Set env/secrets and redeploy if needed:
-```bash
 kbagent --allow-env-manage-token data-app secrets-set --project <alias> --app-id <data_app_id> '#KEY=VAL'
 ```
 
-**Success = repo in Keboola git + app deploys + container builds + frontend serves + backend process starts.** Backend *data* errors (missing Storage tables) mean the app is running and looking for data — not a git/deploy failure.
+**Success = repo in Keboola git + app deploys + container builds + `node-frontend` RUNNING + backend process starts.** Backend *data* errors — e.g. `python-api` crash-looping on a Storage `404 Not Found` from its startup data load — mean the app is running and looking for tables that don't exist in an empty project. That's a data condition, **not** a git/deploy failure.
 
 ## Gotchas
 

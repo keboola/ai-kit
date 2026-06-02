@@ -17,7 +17,7 @@ Covers:
 - Mint a one-time push credential with `create_python_js_data_app_git_credential` (`git_clone_url` = `https://kai:<secret>@git.<stack>/keboola/app-<id>.git`).
 - Raw `git clone` / `remote add` / `push keboola HEAD:main` (kbagent has no repo-copy helper).
 - The **15MB / HTTP 413 cap** and the **build-at-deploy** recipe (untrack `frontend/.next`, build in `keboola-config/setup.sh`).
-- Deploy + verify: `deploy_data_app`, logs, password, `POST /` probe.
+- Deploy + verify from the logs (`Compiled successfully`, `Completed: setup_sh`, `node-frontend entered RUNNING`) — not an HTTP probe, since `GET /` hits the platform login gate and `POST /` is an nginx health rule.
 - A full command catalog and gotchas table in [`skills/keboola-git/references/managed-git.md`](./skills/keboola-git/references/managed-git.md).
 
 ## ⚡ Command

@@ -160,6 +160,8 @@ object storage, etc.). You cannot split it.
 | Force-push rejected / dangerous | Shared managed branch | Never force-push managed/shared branches |
 | Credential leaked into a commit or log | `git_clone_url` echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
 | `logs` / `password` command errors on auth | Manage token not in env | Add `--allow-env-manage-token` and ensure the manage token is exported |
-| Deploy succeeds but backend logs data errors | Empty project / missing Storage tables | **Expected** when the target project has no data — the app is running and looking for data; not a git/deploy failure |
-| `POST /` returns non-200 | Frontend not serving | Check build logs (`next build` failed?) and supervisord process state |
+| Deploy succeeds but `python-api` crash-loops on `404 Not Found` at startup | Backend's startup data load hits Storage tables that don't exist in an empty project | **Expected** out-of-scope data error — the app is running and looking for data; not a git/deploy failure. Verify the *frontend* separately (`node-frontend` RUNNING). |
+| `GET /` returns a login page (`<title>Login</title>`, no `_next/static`) | Keboola platform auth gate sits *in front of* the container — it returns 200 regardless of app state | Not a frontend signal. Confirm serving via logs (`node-frontend entered RUNNING`, `Ready in`); to test the app UI, authenticate with the app password first |
+| `POST /` returns 200 but app may not be up | nginx `location = /` returns 200 for POST unconditionally (platform health rule) | Don't use POST `/` as a serving check; rely on `node-frontend entered RUNNING` in the logs |
+| Frontend genuinely not serving | `next build` failed, static `cp` path wrong, or server crashed | Check logs for `Compiled successfully`, `Completed: setup_sh`, and `node-frontend` spawn/RUNNING vs `exited`/`backoff` |
 | kbagent tool call hangs / no output | `KBAGENT_CONVERSATION_ID` unset or `--json` omitted | Export the conversation id; always pass `--json` |

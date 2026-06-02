@@ -53,7 +53,11 @@ that drives it.
    If non-empty: push an `--orphan` clean commit (fresh managed repo) or `git filter-repo`/BFG (preserve history).
 6. **Push:** `git remote add keboola "$URL" && git push keboola HEAD:main` (or `clean-main:main` if you orphaned).
    - On `HTTP 413`, re-run **both** guards and **report the offending file** — it can't be split; ask the user how to externalize it.
-7. **Offer to deploy + verify:** `deploy_data_app`, tail logs (~90s build), get password, probe `POST /` for 200.
+7. **Offer to deploy + verify:** `deploy_data_app`, then tail logs (`setup_sh` ~2min) and confirm
+   from the logs — `✓ Compiled successfully`, `Completed: setup_sh` (static `cp` worked), and
+   `success: node-frontend entered RUNNING` + `Ready in`. Don't trust an HTTP probe: unauthenticated
+   `GET /` returns the platform login gate (200), and `POST /` 200 is just the nginx health rule.
+   A `python-api` crash loop on a Storage `404` is an expected data error in an empty project, not a deploy failure.
 
 ## `to-github` (Keboola → GitHub)
 
