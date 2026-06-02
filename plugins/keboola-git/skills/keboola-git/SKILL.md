@@ -93,16 +93,42 @@ Forgejo rejects pushes over **~15MB** with **HTTP 413**. A single file over the 
    ```
 3. Move the build into `keboola-config/setup.sh` so it runs in the Linux container at deploy:
    ```bash
-   # in keboola-config/setup.sh, in the app dir:
-   npm ci && npm run build
-   # Next.js standalone needs static assets copied alongside the server:
-   cp -r frontend/.next/static frontend/.next/standalone/frontend/.next/static
-   cp -r frontend/public      frontend/.next/standalone/frontend/public
+   # in keboola-config/setup.sh, run from the app's frontend dir:
+   cd frontend && npm ci && npm run build
+   # Next.js output:'standalone' does NOT copy static assets — copy them so the
+   # standalone server.js can serve them. The destination MIRRORS the path from the
+   # Next.js workspace root, so it differs by layout — detect where server.js landed:
+   #   find .next/standalone -maxdepth 3 -name server.js
+   # Single-package repo (workspace root == frontend/, server.js at .next/standalone/server.js):
+   cp -r .next/static .next/standalone/.next/static
+   cp -r public       .next/standalone/public
+   # Monorepo (workspace root above frontend/, server.js at .next/standalone/frontend/server.js):
+   #   cp -r .next/static .next/standalone/frontend/.next/static
+   #   cp -r public       .next/standalone/frontend/public
    ```
    For the exact setup.sh / nginx / supervisord wiring, cross-reference the **`dataapp-developer:dataapp-deployment`** skill.
-4. Commit the source-only tree, re-run the size guard (no tracked file >15MB), then push.
+4. Commit the source-only tree, then re-run the size guard (no tracked file >15MB).
 
-If a push still 413s, re-run the size guard and **report the offending file** — the user must decide how to externalize it (it can't be split).
+5. **Check git *history*, not just the working tree (CRITICAL).** `git push` sends every
+   object reachable from the pushed ref — so a build committed in an *earlier* commit still
+   gets pushed and still 413s, even after step 2 removes it from `HEAD`. The `find` guard only
+   sees the working tree. Check reachable blobs:
+   ```bash
+   git rev-list --objects HEAD \
+     | git cat-file --batch-check='%(objecttype) %(objectsize) %(rest)' \
+     | awk '$1=="blob" && $2>15000000 {print $2, $3}'
+   ```
+   If anything prints, the over-cap blob is in history. Two remedies:
+   - **Fresh managed repo (the common case):** push a single clean commit so the old blobs
+     are never reachable —
+     ```bash
+     git checkout --orphan clean-main && git add -A && git commit -m "Source-only (build at deploy)"
+     git push keboola clean-main:main
+     ```
+   - **History must be preserved:** purge the blob with `git filter-repo` (or BFG), then push.
+
+If a push still 413s, re-run **both** guards (working tree *and* history) and **report the
+offending file** — the user must decide how to externalize it (it can't be split).
 
 ## 5. Deploy + verify
 

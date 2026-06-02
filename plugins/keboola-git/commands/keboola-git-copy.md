@@ -5,6 +5,7 @@ allowed-tools:
   - Bash
   - Read
   - Edit
+  - Write
 argument-hint: "to-keboola|to-github --source <repo-url-or-path> --branch <branch> --project <alias> [--config <cfg>] [--app-name <name>]"
 ---
 
@@ -39,15 +40,20 @@ that drives it.
    - Else: provision with `modify_python_js_data_app` (use `--app-name`); capture `configuration_id`, `data_app_id`, `repo_url`.
 2. **Mint a push credential** with `create_python_js_data_app_git_credential` → `git_clone_url` into `$URL`.
 3. **Clone the source** (single-branch) into `./.keboola-git-work/app`.
-4. **Size guard:** `find . -size +15M -not -path '*/.git/*'`.
+4. **Size guard (working tree):** `find . -size +15M -not -path '*/.git/*'`.
    - If a committed build is found (e.g. `frontend/.next`), apply **source-only + build-at-deploy**:
      untrack + gitignore the build dir and `node_modules/`; set `keboola-config/setup.sh` to
-     `npm ci && npm run build` and copy `frontend/.next/static` + `frontend/public` into the
-     `.next/standalone/` tree. Commit the source-only tree. (See the `dataapp-developer:dataapp-deployment` skill for setup.sh wiring.)
-   - Re-run the guard; it must return nothing.
-5. **Push:** `git remote add keboola "$URL" && git push keboola HEAD:main`.
-   - On `HTTP 413`, re-run the size guard and **report the offending file** — it can't be split; ask the user how to externalize it.
-6. **Offer to deploy + verify:** `deploy_data_app`, tail logs (~90s build), get password, probe `POST /` for 200.
+     `cd frontend && npm ci && npm run build`, then copy `static` + `public` to wherever the build
+     put `server.js` (`find .next/standalone -name server.js` — single-package vs monorepo differ).
+     Commit the source-only tree. (See the `dataapp-developer:dataapp-deployment` skill for setup.sh wiring.)
+   - Re-run the working-tree guard; it must return nothing.
+5. **History guard (CRITICAL):** a build committed in an earlier commit still 413s — `git push`
+   sends all reachable history, the `find` guard only sees the working tree. Check:
+   `git rev-list --objects HEAD | git cat-file --batch-check='%(objecttype) %(objectsize) %(rest)' | awk '$1=="blob" && $2>15000000'`.
+   If non-empty: push an `--orphan` clean commit (fresh managed repo) or `git filter-repo`/BFG (preserve history).
+6. **Push:** `git remote add keboola "$URL" && git push keboola HEAD:main` (or `clean-main:main` if you orphaned).
+   - On `HTTP 413`, re-run **both** guards and **report the offending file** — it can't be split; ask the user how to externalize it.
+7. **Offer to deploy + verify:** `deploy_data_app`, tail logs (~90s build), get password, probe `POST /` for 200.
 
 ## `to-github` (Keboola → GitHub)
 
