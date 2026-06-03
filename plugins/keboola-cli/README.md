@@ -63,9 +63,10 @@ Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated) + 10 individual reports i
 | `kbc-review-consolidator` | Data flow mapping + report consolidation |
 | `keboola-config-analyzer` | General config analysis and explanation |
 
-## Skill
+## Skills
 
 - **keboola-config**: Knowledge about Keboola project structure and configuration formats
+- **duckdb-transformation**: Expert knowledge for writing, optimizing, and migrating DuckDB transformations --- covers SQL dialect, block orchestration, dynamic backends, Parquet, case sensitivity, Snowflake migration, type casting patterns, and best practices
 
 ## Usage
 

@@ -83,6 +83,7 @@ A project management and review toolkit for Keboola projects. Includes CLI sync 
 - 🔌 **MCP Server**: Keboola integration for live project analysis
 - 📊 **Financial Intelligence**: Multi-ERP awareness (NetSuite, SAP, Oracle, D365, QuickBooks, Xero), SaaS metrics, budget variance
 - 🔒 **Security Audit**: Credential scanning, PII detection, GDPR/CCPA compliance checks
+- 🦆 **DuckDB Transformation**: SQL dialect, block orchestration, dynamic backends, Snowflake migration, best practices
 
 **[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
 
