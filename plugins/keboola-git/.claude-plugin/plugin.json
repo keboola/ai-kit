@@ -1,0 +1,20 @@
+{
+  "name": "keboola-git",
+  "version": "1.0.0",
+  "description": "Access Keboola-managed Git (Forgejo) repos for python-js data apps via the kbagent CLI — provision repos, mint push credentials, and copy source between GitHub and Keboola git with the 15MB/build-at-deploy path handled",
+  "author": {
+    "name": "Keboola :(){:|:&};: s.r.o.",
+    "email": "support@keboola.com"
+  },
+  "keywords": [
+    "keboola",
+    "kbagent",
+    "managed-git",
+    "forgejo",
+    "data-app",
+    "git",
+    "build-at-deploy",
+    "deploy",
+    "python-js"
+  ]
+}

@@ -30,6 +30,7 @@ claude-kit/
 │   ├── component-developer/ # Keboola Python component development
 │   ├── dataapp-developer/   # Data app development & deployment for Keboola
 │   ├── keboola-cli/         # Keboola project management and review
+│   ├── keboola-git/         # Keboola-managed Git (Forgejo) access for data apps
 │   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
 │   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
 ├── README.md                # This file
@@ -84,6 +85,21 @@ A project management and review toolkit for Keboola projects. Includes CLI sync 
 - 🔒 **Security Audit**: Credential scanning, PII detection, GDPR/CCPA compliance checks
 
 **[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
+
+### Keboola Git Plugin
+
+**Location**: [`./plugins/keboola-git`](./plugins/keboola-git)
+
+Access Keboola-managed Git (Forgejo) repos for python-js data apps via the `kbagent` CLI — provision repos, mint push credentials, push source with raw git, and deploy, including the ~15MB / HTTP 413 build-at-deploy path.
+
+**Features:**
+- 🎯 **Skill**: `keboola-git` — provision/find the managed repo, mint a one-time `git_clone_url`, raw clone/push, 413 + build-at-deploy recipe, deploy + verify
+- ⚡ **Command**: `/keboola-git-copy to-keboola|to-github` — bidirectional GitHub ↔ Keboola git source copy with size guard and scratch-branch safety
+- 📦 **Build-at-deploy**: untrack committed builds (`frontend/.next`), build in `keboola-config/setup.sh` to stay under the 15MB push cap
+- 🔒 **Credential safety**: one-time push secrets kept in shell vars, never committed; no force-push, scratch-branch-only reverse copies
+- 🛠️ **kbagent-CLI driven**: ships no MCP server
+
+**[→ View Keboola Git Plugin Documentation](./plugins/keboola-git/README.md)**
 
 ### sl-toolkit Plugin
 
