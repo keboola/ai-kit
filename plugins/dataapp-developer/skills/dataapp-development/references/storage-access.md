@@ -114,13 +114,13 @@ Full reference and runnable harness: [duckdb-caching.md](duckdb-caching.md) and 
 ## Direct RO workspace queries
 
 Use this when:
-- You're using the MCP `modify_data_app` flow and the `{QUERY_DATA_FUNCTION}` placeholder gets injected automatically — most agent-driven Streamlit creation works this way.
+- You're using the MCP `modify_streamlit_data_app` flow and the `{QUERY_DATA_FUNCTION}` placeholder gets injected automatically — most agent-driven Streamlit creation works this way.
 - The cached dataset would be too large for an in-memory cache, OR the freshness requirement is sub-minute.
 - You're prototyping and haven't wired DuckDB yet.
 
 Two paths to call the workspace:
 
-- **MCP-injected `query_data`** — when `modify_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
+- **MCP-injected `query_data`** — when `modify_streamlit_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
 - **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/query-service` (JS/TS). The SDK handles submit + poll + paginate; you call `executeQuery({ branchId, workspaceId, statements })` and get back columns + rows.
 
 **Do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That was an older Storage API workspace-query endpoint that survives in some docs and templates, but it returns `workspace.workspaceNotFound` 404s on most Snowflake projects today. Use the Query Service.

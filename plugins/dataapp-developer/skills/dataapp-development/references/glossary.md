@@ -12,7 +12,7 @@ Source: https://github.com/keboola/mcp-server
 
 The MCP server that exposes Keboola tools to agents. Provides:
 
-- **Data app lifecycle:** `modify_data_app`, `deploy_data_app`, `get_data_apps` (Streamlit only today).
+- **Data app lifecycle:** `modify_streamlit_data_app`, `deploy_data_app`, `get_data_apps` (Streamlit only today).
 - **Data validation:** `get_project_info`, `get_table`, `query_data`, `search`.
 - **Docs lookup:** `docs_query` — searches the Keboola Connection documentation. Prefer this over guessing from memory.
 - **Config management:** `get_components`, `find_component_id`, `get_configs`, `create_config`, `update_config`, `add_config_row`, `update_config_row`, `run_sync_action`.

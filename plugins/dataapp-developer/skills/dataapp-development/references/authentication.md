@@ -5,7 +5,7 @@
 ## Options overview
 
 Keboola Data Apps ship with six built-in authentication methods. All of them
-are configured on the app itself (in the Keboola UI or via `modify_data_app`)
+are configured on the app itself (in the Keboola UI or via `modify_streamlit_data_app`)
 and do not require any code changes inside the app.
 
 - **None** — app is publicly accessible by URL. Implement your own auth in
@@ -67,7 +67,7 @@ If you need rotatable passwords, multiple users, MFA, or any kind of access audi
 
 ## MCP defaults
 
-When using `modify_data_app` via MCP:
+When using `modify_streamlit_data_app` via MCP:
 
 - **New apps** default to `basic-auth` for security if `authentication_type` is not specified.
 - **Updates to existing apps** — pass `authentication_type="default"` to preserve the existing setup. Important: passing `"basic-auth"` on an UPDATE to an OIDC app will silently DOWNGRADE it to basic-auth. Always use `"default"` on updates unless you explicitly intend to change the auth method.
