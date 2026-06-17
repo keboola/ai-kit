@@ -1,7 +1,7 @@
 {
   "name": "dataapp-developer",
-  "version": "1.1.0",
-  "description": "Toolkit for building and deploying data apps to Keboola — Streamlit development with validate/build/verify workflow, plus deployment guides for Node.js, Python, and any web framework",
+  "version": "1.2.0",
+  "description": "Toolkit for building and deploying Keboola Apps (Streamlit and Python/JS) — full lifecycle: choosing app type, deployment paths, storage access, authentication, DuckDB caching, styling, dashboard patterns, optional Kai chat, and the validate-build-verify dev workflow.",
   "author": {
     "name": "Keboola :(){:|:&};: s.r.o.",
     "email": "support@keboola.com"
