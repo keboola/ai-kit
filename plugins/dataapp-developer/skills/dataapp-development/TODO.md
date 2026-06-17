@@ -16,11 +16,11 @@ Open Linear issues whose resolution will change what the skill teaches. Until th
 
 Gaps that force the skill to recommend kbagent or filesystem paths for things MCP should cover.
 
-- **`modify_data_app` is Streamlit-only.** No Python/JS app creation or modification via MCP. Blocks Path A for dashboarding apps. See `references/python-js-apps.md` §"Deployment via MCP — PLACEHOLDER".
-- **No Git deployment mode via MCP.** `modify_data_app` only supports Code mode. Git-mode apps (the recommended choice for multi-file projects) require the Configuration API or kbagent.
+- **`modify_streamlit_data_app` is Streamlit-only.** No Python/JS app creation or modification via MCP. Blocks Path A for dashboarding apps. See `references/python-js-apps.md` §"Deployment via MCP — PLACEHOLDER".
+- **No Git deployment mode via MCP.** `modify_streamlit_data_app` only supports Code mode. Git-mode apps (the recommended choice for multi-file projects) require the Configuration API or kbagent.
 - **No log-reading tool beyond the 20-line tail.** `get_data_apps(...).deployment_info.logs` returns only the most recent lines. For real debugging the agent has to direct the user to the Keboola UI Terminal Log tab.
 - **No workspace management.** Cannot create / grant / list / delete workspaces via MCP. Local-dev workspace setup falls back to UI or kbagent.
-- **No direct secret management.** Adding / removing / listing `dataApp.secrets` has to go through `modify_data_app` (which couples it to source-code edits) or the Configuration API directly.
+- **No direct secret management.** Adding / removing / listing `dataApp.secrets` has to go through `modify_streamlit_data_app` (which couples it to source-code edits) or the Configuration API directly.
 - **No Storage Access toggle.** Enabling Storage Access on an app config requires UI navigation; no MCP affordance.
 - **No project-feature discovery.** Agents can't programmatically detect whether the direct-grant feature is enabled on the project — currently has to ask the user or read error responses.
 
@@ -36,7 +36,7 @@ Smaller gaps; kbagent already covers most of the data-app lifecycle.
 Sections we know are incomplete because the underlying pattern isn't firm yet. Mostly tracked by Linear above, but listed here as the writing tasks.
 
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
-- **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_data_app` covers Python/JS.
+- **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_streamlit_data_app` covers Python/JS.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/query-service` (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
 - **BigQuery RW path.** Add once BigQuery Storage Access lands (see Platform section above).
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**

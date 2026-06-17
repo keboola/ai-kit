@@ -31,7 +31,7 @@ When phrasing the question, present each path with its trade-offs honestly. Alwa
 
 > I see both an MCP server (`keboola-test` → branch 35403) and kbagent (`new-branches` alias → project 3047, branch 37363) available, with filesystem access. Two viable paths:
 >
-> - **MCP-only**: compose source into `modify_data_app`, deploy via `deploy_data_app`, debug via platform logs. No CLI work on your machine, no local environment to manage.
+> - **MCP-only**: compose source into `modify_streamlit_data_app`, deploy via `deploy_data_app`, debug via platform logs. No CLI work on your machine, no local environment to manage.
 > - **kbagent + local iteration**: edit `streamlit_app.py` locally, run with `streamlit run` against the workspace, deploy via `kbagent data-app deploy` when it works. Faster iteration loop for non-trivial apps — but you'll be filling in `.env.local`, running shell commands, and debugging CLI output. Expect to hit a few CLI gotchas along the way.
 >
 > Which would you like? Note: these paths may resolve to different branches or projects.
@@ -44,7 +44,7 @@ The trade-off is not just "which works" — it's iteration speed.
 
 | Path | Iteration loop | Best for |
 |---|---|---|
-| **MCP-only (Path A)** | Each edit → `modify_data_app` → `deploy_data_app` → wait for container spin-up → check logs via MCP → repeat | Small or quick apps where the first try is close. Demos. No filesystem assumed. |
+| **MCP-only (Path A)** | Each edit → `modify_streamlit_data_app` → `deploy_data_app` → wait for container spin-up → check logs via MCP → repeat | Small or quick apps where the first try is close. Demos. No filesystem assumed. |
 | **kbagent + filesystem (Path B/C)** | Edit `streamlit_app.py` locally → `streamlit run` against real workspace creds in `.env.local` → verify in browser → only then `kbagent data-app deploy` or `git push` | Non-trivial apps. You catch SQL errors, missing columns, layout bugs locally where the loop is seconds. Only ship a working version. |
 
 The MCP loop can be much slower for any app that needs more than one or two corrections — every cycle pays the platform's container spin-up cost (tens of seconds). The local-iterate-then-deploy loop runs at editor speed.
@@ -57,17 +57,17 @@ Once the user picks, **don't use the others, not even for unrelated operations l
 
 The defining constraint of this path is **the only channel to Keboola is MCP**. The agent may have a sandbox filesystem (Claude Desktop now does), a Python runner, a Bash tool — but none of those connect to your Keboola project. They run in the agent's local workspace, isolated. Anything that needs to reach Keboola — source code, deploy commands, log reads — has to go through an MCP tool call.
 
-This matters most for the `modify_data_app` flow: the `source_code` argument **is** the deployment artifact. Writing the same code to the sandbox FS first and then re-emitting it as the tool argument doubles output tokens for no benefit. The sandbox FS is useful for scratchpad iteration (cheap `str_replace` edits before a single expensive emit) but the artifact lives in the tool call, not the file.
+This matters most for the `modify_streamlit_data_app` flow: the `source_code` argument **is** the deployment artifact. Writing the same code to the sandbox FS first and then re-emitting it as the tool argument doubles output tokens for no benefit. The sandbox FS is useful for scratchpad iteration (cheap `str_replace` edits before a single expensive emit) but the artifact lives in the tool call, not the file.
 
 Available tools:
 
-- `modify_data_app` — creates or updates the source code IN the data app configuration (no separate git repo).
+- `modify_streamlit_data_app` — creates or updates the source code IN the data app configuration (no separate git repo).
 - `deploy_data_app(action="deploy", configuration_id=...)` — deploys or restarts the app.
 - `deploy_data_app(action="stop", configuration_id=...)` — suspends.
 - `get_data_apps([cfg_id])` — returns the latest 20 log lines for debugging.
 - `query_data`, `get_table`, `get_project_info` — for validating data before writing code.
 
-After `modify_data_app`, ALWAYS call `deploy_data_app(action="deploy")` — without this, changes do not take effect. The existing running app keeps serving the previous code.
+After `modify_streamlit_data_app`, ALWAYS call `deploy_data_app(action="deploy")` — without this, changes do not take effect. The existing running app keeps serving the previous code.
 
 For new apps, pass `configuration_id=""`. For updates, pass the existing configuration ID and a non-empty `change_description`.
 
@@ -75,18 +75,18 @@ For `authentication_type` defaults and the OIDC-downgrade footgun on updates, se
 
 **Limitations:** Streamlit type only. No Git deployment mode via MCP. No Python/JS type via MCP today (planned — see [python-js-apps.md](python-js-apps.md) "Deployment via MCP — PLACEHOLDER").
 
-**Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
+**Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_streamlit_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
 
 The one legitimate exception: if the source is large enough that you genuinely need cheap iterative edits before a single expensive emit (e.g. via `str_replace` against a sandboxed file), use the local copy as a scratchpad — but only that, and only if the iteration savings beat the redundant emit. For small apps (<100 lines), compose-in-tool is always cheaper.
 
 Local files only become deployment artifacts on Paths B and C (git push or kbagent). The "local development" instructions in [streamlit-apps.md](streamlit-apps.md) and [python-js-apps.md](python-js-apps.md) apply to those paths, not to Path A.
 
-**Debug loop:** if the app fails to start or behaves wrong after deploy, call `get_data_apps(<cfg_id>)` for the latest 20 log lines, fix the `source_code`, call `modify_data_app` again with a `change_description`, then `deploy_data_app(action="deploy")`. Repeat. There is no way to attach to a shell or read arbitrary log files from this path.
+**Debug loop:** if the app fails to start or behaves wrong after deploy, call `get_data_apps(<cfg_id>)` for the latest 20 log lines, fix the `source_code`, call `modify_streamlit_data_app` again with a `change_description`, then `deploy_data_app(action="deploy")`. Repeat. There is no way to attach to a shell or read arbitrary log files from this path.
 
 Minimal example call signature (annotated, not executable):
 
 ```python
-modify_data_app(
+modify_streamlit_data_app(
     name="My App",
     description="...",
     source_code="""
@@ -110,7 +110,7 @@ The most flexible path. Edit code locally with Read/Edit/Write tools. Use Playwr
 
 For **Streamlit** apps:
 
-- Code mode: edit local file, then push to git OR use `modify_data_app` to paste the contents into the data app config.
+- Code mode: edit local file, then push to git OR use `modify_streamlit_data_app` to paste the contents into the data app config.
 - Git mode: edit local file, `git push`, then `deploy_data_app` via MCP picks up the new commit.
 
 For **Python/JS** apps:
@@ -128,7 +128,7 @@ Best fit for:
 
 1. Validate data with `query_data` / `get_table` (MCP).
 2. Edit code locally with Read/Edit/Write.
-3. Push to git (Python/JS) or paste via `modify_data_app` (Streamlit Code mode).
+3. Push to git (Python/JS) or paste via `modify_streamlit_data_app` (Streamlit Code mode).
 4. `deploy_data_app(action="deploy", ...)` via MCP, or `kbagent data-app deploy --wait` if Path C.
 5. Open the running app in Playwright MCP, take a screenshot, iterate.
 

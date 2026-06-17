@@ -35,7 +35,7 @@ If unsure → `references/choosing-app-type.md`. Short version:
 
 `references/deployment-paths.md` covers all three:
 
-- **Path A — Claude Desktop / web (MCP-only, no filesystem):** Use `modify_data_app` / `deploy_data_app` MCP tools (Streamlit only today).
+- **Path A — Claude Desktop / web (MCP-only, no filesystem):** Use `modify_streamlit_data_app` / `deploy_data_app` MCP tools (Streamlit only today).
 - **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to customer git, deploy via MCP or kbagent.
 - **Path C — CLI agent (`kbagent`):** Full lifecycle via `kbagent data-app` command group.
 
@@ -75,5 +75,5 @@ The Keboola MCP server exposes a `docs_query` tool that searches the official Ke
 5. **Never declare `[program:nginx]`** in `keboola-config/supervisord/`. Nginx is managed by the base image.
 6. **Validate data first, code second.** When using Keboola MCP, call `get_table` and `query_data` to confirm schema before writing SQL. If the project has a semantic layer, check it first via `search_semantic_context` / `get_semantic_context` and ground the query in those definitions rather than inventing the calculation. See `references/dev-workflow.md`.
 7. **Pick one Keboola path per session.** Before any project-mutating call, run BOTH detection checks (`which kbagent` + scan for `mcp__*[Kk]eboola*` tools) and ask the user which to use if more than one is present. Don't silently pick. See `references/deployment-paths.md` §Pick one path per session.
-8. **MCP-only flows: compose source directly into the tool call.** When the chosen path is `modify_data_app`, the `source_code` argument **is** the deployment artifact — don't pre-write a local copy. See `references/deployment-paths.md` Path A.
+8. **MCP-only flows: compose source directly into the tool call.** When the chosen path is `modify_streamlit_data_app`, the `source_code` argument **is** the deployment artifact — don't pre-write a local copy. See `references/deployment-paths.md` Path A.
 9. **For local-dev credentials: pre-fill what you can, ask for what's missing, then offer to run.** Never grep the filesystem or scan unrelated env vars for tokens. See `references/storage-access.md` §Getting the env vars for local development.
