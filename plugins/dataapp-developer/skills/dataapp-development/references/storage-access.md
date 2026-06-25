@@ -197,7 +197,7 @@ The SDKs handle the submit-job → poll-status → paginate-results dance intern
 
 Two statement-level rules (verified on BigQuery, apply on both backends):
 - **One SQL command per statement.** Each entry in `statements` must be a single command — a semicolon-joined script in one string is rejected (`ValidationError: Each statement must contain exactly one SQL command`). To run several commands, pass them as separate list items.
-- **Statements in one `execute_query` call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`).
+- **Statements in one `execute_query` (Python) / `executeQuery` (JS) call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`).
 
 ### How to know which SQL dialect to emit
 
@@ -225,8 +225,8 @@ SELECT * FROM `in.c-main.customers`     LIMIT 1000
 
 | Backend | Identifier quoting | Example |
 | --- | --- | --- |
-| Snowflake | Double quotes | `"in.c-main"."customers"` |
-| BigQuery | Backticks, `dataset.table` (stage stays in the dataset name) | `` `in_c_main`.`customers` `` |
+| Snowflake | Double quotes, full 3-part FQN | `"KBC_REGION_PROJID"."in.c-main"."customers"` |
+| BigQuery | Backticks, 2-part `dataset.table` (stage stays in the dataset name) | `` `in_c_main`.`customers` `` |
 
 **2. Reference the dataset by its mangled bucket name.** BigQuery dataset names cannot contain dots (`.`) or hyphens (`-`), so a Keboola bucket is not exposed under its literal bucket ID. The bucket ID maps to a dataset name by replacing every `.` and `-` with an underscore (`_`):
 
