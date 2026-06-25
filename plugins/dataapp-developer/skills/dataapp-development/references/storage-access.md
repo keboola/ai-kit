@@ -147,7 +147,7 @@ st.dataframe(df)
 
 **On Snowflake, always use the full fully-qualified name** — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Get the exact string from `mcp__keboola__get_table`'s `fully_qualified_name` field (or the equivalent `fqn` field returned by other MCP tools). The database prefix is required: without it, the session default database only sees in-project tables, so any Data Catalog (cross-project linked) tables fail to resolve. Data apps always run in the production branch, so the FQN you get from MCP against main is the right one for the deployed app.
 
-On **BigQuery** the identifier syntax and dataset names differ — backticks per segment and mangled dataset names. See "BigQuery SQL dialect" below before writing any query.
+On **BigQuery** the identifier syntax and dataset names differ — backticks and mangled dataset names (no stage prefix). See "BigQuery SQL dialect" below before writing any query.
 
 ### Query Service SDK call shape
 
@@ -203,7 +203,7 @@ Two statement-level rules (verified on BigQuery, apply on both backends):
 
 Call `mcp__keboola__get_project_info` and read the `sql_dialect` field:
 - `"Snowflake"` → quote identifiers with double quotes (`"bucket"."table"`), as shown above.
-- `"BigQuery"` → quote identifiers with backticks per segment and reference datasets by their mangled bucket name. See "BigQuery SQL dialect" below.
+- `"BigQuery"` → quote identifiers with backticks and reference datasets by their mangled bucket name (no stage prefix). See "BigQuery SQL dialect" below.
 
 Both dialects go through the **Query Service** (the preferred path). `sql_dialect` tells you which SQL syntax to generate, not which API to call. There are no other dialects today. If `sql_dialect` is missing or returns something else, stop and ask the user before guessing.
 
@@ -211,20 +211,22 @@ Both dialects go through the **Query Service** (the preferred path). `sql_dialec
 
 On BigQuery projects, every SQL example on this page that uses Snowflake double-quote quoting (`"bucket"."table"`) has to be rewritten. Two rules cover it. They apply to **both** the read queries here and the read-write Storage Access path below — the Query Service passes SQL through unchanged, so your app is responsible for emitting the correct syntax for the project's backend.
 
-**1. Quote identifiers with backticks, per segment.** BigQuery uses backticks (`` ` ``) instead of double quotes, and **each segment must be quoted separately**. Do not wrap the whole `dataset.table` reference in a single pair of backticks — BigQuery reads a dotted name inside one pair as `project.dataset.table` and tries to resolve the first segment as a Google Cloud project (you'll see an error such as `The project <stage> has not enabled BigQuery`).
+**1. Quote identifiers with backticks, not double quotes.** BigQuery uses backticks (`` ` ``) where Snowflake uses double quotes. A table reference is **two parts** — `dataset.table` — and you may write it either as `` `dataset`.`table` `` or as `` `dataset.table` `` (both are valid; quoting each segment separately is not required). The real trap is **adding a third leading segment**: do not prepend the Keboola stage (`in`/`out`) or a Snowflake-style "database", and do not split the dotted bucket ID into separate backticked parts. BigQuery reads a three-part name as `project.dataset.table` and tries to resolve the first segment as a Google Cloud project — you'll see `The project <stage> has not enabled BigQuery`. (Verified against a live BigQuery project.)
 
 ```sql
--- ✅ Correct — each segment quoted on its own
-SELECT * FROM `my_dataset`.`customers` LIMIT 1000
+-- ✅ Correct — dataset.table (two parts); either quoting works
+SELECT * FROM `in_c_main`.`customers` LIMIT 1000
+SELECT * FROM `in_c_main.customers`  LIMIT 1000
 
--- ❌ Wrong — BigQuery reads `my_dataset` as a project ID
-SELECT * FROM `my_dataset.customers` LIMIT 1000
+-- ❌ Wrong — the Keboola stage `in` becomes a third (project) segment
+SELECT * FROM `in`.`c-main`.`customers` LIMIT 1000
+SELECT * FROM `in.c-main.customers`     LIMIT 1000
 ```
 
 | Backend | Identifier quoting | Example |
 | --- | --- | --- |
 | Snowflake | Double quotes | `"in.c-main"."customers"` |
-| BigQuery | Backticks, per segment | `` `in_c_main`.`customers` `` |
+| BigQuery | Backticks, `dataset.table` (no stage prefix) | `` `in_c_main`.`customers` `` |
 
 **2. Reference the dataset by its mangled bucket name.** BigQuery dataset names cannot contain dots (`.`) or hyphens (`-`), so a Keboola bucket is not exposed under its literal bucket ID. The bucket ID maps to a dataset name by replacing every `.` and `-` with an underscore (`_`):
 
@@ -303,7 +305,7 @@ A few things worth noting on the BQ path that differ from Query Service:
 - **Rows arrive as objects keyed by column name**, not arrays + separate columns metadata. Iterate directly.
 - **Cell values are native types** (numbers, booleans, ISO strings for timestamps) — the string-cell coercion you do on the Query Service path is unnecessary here.
 - **No submit/poll/paginate.** The endpoint returns the full result in one synchronous response. For very large result sets, add a `LIMIT` on the SQL side; the response doesn't paginate.
-- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/query-service` client — you only adjust the SQL (backtick-per-segment quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
+- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/query-service` client — you only adjust the SQL (backtick quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
 
 ## Read-write direct access (Storage Access)
 

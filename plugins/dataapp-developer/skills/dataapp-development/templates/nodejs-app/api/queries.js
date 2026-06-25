@@ -4,8 +4,8 @@ import { runQuery } from './keboola-client.js';
  * Fully qualified table name. Copy from mcp__keboola__get_table's
  * `fully_qualified_name` field — the database prefix is required so
  * Data Catalog (cross-project linked) tables also resolve.
- * Snowflake quoting shown. On a BigQuery project use backticks per segment and the
- * mangled dataset name, e.g. `in_c_bucket`.`table_name` — see
+ * Snowflake quoting shown. On a BigQuery project use backticks and the mangled
+ * dataset name (no stage prefix), e.g. `in_c_bucket`.`table_name` — see
  * references/storage-access.md "BigQuery SQL dialect".
  */
 const TABLE_FQN = '"KBC_REGION_PROJID"."in.c-bucket"."table_name"';
