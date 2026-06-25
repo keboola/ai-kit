@@ -147,7 +147,7 @@ st.dataframe(df)
 
 **On Snowflake, always use the full fully-qualified name** — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Get the exact string from `mcp__keboola__get_table`'s `fully_qualified_name` field (or the equivalent `fqn` field returned by other MCP tools). The database prefix is required: without it, the session default database only sees in-project tables, so any Data Catalog (cross-project linked) tables fail to resolve. Data apps always run in the production branch, so the FQN you get from MCP against main is the right one for the deployed app.
 
-On **BigQuery** the identifier syntax and dataset names differ — backticks and mangled dataset names (no stage prefix). See "BigQuery SQL dialect" below before writing any query.
+On **BigQuery** the identifier syntax and dataset names differ — backticks, and the bucket's `in`/`out` stage stays inside the single mangled dataset name (e.g. `in_c_main`), never a separate segment. See "BigQuery SQL dialect" below before writing any query.
 
 ### Query Service SDK call shape
 
@@ -203,7 +203,7 @@ Two statement-level rules (verified on BigQuery, apply on both backends):
 
 Call `mcp__keboola__get_project_info` and read the `sql_dialect` field:
 - `"Snowflake"` → quote identifiers with double quotes (`"bucket"."table"`), as shown above.
-- `"BigQuery"` → quote identifiers with backticks and reference datasets by their mangled bucket name (no stage prefix). See "BigQuery SQL dialect" below.
+- `"BigQuery"` → quote identifiers with backticks and reference datasets by their mangled bucket name (the `in`/`out` stage stays inside that name, not a separate segment). See "BigQuery SQL dialect" below.
 
 Both dialects go through the **Query Service** (the preferred path). `sql_dialect` tells you which SQL syntax to generate, not which API to call. There are no other dialects today. If `sql_dialect` is missing or returns something else, stop and ask the user before guessing.
 
@@ -226,7 +226,7 @@ SELECT * FROM `in.c-main.customers`     LIMIT 1000
 | Backend | Identifier quoting | Example |
 | --- | --- | --- |
 | Snowflake | Double quotes | `"in.c-main"."customers"` |
-| BigQuery | Backticks, `dataset.table` (no stage prefix) | `` `in_c_main`.`customers` `` |
+| BigQuery | Backticks, `dataset.table` (stage stays in the dataset name) | `` `in_c_main`.`customers` `` |
 
 **2. Reference the dataset by its mangled bucket name.** BigQuery dataset names cannot contain dots (`.`) or hyphens (`-`), so a Keboola bucket is not exposed under its literal bucket ID. The bucket ID maps to a dataset name by replacing every `.` and `-` with an underscore (`_`):
 

@@ -27,8 +27,9 @@ _refreshing = False
 
 # EDIT THIS: pull SQL against your Keboola workspace.
 # Snowflake quoting shown. On a BigQuery project use backticks and the mangled
-# dataset name with no stage prefix (e.g. `in_c_bucket`.`table`) — see
-# references/storage-access.md "BigQuery SQL dialect".
+# dataset name, e.g. `in_c_bucket`.`table` — the `in` stage stays inside the
+# dataset name, not a separate segment. See references/storage-access.md
+# "BigQuery SQL dialect".
 SNOWFLAKE_PULL_SQL = """
     SELECT "id" AS id, "name" AS name, "value" AS value
     FROM "in.c-bucket"."table"
