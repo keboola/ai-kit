@@ -132,7 +132,7 @@ Without `enable_enterprise_modules=True` the license key is ignored and you fall
 
 For the full pattern -- which workspace gets mounted, how RO/RW differs across Snowflake and BigQuery, and which Keboola SDK to use -- see [storage-access.md](storage-access.md).
 
-Short version: by default a Streamlit data app gets a read-only workspace. On Snowflake projects you query it through the Query Service; on BigQuery projects you go through the Storage API. The runtime injects three environment variables that the SDKs consume directly: `KBC_URL`, `KBC_TOKEN`, and `WORKSPACE_ID`. In production these come from the platform; for local development you set them in `.streamlit/secrets.toml` and read them via the env-parity pattern below.
+Short version: by default a Streamlit data app gets a read-only workspace, which you query through the Query Service on both Snowflake and BigQuery projects (on BigQuery the SQL quoting and dataset names differ — see [storage-access.md](storage-access.md); a Storage API endpoint is also available there as an alternative). The runtime injects three environment variables that the SDKs consume directly: `KBC_URL`, `KBC_TOKEN`, and `WORKSPACE_ID`. In production these come from the platform; for local development you set them in `.streamlit/secrets.toml` and read them via the env-parity pattern below.
 
 ### Cache the Storage client across reruns
 
@@ -147,6 +147,7 @@ def get_storage() -> Storage:
     return Storage()
 
 storage = get_storage()
+# Snowflake quoting; on BigQuery use `out_c_data_app`.`mvc-crashes` — see storage-access.md
 rows = storage.select('SELECT * FROM "KBC_REGION_PROJID"."out.c-data-app"."mvc-crashes" LIMIT 100')
 st.dataframe(rows)
 ```

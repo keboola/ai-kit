@@ -42,6 +42,8 @@ mcp__keboola__query_data(
 → Confirms distinct values, row counts, NULL handling. Use to validate the filter SQL before embedding it in code.
 ```
 
+The query above uses Snowflake quoting. On a **BigQuery** project, write the same query with backticks per segment and the mangled dataset name (e.g. `` `out_c_analysis`.`usage_data` ``). See [storage-access.md](storage-access.md) §"BigQuery SQL dialect".
+
 Sample sequence:
 
 ```text
