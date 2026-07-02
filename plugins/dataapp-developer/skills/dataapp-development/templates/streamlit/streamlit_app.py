@@ -13,6 +13,10 @@ with open(_LOGO_PATH, "rb") as _f:
 # Fully qualified table name. Copy from mcp__keboola__get_table's
 # `fully_qualified_name` field — the database prefix is required so
 # Data Catalog (cross-project linked) tables also resolve.
+# Snowflake quoting shown. On a BigQuery project use backticks and the mangled
+# dataset name, e.g. `out_c_bucket`.`table_name` — the `out` stage stays inside
+# the dataset name, not a separate segment. See references/storage-access.md
+# "BigQuery SQL dialect".
 TABLE_FQN = '"KBC_REGION_PROJID"."out.c-bucket"."table_name"'
 
 st.set_page_config(page_title="Keboola App", layout="wide")

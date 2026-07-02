@@ -27,6 +27,10 @@ let lastError = null;
 let refreshPromise = null;
 
 // EDIT THIS: pull SQL against your Keboola workspace.
+// Snowflake quoting shown. On a BigQuery project use backticks and the mangled
+// dataset name, e.g. `in_c_bucket`.`table` — the `in` stage stays inside the
+// dataset name, not a separate segment. See references/storage-access.md
+// "BigQuery SQL dialect".
 const SNOWFLAKE_PULL_SQL = `
   SELECT
     "id" AS id,

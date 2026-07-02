@@ -10,7 +10,6 @@ Open Linear issues whose resolution will change what the skill teaches. Until th
 - **AI-3219 #1 — Branched workspaces for write-enabled apps.** Currently the only way to develop a RW app locally is a workspace with writes to production tables. Skill can't ship clean RW guidance until there's a path to a branched workspace.
 - **[PROF-114](https://linear.app/keboola/issue/PROF-114/) — Data Apps in development branches.** If accepted, drafts/previews of an app config bound to a dev branch become a real concept; skill needs to be rewritten for the new model. If rejected, document the production-only constraint more firmly.
 - **[AI-3218](https://linear.app/keboola/issue/AI-3218/) — `workspace.enabled=true` by default.** Removes the "if your app was created via UI you may need to flip workspace on first" caveat from SKILL.md and `deployment-paths.md`.
-- **BigQuery support for direct-grant Storage Access.** Currently "Snowflake only" — `storage-access.md` §Read-write direct access. Need a public roadmap signal or ETA.
 
 ## MCP server (`keboola/mcp-server`)
 
@@ -38,7 +37,6 @@ Sections we know are incomplete because the underlying pattern isn't firm yet. M
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
 - **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_streamlit_data_app` covers Python/JS.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/query-service` (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
-- **BigQuery RW path.** Add once BigQuery Storage Access lands (see Platform section above).
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
   - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.
   - `KAI_TOKEN` secret workaround for embedding Kai chat without manual user token entry. Belongs in `kai-integration.md` once the contract with `kai-client` is firm.
@@ -50,7 +48,7 @@ The skill has been validated end-to-end in three sessions, but not against every
 - **Python-only app (Flask + `uv`)** template path has never been live-tested.
 - **kbagent end-to-end** path — partial coverage (used in one debug session for `data-app deploy --wait`). Hasn't been driven from scratch (`data-app create` → secrets → first deploy → iteration → deploy).
 - **Kai integration** path — no live test against a real `kai-client` deployment.
-- **BigQuery project** — the BigQuery code paths in `storage-access.md` are documented but unverified against a real BQ project.
+- **BigQuery project** — identifier quoting, bucket→dataset mangling, read queries, the Query Service return shape (string cells, like Snowflake), and `INSERT` DML (via the Query Service: `rows_affected` populated, round-trip confirmed, statements share a session) are verified on a real BQ project (AJDA-2835, AJDA-2840). Still untested: a `direct-grant` write to a real Storage table from a *deployed* app (needs an app with a `direct-grant` output mapping; the SQL-execution layer itself is verified).
 
 ## Asset / link hygiene
 

@@ -5,9 +5,9 @@
 ## Contents
 - Getting the env vars for local development (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`, `BRANCH_ID`)
 - Preferred default for read-only apps: DuckDB-cached RO
-- Direct RO workspace queries (Query Service SDK + BigQuery legacy endpoint)
+- Direct RO workspace queries (Query Service SDK; BigQuery dialect + alternative Storage API endpoint)
 - Read-write direct access (Storage Access wrapper + SQL injection validation)
-- Query Service return shape — cells come back as strings
+- Query Service return shape — cells come back as strings (both backends)
 - Input mapping — discouraged for new apps
 - Data access management — PLACEHOLDER
 
@@ -93,16 +93,16 @@ For every other case → omit `BRANCH_ID` (or set it to `default`) and the app r
 For any read-only dashboarding app, this is the default. Don't query the warehouse on every render — cache once into an in-memory DuckDB and serve every dashboard query from local memory.
 
 Why this is the default:
-- Querying Snowflake on every render burns DWH credits. A dashboard with 5 KPIs viewed by 100 users per day is 500 queries/day for data that changed once. Multiply by every dashboard the customer runs.
-- A single pull from Snowflake into an in-memory DuckDB costs ONE query and serves every subsequent dashboard render at local-process speed (typically sub-millisecond).
+- Querying the warehouse on every render burns DWH credits. A dashboard with 5 KPIs viewed by 100 users per day is 500 queries/day for data that changed once. Multiply by every dashboard the customer runs.
+- A single pull from the warehouse into an in-memory DuckDB costs ONE query and serves every subsequent dashboard render at local-process speed (typically sub-millisecond).
 - Most dashboards tolerate minutes-old data; users do not notice a 30-minute refresh interval on aggregate KPIs.
 
-The pattern:
+The pattern (applies on both Snowflake and BigQuery):
 1. On app start: `init()` creates an in-memory DuckDB with the right table schemas.
-2. `refresh()` pulls from Snowflake once (via the RO workspace endpoint) and bulk-inserts the rows into DuckDB.
+2. `refresh()` pulls from the warehouse once (via the Query Service, which works on both backends) and bulk-inserts the rows into DuckDB.
 3. A background interval (`setInterval` in Node, `threading.Timer` in Python) re-runs `refresh()` every N minutes — typical interval 30-60 min.
 4. An admin endpoint (`POST /api/refresh`) forces a refresh on demand for operators who can't wait for the next interval.
-5. Every dashboard query runs against DuckDB, not Snowflake.
+5. Every dashboard query runs against DuckDB, not the warehouse.
 
 When NOT to use this default:
 - The app writes back via Storage Access — see "Read-write direct access" below. Every read must be current; no caching.
@@ -123,7 +123,7 @@ Two paths to call the workspace:
 - **MCP-injected `query_data`** — when `modify_streamlit_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
 - **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/query-service` (JS/TS). The SDK handles submit + poll + paginate; you call `executeQuery({ branchId, workspaceId, statements })` and get back columns + rows.
 
-**Do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That was an older Storage API workspace-query endpoint that survives in some docs and templates, but it returns `workspace.workspaceNotFound` 404s on most Snowflake projects today. Use the Query Service.
+**On Snowflake, do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That older Storage API workspace-query endpoint returns `workspace.workspaceNotFound` 404s on Snowflake projects — use the Query Service instead. On BigQuery it does work and is a valid alternative (see "Alternative: Storage API workspace-query endpoint" below), but default to the Query Service on both backends.
 
 Required env vars (Keboola auto-injects on deploy when Storage Access is enabled):
 - `KBC_URL`, `KBC_TOKEN` — auth + base host.
@@ -131,20 +131,23 @@ Required env vars (Keboola auto-injects on deploy when Storage Access is enabled
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
 
-Behind the scenes:
-- Snowflake projects → Query Service API (this is the path you'll be on >95% of the time).
-- BigQuery projects → Storage API workspace-query endpoint (Query Service does not yet support BigQuery — this is the legacy path's one remaining use case).
+The **Query Service is the preferred path on both backends** — Snowflake and BigQuery alike. The Query Service passes SQL through to the backend unchanged; it does **not** translate dialects, so the one thing that changes between backends is the SQL dialect you emit — identifier quoting and dataset naming. See "BigQuery SQL dialect" below.
 
-The MCP-injected `query_data` function signature is consistent across backends; the SDK is also consistent. The agent doesn't need to know which one it's hitting unless they're on the BigQuery path explicitly.
+BigQuery has an additional option — the Storage API workspace-query endpoint (see "Alternative: Storage API workspace-query endpoint" below). It works, but default to the Query Service.
+
+The MCP-injected `query_data` function signature is consistent across backends; the SDK is also consistent. The SQL you write is the only thing that differs by backend.
 
 Usage pattern in a Streamlit app (Snowflake project, Query Service path):
 
 ```python
+# Snowflake quoting. On a BigQuery project see "BigQuery SQL dialect" below.
 df = query_data('SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100')
 st.dataframe(df)
 ```
 
-**Always use the full fully-qualified name** — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Get the exact string from `mcp__keboola__get_table`'s `fully_qualified_name` field (or the equivalent `fqn` field returned by other MCP tools). The database prefix is required: without it, the session default database only sees in-project tables, so any Data Catalog (cross-project linked) tables fail to resolve. Data apps always run in the production branch, so the FQN you get from MCP against main is the right one for the deployed app.
+**On Snowflake, always use the full fully-qualified name** — `"<DATABASE>"."<BUCKET>"."<TABLE>"`. Get the exact string from `mcp__keboola__get_table`'s `fully_qualified_name` field (or the equivalent `fqn` field returned by other MCP tools). The database prefix is required: without it, the session default database only sees in-project tables, so any Data Catalog (cross-project linked) tables fail to resolve. Data apps always run in the production branch, so the FQN you get from MCP against main is the right one for the deployed app.
+
+On **BigQuery** the identifier syntax and dataset names differ — backticks, and the bucket's `in`/`out` stage stays inside the single mangled dataset name (e.g. `in_c_main`), never a separate segment. See "BigQuery SQL dialect" below before writing any query.
 
 ### Query Service SDK call shape
 
@@ -192,17 +195,59 @@ const rows = result.data.map((row) =>
 
 The SDKs handle the submit-job → poll-status → paginate-results dance internally. Don't hand-roll that — it's three endpoints, eventual consistency, and partial-page edge cases.
 
-### How to know which backend you're on
+Two statement-level rules (verified on BigQuery, apply on both backends):
+- **One SQL command per statement.** Each entry in `statements` must be a single command — a semicolon-joined script in one string is rejected (`ValidationError: Each statement must contain exactly one SQL command`). To run several commands, pass them as separate list items.
+- **Statements in one `execute_query` (Python) / `executeQuery` (JS) call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`).
+
+### How to know which SQL dialect to emit
 
 Call `mcp__keboola__get_project_info` and read the `sql_dialect` field:
-- `"Snowflake"` → use the **Query Service** as shown above. This is the default path for >95% of projects.
-- `"BigQuery"` → use the **Storage API workspace-query endpoint** shown below. Query Service does not support BigQuery yet.
+- `"Snowflake"` → quote identifiers with double quotes (`"bucket"."table"`), as shown above.
+- `"BigQuery"` → quote identifiers with backticks and reference datasets by their mangled bucket name (the `in`/`out` stage stays inside that name, not a separate segment). See "BigQuery SQL dialect" below.
 
-There are no other dialects today. If `sql_dialect` is missing or returns something else, stop and ask the user before guessing.
+Both dialects go through the **Query Service** (the preferred path). `sql_dialect` tells you which SQL syntax to generate, not which API to call. There are no other dialects today. If `sql_dialect` is missing or returns something else, stop and ask the user before guessing.
 
-### BigQuery path — Storage API workspace-query endpoint
+### BigQuery SQL dialect — quoting and dataset names
 
-For BigQuery projects, the Query Service warnings above don't apply — you DO post to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<workspace>/query`. That endpoint is the only way to query a BigQuery workspace today. The call is synchronous (no submit/poll/paginate) and returns rows as dicts with native types — no string coercion needed.
+On BigQuery projects, every SQL example on this page that uses Snowflake double-quote quoting (`"bucket"."table"`) has to be rewritten. Two rules cover it. They apply to **both** the read queries here and the read-write Storage Access path below — the Query Service passes SQL through unchanged, so your app is responsible for emitting the correct syntax for the project's backend.
+
+**1. Quote identifiers with backticks, not double quotes.** BigQuery uses backticks (`` ` ``) where Snowflake uses double quotes. A table reference is **two parts** — `dataset.table` — and you may write it either as `` `dataset`.`table` `` or as `` `dataset.table` `` (both are valid; quoting each segment separately is not required). The real trap is **adding a third leading segment**: do not prepend the Keboola stage (`in`/`out`) or a Snowflake-style "database", and do not split the dotted bucket ID into separate backticked parts. BigQuery reads a three-part name as `project.dataset.table` and tries to resolve the first segment as a Google Cloud project — you'll see `The project <stage> has not enabled BigQuery`. (Verified against a live BigQuery project.)
+
+```sql
+-- ✅ Correct — dataset.table (two parts); either quoting works
+SELECT * FROM `in_c_main`.`customers` LIMIT 1000
+SELECT * FROM `in_c_main.customers`  LIMIT 1000
+
+-- ❌ Wrong — the Keboola stage `in` becomes a third (project) segment
+SELECT * FROM `in`.`c-main`.`customers` LIMIT 1000
+SELECT * FROM `in.c-main.customers`     LIMIT 1000
+```
+
+| Backend | Identifier quoting | Example |
+| --- | --- | --- |
+| Snowflake | Double quotes, full 3-part FQN | `"KBC_REGION_PROJID"."in.c-main"."customers"` |
+| BigQuery | Backticks, 2-part `dataset.table` (stage stays in the dataset name) | `` `in_c_main`.`customers` `` |
+
+**2. Reference the dataset by its mangled bucket name.** BigQuery dataset names cannot contain dots (`.`) or hyphens (`-`), so a Keboola bucket is not exposed under its literal bucket ID. The bucket ID maps to a dataset name by replacing every `.` and `-` with an underscore (`_`):
+
+| Keboola bucket ID | BigQuery dataset name |
+| --- | --- |
+| `in.c-main` | `in_c_main` |
+| `out.c-Test-Data---Customers-Products-Orders` | `out_c_Test_Data___Customers_Products_Orders` |
+
+So a table `customers` in bucket `out.c-Test-Data---Customers-Products-Orders` is referenced as:
+
+```sql
+SELECT * FROM `out_c_Test_Data___Customers_Products_Orders`.`customers` LIMIT 100
+```
+
+Only the **dataset** (bucket) name is mangled — the **table** name keeps its original form. A table named `cashier-data` stays `cashier-data`; it just needs backticks because of the hyphen.
+
+**Find the exact names without deriving them by hand.** Open the table in **Storage** → **Overview** tab; it shows the **Dataset Name** (the bucket's BigQuery dataset, e.g. `in_c_shared_bucket`) and the **Table Name** to use in your queries. If the app needs to discover names dynamically at runtime, query `INFORMATION_SCHEMA.SCHEMATA` to list the datasets the workspace can see. (`mcp__keboola__get_table`'s `fully_qualified_name`/`fqn` is Snowflake-style — on BigQuery, prefer Storage → Overview or translate by the two rules above.)
+
+### Alternative: Storage API workspace-query endpoint (BigQuery)
+
+For BigQuery projects there's an alternative to the Query Service: post to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<workspace>/query`. **Prefer the Query Service** (above) for new apps; this endpoint is here as another option — e.g. when you want a synchronous call with native-typed rows, or you're maintaining an app already built on it. The call is synchronous (no submit/poll/paginate) and returns rows as dicts with native types — no string coercion needed. (On Snowflake projects this endpoint returns 404 — see the warning above.)
 
 Required env vars: `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (can be the string `"default"` here — the Storage API accepts it, unlike Query Service).
 
@@ -260,11 +305,13 @@ A few things worth noting on the BQ path that differ from Query Service:
 - **Rows arrive as objects keyed by column name**, not arrays + separate columns metadata. Iterate directly.
 - **Cell values are native types** (numbers, booleans, ISO strings for timestamps) — the string-cell coercion you do on the Query Service path is unnecessary here.
 - **No submit/poll/paginate.** The endpoint returns the full result in one synchronous response. For very large result sets, add a `LIMIT` on the SQL side; the response doesn't paginate.
-- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for Snowflake / Query Service.** If you start from a template on a BigQuery project, you'll need to swap `data_loader.py` / `keboola-client.js` to use the pattern above and remove the `keboola-query-service` / `@keboola/query-service` dependency.
+- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/query-service` client — you only adjust the SQL (backtick quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
 
 ## Read-write direct access (Storage Access)
 
-Real-time read AND write to Keboola Storage. **Snowflake only.** BigQuery support is planned. No caching — every read must reflect the latest state.
+Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state.
+
+On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
 Setup:
 - Project Settings → Features → enable "Storage Access".
@@ -399,6 +446,8 @@ const rows = await select<{ id: string; name: string }>(
 await execute(`INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES ('abc-123','Click')`);
 ```
 
+These examples use Snowflake quoting. On a **BigQuery** project the same `select()` / `execute()` calls work unchanged — only the SQL differs, e.g. `` SELECT `id`, `name` FROM `in_c_main`.`customers` LIMIT 100 ``. See "BigQuery SQL dialect" above.
+
 ### SQL injection — validate every interpolated value
 
 The Query Service accepts raw SQL and does **NOT** support parameterized queries / bind variables. Every value the app interpolates into SQL must be validated and escaped explicitly. Concentrate validation in one module so route handlers can't accidentally bypass it.
@@ -485,7 +534,9 @@ First-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers are in deve
 
 ## Query Service return shape — cells come back as strings
 
-Applies to the Snowflake Query Service path — both direct RO workspace queries to the Query Service and Storage Access reads/writes via `keboola-query-service` / `@keboola/query-service`. BigQuery responses (via the Storage API workspace endpoint) return native types and don't need this conversion.
+Applies to the Query Service path on **both Snowflake and BigQuery** — direct RO workspace queries and Storage Access reads/writes via `keboola-query-service` / `@keboola/query-service`. On either backend, every cell comes back as a **string** regardless of SQL type. Verified on BigQuery: `INT64 42` → `"42"`, `FLOAT64 3.14` → `"3.14"`, `BOOL TRUE` → `"true"`, `NUMERIC 99.95` → `"99.95"`, `TIMESTAMP` → a string, and SQL `NULL` → `None`/`null`. The only native-typed path is the Storage API workspace endpoint (the BigQuery alternative above) — that's why its examples skip the coercion below.
+
+`result.columns` carries the declared type so you know what to coerce, but the type names are driver-dependent: Snowflake reports lowercase internal names (`fixed`, `real`, `text`, `timestamp_ntz`), BigQuery reports uppercase (`INTEGER`, `FLOAT`, `NUMERIC`, `BOOLEAN`, `DATE`, `TIMESTAMP`).
 
 The shape:
 
@@ -505,7 +556,7 @@ df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
 
 The DataFrame's dtype stays `object` (string) until you explicitly convert. Convert at the boundary — once, right after the query — not inside every chart.
 
-**JavaScript (when using `@keboola/query-service` directly):** zip `result.data` with `result.columns` to produce objects, and coerce numeric columns. Inspect the actual `column.type` values returned by the API for your project — they're driver-dependent (lowercase internal Snowflake names like `"text"`, `"fixed"`, `"real"`, `"timestamp_ntz"` have been observed). Don't hand the raw `result.data` straight to the UI layer.
+**JavaScript (when using `@keboola/query-service` directly):** zip `result.data` with `result.columns` to produce objects, and coerce numeric columns. Inspect the actual `column.type` values returned by the API for your project — they're driver-dependent (Snowflake reports lowercase internal names like `"text"`, `"fixed"`, `"real"`, `"timestamp_ntz"`; BigQuery reports uppercase `"INTEGER"`, `"FLOAT"`, `"NUMERIC"`, `"BOOLEAN"`, `"DATE"`, `"TIMESTAMP"`). Don't hand the raw `result.data` straight to the UI layer.
 
 ```javascript
 function toObjects(result) {
