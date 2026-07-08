@@ -70,6 +70,7 @@ A toolkit for building and deploying data apps to Keboola — Streamlit developm
 - 🤖 **Kai Integration**: Optional natural-language assistant via `kai-client`
 - 📦 **Templates**: 5 runnable starters (Streamlit, Python-only, Node-only, Python+Node, DuckDB cache)
 - 🔌 **MCP Servers**: Keboola (remote HTTP) and Playwright (browser automation)
+- 🔌 **MCP hosting**: host any MCP server (Keboola MCP as the worked example) as a single-tenant data app — bearer + OAuth-shape auth, deploy via kbagent / keboola-git / hosted MCP tools
 
 **[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
 

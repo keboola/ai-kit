@@ -39,6 +39,18 @@ Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataa
 - Debug deployment or runtime issues
 - Migrate between app types
 
+### mcp-data-app
+
+**Activation:** Automatic when hosting an MCP server as a private, single-tenant Keboola data app.
+
+**What it covers:**
+
+- Hosting any streamable-HTTP / FastMCP server as a dedicated remote MCP endpoint — Keboola MCP is the built-in worked example
+- Two client-auth patterns — static bearer and OAuth-shape (claude.ai, Kai)
+- Four deploy drivers — kbagent, keboola-git managed repos, hosted MCP tools (incl. Kai), manual Keboola UI fallback
+
+See `skills/mcp-data-app/SKILL.md` for the full workflow.
+
 ## MCP Servers
 
 | Server | Type | Purpose |
