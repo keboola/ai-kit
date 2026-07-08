@@ -65,16 +65,21 @@ plugins/dataapp-developer/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── skills/
-│   └── dataapp-development/
+│   ├── dataapp-development/
+│   │   ├── SKILL.md          # router
+│   │   ├── references/       # 14 topical references
+│   │   └── templates/        # 5 runnable starter templates
+│   └── mcp-data-app/
 │       ├── SKILL.md          # router
-│       ├── references/       # 14 topical references
-│       └── templates/        # 5 runnable starter templates
+│       ├── reference/        # 4 deployment and auth references
+│       ├── scripts/          # scaffold.sh
+│       └── template/         # MCP server starter template
 └── README.md
 ```
 
 ## Version
 
-1.3.0
+1.4.0
 
 ## Maintainer
 
