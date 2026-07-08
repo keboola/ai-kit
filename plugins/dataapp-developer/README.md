@@ -1,6 +1,6 @@
 # Data App Developer Plugin
 
-Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataapp-development`, that covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 14 topical references and 5 runnable templates.
+Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`, which covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 14 topical references and 5 runnable templates, plus `semantic-layer-usage` for grounding apps and queries in a semantic model without mistaking logical names for physical Storage identifiers.
 
 ## Available Skills
 
@@ -39,6 +39,17 @@ Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataa
 - Debug deployment or runtime issues
 - Migrate between app types
 
+### semantic-layer-usage
+
+**Activation:** Automatic when building an app, query, report, or transformation from a Keboola semantic layer / semantic model, or right after a semantic-context tool returns.
+
+**What it covers:**
+
+- The semantic layer is a *logical* model — its entity/metric/field names are not guaranteed to equal physical bucket/table/column identifiers
+- The mandatory verification loop before writing any SQL: read the semantic definition, resolve each logical object to its physical Storage identifier (`get_buckets` → `get_tables` → `get_table`), confirm exact column names, and probe with a `query_data` `SELECT … LIMIT 1`
+- Using the fully-qualified physical identifier exactly as returned by `get_table` (per-backend FQN quoting)
+- A worked example of the failure it prevents (semantic field name ≠ physical column in `out.c-nyc-aggregations-duckdb.rpt_*`)
+
 ## MCP Servers
 
 | Server | Type | Purpose |
@@ -53,16 +64,18 @@ plugins/dataapp-developer/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── skills/
-│   └── dataapp-development/
-│       ├── SKILL.md          # router
-│       ├── references/       # 14 topical references
-│       └── templates/        # 5 runnable starter templates
+│   ├── dataapp-development/
+│   │   ├── SKILL.md          # router
+│   │   ├── references/       # 14 topical references
+│   │   └── templates/        # 5 runnable starter templates
+│   └── semantic-layer-usage/
+│       └── SKILL.md          # logical→physical resolution before querying
 └── README.md
 ```
 
 ## Version
 
-1.3.0
+1.4.0
 
 ## Maintainer
 
