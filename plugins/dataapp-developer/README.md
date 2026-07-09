@@ -45,10 +45,9 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 
 **What it covers:**
 
-- The semantic layer is a *logical* model — its entity/metric/field names are not guaranteed to equal physical bucket/table/column identifiers
-- The mandatory verification loop before writing any SQL: read the semantic definition, resolve each logical object to its physical Storage identifier (`get_buckets` → `get_tables` → `get_table`), confirm exact column names, and probe with a `query_data` `SELECT … LIMIT 1`
-- Using the fully-qualified physical identifier exactly as returned by `get_table` (per-backend FQN quoting)
-- A worked example of the failure it prevents (semantic field name ≠ physical column in `out.c-nyc-aggregations-duckdb.rpt_*`)
+- The semantic layer already carries the physical mapping (`semantic-dataset` `tableId`/`fqn`, `semantic-metric` SQL) — the business-facing display names are labels, not physical columns
+- The one rule the MCP system-prompt workflow doesn't spell out: confirm the real columns via Keboola MCP (e.g. `get_table` on the dataset's `tableId`) and use the metric SQL verbatim before embedding any query
+- A worked example of the failure it prevents (dashboard built from semantic display names ≠ physical columns in `out.c-nyc-aggregations-duckdb.rpt_*`)
 
 ## MCP Servers
 
@@ -69,7 +68,7 @@ plugins/dataapp-developer/
 │   │   ├── references/       # 14 topical references
 │   │   └── templates/        # 5 runnable starter templates
 │   └── semantic-layer-usage/
-│       └── SKILL.md          # logical→physical resolution before querying
+│       └── SKILL.md          # confirm physical columns before querying
 └── README.md
 ```
 
