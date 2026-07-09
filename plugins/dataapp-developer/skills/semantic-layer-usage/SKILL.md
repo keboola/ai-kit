@@ -23,25 +23,35 @@ blank or error screen.
 Do this for **every** logical object you plan to touch. Do not skip it because
 the names "look obvious".
 
-1. **Read the semantic definition.** `mcp__keboola__search_semantic_context` to
-   find the relevant metric/entity/dataset, then `mcp__keboola__get_semantic_context`
-   to read its SQL, the dataset's identifier, and join paths. Use the metric's
-   calculation **verbatim** — don't reinvent it.
+**Step 1 applies only when a semantic layer/model is present. Steps 2–4 are the
+floor and always apply** — whether you started from a semantic model, a bare
+Storage table, or a user's business-language request. If no semantic model
+exists (or none matches the request), say so and go straight to steps 2–4
+against the raw tables.
+
+1. **(If a semantic model is available) Read the semantic definition.**
+   `mcp__keboola__search_semantic_context` to find the relevant
+   metric/entity/dataset, then `mcp__keboola__get_semantic_context` to read its
+   SQL, the dataset's identifier, and join paths. Use the metric's calculation
+   **verbatim** — don't reinvent it. If nothing relevant is returned, treat the
+   source as raw Storage and continue with steps 2–4.
 2. **Resolve to physical Storage identifiers.** Map each logical dataset/entity
-   to a real bucket + table with `mcp__keboola__get_buckets` → `mcp__keboola__get_tables`,
-   then `mcp__keboola__get_table(table_id=...)` for the chosen table. `get_table`
+   (or the user's described table) to a real bucket + table with
+   `mcp__keboola__get_buckets` → `mcp__keboola__get_tables`, then
+   `mcp__keboola__get_table(table_id=...)` for the chosen table. `get_table`
    returns the **exact column names** (with case), data types, and the
    `fully_qualified_name` / `fqn` to use in queries.
-3. **Confirm column names.** Match every field the semantic definition references
-   to a real column from `get_table`. If a semantic field has no obvious physical
-   column, it is derived — read the semantic SQL to see how it's computed; do not
-   guess a column name.
+3. **Confirm column names.** Match every field you plan to select to a real
+   column from `get_table`. If a semantic field has no obvious physical column,
+   it is derived — read the semantic SQL to see how it's computed; do not guess
+   a column name.
 4. **Probe before committing.** Run a cheap `mcp__keboola__query_data` probe —
    `SELECT <cols> FROM <fqn> LIMIT 1` — against the resolved physical identifiers
    to prove the table, columns, and quoting are correct **before** you write them
    into app, transformation, or report code.
 
-Only after all four steps write the real query. If the project exposes
+Write the real query only after the applicable steps pass. When you did start
+from a semantic model and the project exposes
 `mcp__keboola__validate_semantic_query`, run it too — it catches mismatches
 against the semantic model before the SQL is embedded.
 
