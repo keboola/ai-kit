@@ -15,7 +15,7 @@ Open Linear issues whose resolution will change what the skill teaches. Until th
 
 Gaps that force the skill to recommend kbagent or filesystem paths for things MCP should cover.
 
-- **`modify_streamlit_data_app` is Streamlit-only.** No Python/JS app creation or modification via MCP. Blocks Path A for dashboarding apps. See `references/python-js-apps.md` §"Deployment via MCP — PLACEHOLDER".
+- **Python/JS app deployment via MCP — DONE.** `modify_python_js_data_app` + `deploy_data_app` now create/modify/deploy Python/JS apps through the managed-git draft→promote flow (`create_python_js_data_app_git_credential`, `delete_python_js_data_app_draft`). Documented in `references/python-js-apps.md` §Deployment via MCP. `modify_streamlit_data_app` remains Streamlit-only, but Python/JS is no longer MCP-blocked.
 - **No Git deployment mode via MCP.** `modify_streamlit_data_app` only supports Code mode. Git-mode apps (the recommended choice for multi-file projects) require the Configuration API or kbagent.
 - **No log-reading tool beyond the 20-line tail.** `get_data_apps(...).deployment_info.logs` returns only the most recent lines. For real debugging the agent has to direct the user to the Keboola UI Terminal Log tab.
 - **No workspace management.** Cannot create / grant / list / delete workspaces via MCP. Local-dev workspace setup falls back to UI or kbagent.
@@ -35,7 +35,7 @@ Smaller gaps; kbagent already covers most of the data-app lifecycle.
 Sections we know are incomplete because the underlying pattern isn't firm yet. Mostly tracked by Linear above, but listed here as the writing tasks.
 
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
-- **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_streamlit_data_app` covers Python/JS.
+- **`python-js-apps.md` §Deployment via MCP — DONE.** Managed-git draft→promote flow is shipped and documented; the former placeholder is now the real reference section.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/query-service` (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
   - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.
