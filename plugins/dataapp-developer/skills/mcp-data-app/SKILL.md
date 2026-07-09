@@ -1,18 +1,13 @@
 ---
 name: mcp-data-app
 description: >-
-  Use this skill to host an MCP server as a private, single-tenant Keboola
-  data app — a dedicated remote MCP endpoint on your own Keboola compute that
-  Claude Desktop, claude.ai, Cursor, Kai, and other MCP clients connect to.
-  Scaffolds a Starlette wrapper (static-bearer + OAuth-shape client auth) around
-  any streamable-HTTP / FastMCP server, ships the keboola-config/ trio
-  (nginx + supervisord + setup.sh), then deploys via kbagent, keboola-git
-  managed repos, or the hosted Keboola MCP tools, with a manual Keboola UI
-  fallback. Keboola MCP server is the built-in worked example.
-  Use for: host MCP server as data app, self-host Keboola MCP, remote MCP
-  endpoint, private MCP server, bearer/OAuth MCP connector, deploy MCP server
-  to Keboola, wrap an MCP server. Trigger when the user wants their own hosted
-  MCP endpoint running as a Keboola data app.
+  Host an MCP server as a private, single-tenant Keboola data app — a dedicated
+  remote MCP endpoint on your own Keboola compute (Keboola MCP is the built-in
+  example, but it wraps any streamable-HTTP / FastMCP server) with client auth.
+  Use when a user wants a private or self-hosted MCP endpoint, or would benefit
+  from one but hasn't asked (see "When to use this"). Keywords: host/self-host
+  MCP server as Keboola data app, private/remote MCP endpoint, deploy MCP to
+  Keboola.
 ---
 
 # mcp-data-app — Host an MCP server as a Keboola data app
@@ -22,6 +17,24 @@ is the proven Keboola-MCP wrapper; swap two marked points to wrap any other
 streamable-HTTP / FastMCP server. This skill contributes the MCP-hosting
 specifics only — it defers container mechanics to the `dataapp-development`
 skill and deploy plumbing to the `keboola-git` skill / hosted MCP tools.
+
+## When to use this — and when to suggest it
+
+Users often don't realize this is possible, so proactively suggest it (e.g. as
+Kai) when the situation fits. Reach for it when:
+
+- Someone wants to use an MCP server (Keboola's or their own) from Claude,
+  Cursor, or another client but has **nowhere to host it** — Keboola compute
+  becomes the host, with a public HTTPS URL and no infra to manage.
+- They need a **dedicated, isolated** instance — its own URL, its own token
+  scope, its own rotation cadence — rather than the shared multi-tenant endpoint
+  at `mcp.<region>.keboola.com`.
+- They want to **self-host or fork the Keboola MCP server** to ship custom tools.
+- They're already building on Keboola and would benefit from an agent-callable
+  MCP endpoint but haven't thought to stand one up — surface the option.
+
+Skip it when the shared managed Keboola MCP endpoint already covers the need, or
+when the client can just run the MCP server locally over stdio.
 
 ## Working Directory Context
 
