@@ -1,6 +1,6 @@
 # Data App Developer Plugin
 
-Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataapp-development`, that covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 14 topical references and 5 runnable templates.
+Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`, which covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 14 topical references and 5 runnable templates, plus `semantic-layer-usage` for grounding apps and queries in a semantic model without mistaking logical names for physical Storage identifiers.
 
 ## Available Skills
 
@@ -51,6 +51,16 @@ Toolkit for building and deploying Keboola Apps. Provides a single skill, `dataa
 
 See `skills/mcp-data-app/SKILL.md` for the full workflow.
 
+### semantic-layer-usage
+
+**Activation:** Automatic when building an app, query, report, or transformation from a Keboola semantic layer / semantic model, or right after a semantic-context tool returns.
+
+**What it covers:**
+
+- The semantic layer already carries the physical mapping (`semantic-dataset` `tableId`/`fqn`, `semantic-metric` SQL) — the business-facing display names are labels, not physical columns
+- The one rule the MCP system-prompt workflow doesn't spell out: confirm the real columns via Keboola MCP (e.g. `get_table` on the dataset's `tableId`) and use the metric SQL verbatim before embedding any query
+- A worked example of the failure it prevents (dashboard built from semantic display names ≠ physical columns in `out.c-nyc-aggregations-duckdb.rpt_*`)
+
 ## MCP Servers
 
 | Server | Type | Purpose |
@@ -69,17 +79,19 @@ plugins/dataapp-developer/
 │   │   ├── SKILL.md          # router
 │   │   ├── references/       # 14 topical references
 │   │   └── templates/        # 5 runnable starter templates
-│   └── mcp-data-app/
-│       ├── SKILL.md          # router
-│       ├── reference/        # 4 deployment and auth references
-│       ├── scripts/          # scaffold.sh
-│       └── template/         # MCP server starter template
+│   ├── mcp-data-app/
+│   │   ├── SKILL.md          # router
+│   │   ├── reference/        # 4 deployment and auth references
+│   │   ├── scripts/          # scaffold.sh
+│   │   └── template/         # MCP server starter template
+│   └── semantic-layer-usage/
+│       └── SKILL.md          # confirm physical columns before querying
 └── README.md
 ```
 
 ## Version
 
-1.4.0
+1.5.0
 
 ## Maintainer
 
