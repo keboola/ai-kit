@@ -46,7 +46,7 @@ Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoin
 | Frontend bundler | No | No | Yes |
 | Backend language | Python | Node | Python + Node |
 | Deploy mode | Code or Git | Git only | Git only |
-| MCP support today | Yes (`modify_streamlit_data_app`) | Yes (`modify_python_js_data_app`, managed-git draft→promote) | Yes (`modify_python_js_data_app`, managed-git draft→promote) |
+| MCP support today | Yes (`modify_streamlit_data_app`) | Yes (`modify_python_js_data_app`, managed-git draft→promote — client runs git) | Yes (`modify_python_js_data_app`, managed-git draft→promote — client runs git) |
 | Cold-start time | Fast | Fastest | Slowest |
 
 ## Migration notes

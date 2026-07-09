@@ -293,7 +293,7 @@ Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh
 
 ## Deployment via MCP (managed-git draft→promote)
 
-The Keboola MCP server deploys Python/JS data apps through a **managed-git draft→promote** flow: Keboola provisions and owns the git repo for the app, so the customer doesn't have to supply their own GitHub/GitLab. This is the path MCP clients (including Kai) use — no kbagent required.
+The Keboola MCP server orchestrates Python/JS data-app deployment through a **managed-git draft→promote** flow: Keboola provisions and owns the git repo for the app, so the customer doesn't have to supply their own GitHub/GitLab. MCP manages the configs and triggers the deploys, but the client runs the git that moves the source (see below). This is the path MCP clients (including Kai) use — no kbagent required.
 
 **MCP never runs git for you.** The tools mint authenticated clone URLs and manage configs/deploys; all git work (clone, branch, commit, push, merge, branch-delete) is yours. This flow therefore needs a filesystem with git available.
 

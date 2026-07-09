@@ -73,7 +73,7 @@ For new apps, pass `configuration_id=""`. For updates, pass the existing configu
 
 For `authentication_type` defaults and the OIDC-downgrade footgun on updates, see [authentication.md](authentication.md) §MCP defaults.
 
-**Limitations:** On a truly filesystem-less client, Streamlit type only. The MCP server *does* deploy Python/JS apps via a managed-git draft→promote flow (`modify_python_js_data_app` + `deploy_data_app`), but that flow requires the agent to run git itself (clone/commit/push — MCP never runs git for you), so it needs a filesystem and belongs to Path B rather than Path A. No Streamlit Git deployment mode via MCP (Code mode only).
+**Limitations:** On a truly filesystem-less client, Streamlit type only. Python/JS apps use the managed-git draft→promote flow (`modify_python_js_data_app` + `deploy_data_app`), where MCP manages the configs, triggers the deploys, and hands you an authenticated `git_clone_url` — but the client, not MCP, runs the git that moves the source (clone/commit/push/merge), so that flow needs a filesystem and belongs to Path B. Streamlit apps have no managed git repo, so there is no Streamlit git-deploy mode via MCP.
 
 **Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_streamlit_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
 
