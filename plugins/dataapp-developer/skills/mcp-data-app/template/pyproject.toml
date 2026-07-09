@@ -1,0 +1,22 @@
+[project]
+name = "mcp-data-app"
+version = "0.1.0"
+description = "Host an MCP server as a private, single-tenant Keboola data app with bearer + OAuth-shape auth."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Keboola", email = "devel@keboola.com" }]
+dependencies = [
+    # ── SWAP POINT (deps): wrapping a different MCP server? Replace the
+    # keboola-mcp-server line with your server's package (and pin a tag/SHA).
+    # Keep fastmcp/mcp/starlette/uvicorn — the wrapper needs them.
+    "keboola-mcp-server @ git+https://github.com/keboola/keboola-mcp-server.git@v1.73.1",
+    "fastmcp>=3.2.0",
+    "mcp>=1.27.0",
+    "starlette>=0.46.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

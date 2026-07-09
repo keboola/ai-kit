@@ -39,6 +39,18 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 - Debug deployment or runtime issues
 - Migrate between app types
 
+### mcp-data-app
+
+**Activation:** Automatic when hosting an MCP server as a private, single-tenant Keboola data app.
+
+**What it covers:**
+
+- Hosting any streamable-HTTP / FastMCP server as a dedicated remote MCP endpoint — Keboola MCP is the built-in worked example
+- Two client-auth patterns — static bearer and OAuth-shape (claude.ai, Kai)
+- Four deploy drivers — kbagent, keboola-git managed repos, hosted MCP tools (incl. Kai), manual Keboola UI fallback
+
+See `skills/mcp-data-app/SKILL.md` for the full workflow.
+
 ### semantic-layer-usage
 
 **Activation:** Automatic when building an app, query, report, or transformation from a Keboola semantic layer / semantic model, or right after a semantic-context tool returns.
@@ -67,6 +79,11 @@ plugins/dataapp-developer/
 │   │   ├── SKILL.md          # router
 │   │   ├── references/       # 14 topical references
 │   │   └── templates/        # 5 runnable starter templates
+│   ├── mcp-data-app/
+│   │   ├── SKILL.md          # router
+│   │   ├── reference/        # 4 deployment and auth references
+│   │   ├── scripts/          # scaffold.sh
+│   │   └── template/         # MCP server starter template
 │   └── semantic-layer-usage/
 │       └── SKILL.md          # confirm physical columns before querying
 └── README.md
@@ -74,7 +91,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.4.0
+1.5.0
 
 ## Maintainer
 

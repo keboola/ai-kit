@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.eggs/
+build/
+dist/
+
+# uv
+.uv-cache/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
