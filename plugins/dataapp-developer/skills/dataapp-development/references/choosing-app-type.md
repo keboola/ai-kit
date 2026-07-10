@@ -6,6 +6,8 @@
 
 There are three viable shapes for a Keboola App. Pick the lowest one in this list that meets your needs — simpler is better.
 
+> **Scope — standalone use.** This ranking (Streamlit as the simplest #1 choice) is for standalone Claude Code / kbagent use. **In Kai the default is different:** Kai defaults to a React / full-stack (Python/JS) app and its system prompt forbids Streamlit unless the user explicitly asks for it. Don't inherit the Streamlit-first ordering below when running inside Kai — start from the React/full-stack shape and only reach for Streamlit on an explicit user request.
+
 ### 1. Streamlit (Python)
 
 **Pick when:**
