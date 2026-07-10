@@ -13,6 +13,8 @@
 
 ## Getting the env vars for local development
 
+> **Scope — standalone local development.** The `.env.local` / `.streamlit/secrets.toml` credential workflow in this section is for standalone Claude Code / kbagent local development. **In Kai it does not apply:** Kai injects credentials at runtime via the `request_credentials` MCP tool — the agent does NOT hand-place `KBC_TOKEN` into a `.env.local` file. (Note also that unlike the local-dev rule below, Kai's component-config secrets DO use `#`-encryption.) Inside Kai, follow the `request_credentials` flow instead of the steps here.
+
 Production: Keboola auto-injects these as env vars from `dataApp.secrets` when the app deploys. Local dev: the **user** sets them yourself, once per machine, from values in the Keboola project UI.
 
 The Python/JS templates load local env vars from `.env` or `.env.local` (both supported; `.env.local` overrides `.env` if both exist). Pick whichever fits your project. Both filenames must be gitignored. The Streamlit template uses `.streamlit/secrets.toml` instead, matching the Streamlit convention.
