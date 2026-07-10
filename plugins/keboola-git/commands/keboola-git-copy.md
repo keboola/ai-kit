@@ -45,7 +45,7 @@ that drives it.
      untrack + gitignore the build dir and `node_modules/`; set `keboola-config/setup.sh` to
      `cd frontend && npm ci && npm run build`, then copy `static` + `public` to wherever the build
      put `server.js` (`find .next/standalone -name server.js` — single-package vs monorepo differ).
-     Commit the source-only tree. (See the `dataapp-developer:dataapp-deployment` skill for setup.sh wiring.)
+     Commit the source-only tree. (See the `dataapp-developer:dataapp-development` skill for setup.sh wiring.)
    - Re-run the working-tree guard; it must return nothing.
 5. **History guard (CRITICAL):** a build committed in an earlier commit still 413s — `git push`
    sends all reachable history, the `find` guard only sees the working tree. Check:

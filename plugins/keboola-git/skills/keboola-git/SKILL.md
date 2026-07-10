@@ -12,7 +12,7 @@ Keboola python-js data apps can host their source in a **Keboola-managed Git rep
 
 **Use this for:** reading or writing a managed Forgejo repo for a python-js data app; moving an app's source between GitHub and Keboola git; pushing source and deploying from the managed repo.
 
-**Not for:** authoring the contents of `keboola-config/` (nginx, supervisord, setup.sh) — that's the `dataapp-developer:dataapp-deployment` skill. Not for Streamlit app development — that's `dataapp-developer:dataapp-dev`. This skill assumes the app source already exists somewhere; it handles the *git plumbing* to get it into Keboola and deployed.
+**Not for:** authoring the contents of `keboola-config/` (nginx, supervisord, setup.sh) — that's the `dataapp-developer:dataapp-development` skill. Not for Streamlit app development — that's `dataapp-developer:dataapp-development`. This skill assumes the app source already exists somewhere; it handles the *git plumbing* to get it into Keboola and deployed.
 
 ## Working Directory Context
 
@@ -106,7 +106,7 @@ Forgejo rejects pushes over **~15MB** with **HTTP 413**. A single file over the 
    #   cp -r .next/static .next/standalone/frontend/.next/static
    #   cp -r public       .next/standalone/frontend/public
    ```
-   For the exact setup.sh / nginx / supervisord wiring, cross-reference the **`dataapp-developer:dataapp-deployment`** skill.
+   For the exact setup.sh / nginx / supervisord wiring, cross-reference the **`dataapp-developer:dataapp-development`** skill.
 4. Commit the source-only tree, then re-run the size guard (no tracked file >15MB).
 
 5. **Check git *history*, not just the working tree (CRITICAL).** `git push` sends every
