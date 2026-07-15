@@ -12,119 +12,79 @@ Alternatively, install via the Claude Code plugin marketplace:
 /plugin marketplace add keboola/claude-kit
 ```
 
-After installation, enable the plugins you need:
+After adding the marketplace, install the single unified plugin:
 
 ```bash
-/plugin install component-developer
+/plugin install keboola
 ```
+
+> **Note:** As of marketplace v2.0.0 this repo ships **one** plugin, `keboola`,
+> that consolidates the six former plugins (`component-developer`,
+> `dataapp-developer`, `keboola-cli`, `keboola-git`, `powerbi-to-sl`,
+> `sl-toolkit`). Installing it enables every area at once. Installing the plugin
+> also wires up the Keboola MCP server for all areas — previously three of the
+> old plugins were MCP-free.
 
 ## Repository Structure
 
-The repository is organized into a plugin-based architecture to make prompts and agents easy to discover and use:
+The repository uses a single-plugin architecture; skills are grouped by area inside the plugin:
 
 ```
 claude-kit/
 ├── .claude-plugin/
-│   └── marketplace.json     # Marketplace configuration
+│   └── marketplace.json     # Marketplace configuration (one plugin entry)
 ├── plugins/
-│   ├── component-developer/ # Keboola Python component development
-│   ├── dataapp-developer/   # Data app development & deployment for Keboola
-│   ├── keboola-cli/         # Keboola project management and review
-│   ├── keboola-git/         # Keboola-managed Git (Forgejo) access for data apps
-│   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
-│   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
+│   └── keboola/             # The unified Keboola plugin
+│       ├── .claude-plugin/plugin.json
+│       ├── README.md
+│       ├── skills/          # 18 skills, flat: skills/<skill-name>/SKILL.md
+│       ├── commands/        # 12 slash commands (all areas)
+│       ├── agents/          # 14 agents (3 component + 11 CLI review)
+│       └── tests/           # semantic-layer consistency tests
 ├── README.md                # This file
 └── LICENSE                  # MIT license
 ```
 
-## Available Plugins
+## The `keboola` Plugin
 
-### Component Developer Plugin
+**Location**: [`./plugins/keboola`](./plugins/keboola)
 
-**Location**: [`./plugins/component-developer`](./plugins/component-developer)
+One plugin, every Keboola workflow. Skills are grouped by area (the grouping is
+documentation only — skills live flat under `skills/<skill-name>/`, and their
+invocation names are unchanged).
 
-A specialized toolkit for building production-ready Keboola Python components following best practices and architectural patterns.
+### Components — build production-ready Keboola Python components
+- **Skills**: `develop-component`, `build-component-ui`, `debug-component`, `test-component` (datadir + unit/mock + VCR), `review` (code quality + backward compatibility), `get-started`, `migrate-to-uv`, `component-defaults`, `keboola-context`
+- **Commands**: `/review`, `/schema-test`, `/generate-vcr-tests`
+- **Agents**: `component-builder`, `ui-developer`, `tester`
 
-**Features:**
-- 🎯 **Skills**: Build component, build UI, debug, test, VCR test, review, backward compatibility review, migrate to UV, getting started
-- ⚡ **Commands**: Init, run, fix, review, migrate-repo, schema-test
-- 🔌 **MCP Server**: Keboola integration
-- 📋 **Configuration Schemas**: JSON Schema with UI elements
-- 🚀 **CI/CD Integration**: Developer Portal and deployment workflows
+### Data Apps — build & deploy Keboola Apps
+- **Skills**: `dataapp-development` (Streamlit + Python/JS full lifecycle, 14 references, 5 templates), `mcp-data-app` (host an MCP server as a data app), `semantic-layer-usage` (confirm physical columns before querying)
 
-**[→ View Component Developer Plugin Documentation](./plugins/component-developer/README.md)**
+### CLI — project management & review
+- **Skills**: `keboola-cli`, `keboola-config`, `duckdb-transformation`
+- **Commands**: `/kbc-init`, `/kbc-pull`, `/kbc-push`, `/kbc-diff`, `/kbc-review`
+- **Agents (10-agent review team + analyzer)**: `kbc-sql-reviewer`, `kbc-config-reviewer`, `kbc-dwh-architect`, `kbc-data-quality-analyst`, `kbc-financial-analyst`, `kbc-semantic-layer-reviewer`, `kbc-security-auditor`, `kbc-performance-optimizer`, `kbc-template-readiness`, `kbc-review-consolidator`, `keboola-config-analyzer`
 
-### Data App Developer Plugin
+### Git — Keboola-managed Git (Forgejo) for data apps
+- **Skill**: `keboola-git` (provision repos, mint push credentials, raw clone/push, 15MB/HTTP-413 build-at-deploy, deploy + verify)
+- **Command**: `/keboola-git-copy` (bidirectional GitHub ↔ Keboola-git copy)
 
-**Location**: [`./plugins/dataapp-developer`](./plugins/dataapp-developer)
+### Power BI — migrate Power BI semantic models
+- **Skill**: `powerbi-to-sl` (TMDL or per-table JSON → Keboola semantic layer; DAX preserved verbatim; bundles `scripts/migrate.py`, `fixtures/`, `tests/`)
 
-A toolkit for building and deploying data apps to Keboola — Streamlit development with validate/build/verify workflow, plus deployment guides for Node.js, Python, and any web framework.
+### Semantic Layer — inspect / validate / build + conversational CRUD
+- **Skill**: `semantic-layer` (deep validation, cascade rename with rollback, multi-cloud)
+- **Commands**: `/sl-show`, `/sl-validate`, `/sl-build`
 
-**Features:**
-- 🎯 **Skills**: `dataapp-development` covering both Streamlit and Python/JS apps with 14 topical references, plus `semantic-layer-usage` for confirming a semantic model's physical columns before querying
-- 🚀 **App Types**: Streamlit (Code or Git), single Node.js + static (dashboarding default), combined Python + Node
-- 💾 **Storage**: RO workspace (default), RW direct access via Query Service, input mapping (legacy)
-- 🔒 **Authentication**: None / Basic / OIDC / GitHub / GitLab / JumpCloud
-- ⚡ **Performance**: Opinionated DuckDB caching pattern (Python + Node templates included)
-- 🎨 **Styling**: Default Keboola theme + optional bundled React+Vite stack + brand customization paths
-- 🤖 **Kai Integration**: Optional natural-language assistant via `kai-client`
-- 📦 **Templates**: 5 runnable starters (Streamlit, Python-only, Node-only, Python+Node, DuckDB cache)
-- 🔌 **MCP Servers**: Keboola (remote HTTP) and Playwright (browser automation)
-- 🔌 **MCP hosting**: host any MCP server (Keboola MCP as the worked example) as a single-tenant data app — bearer + OAuth-shape auth, deploy via kbagent / keboola-git / hosted MCP tools
-
-**[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
-
-### Keboola CLI Plugin
-
-**Location**: [`./plugins/keboola-cli`](./plugins/keboola-cli)
-
-A project management and review toolkit for Keboola projects. Includes CLI sync commands and a 10-agent review team that audits SQL quality, security, performance, financial logic, data quality, and template readiness.
-
-**Features:**
-- 🤖 **Agents**: 10 specialized review agents (SQL, Config, DWH Architecture, Data Quality, Financial Logic, Semantic Layer, Security, Performance, Template Readiness, Consolidator) + config analyzer
-- ⚡ **Commands**: `/kbc-init`, `/kbc-pull`, `/kbc-push`, `/kbc-diff`, `/kbc-review`
-- 🔌 **MCP Server**: Keboola integration for live project analysis
-- 📊 **Financial Intelligence**: Multi-ERP awareness (NetSuite, SAP, Oracle, D365, QuickBooks, Xero), SaaS metrics, budget variance
-- 🔒 **Security Audit**: Credential scanning, PII detection, GDPR/CCPA compliance checks
-- 🦆 **DuckDB Transformation**: SQL dialect, block orchestration, dynamic backends, Snowflake migration, best practices
-
-**[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
-
-### Keboola Git Plugin
-
-**Location**: [`./plugins/keboola-git`](./plugins/keboola-git)
-
-Access Keboola-managed Git (Forgejo) repos for python-js data apps via the `kbagent` CLI — provision repos, mint push credentials, push source with raw git, and deploy, including the ~15MB / HTTP 413 build-at-deploy path.
-
-**Features:**
-- 🎯 **Skill**: `keboola-git` — provision/find the managed repo, mint a one-time `git_clone_url`, raw clone/push, 413 + build-at-deploy recipe, deploy + verify
-- ⚡ **Command**: `/keboola-git-copy to-keboola|to-github` — bidirectional GitHub ↔ Keboola git source copy with size guard and scratch-branch safety
-- 📦 **Build-at-deploy**: untrack committed builds (`frontend/.next`), build in `keboola-config/setup.sh` to stay under the 15MB push cap
-- 🔒 **Credential safety**: one-time push secrets kept in shell vars, never committed; no force-push, scratch-branch-only reverse copies
-- 🛠️ **kbagent-CLI driven**: ships no MCP server
-
-**[→ View Keboola Git Plugin Documentation](./plugins/keboola-git/README.md)**
-
-### sl-toolkit Plugin
-
-**Location**: [`./plugins/sl-toolkit`](./plugins/sl-toolkit)
-
-Semantic layer tools for Keboola — inspect, validate, and build models via the metastore API. Works with or without the Semantic Layer data app.
-
-**Features:**
-- ⚡ **Commands**: `/sl-show`, `/sl-validate`, `/sl-build`
-- 🗣️ **Conversational CRUD**: add/edit/remove entities by just asking — the `semantic-layer` skill handles it
-- 🔑 **kbagent-free**: show, validate, and all CRUD require only a Storage API token
-- 🔄 **Cascade rename**: editing a metric name auto-updates all constraint references, with rollback on failure
-- ✅ **Deep validation**: phantom field and type-mismatch checks against actual Snowflake schemas
-- 🏗️ **Greenfield wizard**: `sl-build` does full schema discovery → SQL analysis → generate → validate → push
-- 🌐 **Multi-cloud**: supports GCP, AWS, and Azure stacks
-
-**[→ View sl-toolkit Plugin Documentation](./plugins/sl-toolkit/README.md)**
+**[→ View the Keboola Plugin Documentation](./plugins/keboola/README.md)**
 
 ## MCP Server Setup
 
-Some commands and plugins require MCP (Model Context Protocol) servers to be configured. If MCP tools are not available when running a command, use the `/mcp` command to authenticate and configure them.
+The `keboola` plugin declares two MCP servers: `keboola` (remote HTTP, project/data
+validation and live queries) and `playwright` (local, browser automation). Some
+commands and agents require the Keboola MCP server. If MCP tools are not available
+when running a command, use the `/mcp` command to authenticate and configure them.
 
 ### Troubleshooting
 
@@ -158,9 +118,8 @@ Test agents and commands locally:
 ### Versioning
 
 We follow semantic versioning. Update version numbers in:
-- `.claude-plugin/marketplace.json`
-- `plugins/<name>/.claude-plugin/plugin.json`
-- `plugins/<name>/README.md`
+- `.claude-plugin/marketplace.json` (both the marketplace `version` and the `keboola` plugin entry's `version`)
+- `plugins/keboola/.claude-plugin/plugin.json`
 
 ## License
 
