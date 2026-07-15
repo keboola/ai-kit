@@ -10,7 +10,7 @@ description: >
   reporting success. Use when tempted to retry different writes hoping one sticks, or when a
   write timed out, was declined, or returned silently. NOT for authoring new configs from
   scratch or bulk multi-item edits.
-version: 1.0.0
+version: 1.2.0
 ---
 
 # Job / Config Error Triage
@@ -96,8 +96,8 @@ This is the heart of the skill.
 - Firing multiple config writes after the first one fails, hoping one sticks.
 - Reporting success on a write whose approval timed out or was declined.
 - Ignoring a silent `modify_flow` (or other write) failure and continuing as if it worked.
-- Bulk-writing many items without halting when writes start erroring — e.g. sending 32 writes,
-  7 error, and never stopping or summarizing the failures.
+- Bulk-writing many items without halting when writes start erroring — process items one at a
+  time and stop to summarize failures instead of plowing through.
 - Guessing the cause from the symptom instead of reading the actual job log.
 
 ## Output format
