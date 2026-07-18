@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "metadata": {
     "description": "Client-facing Claude Kit marketplace for Keboola workflows — component development, data app building, project management and review, and semantic layer toolkit"
   },
@@ -13,28 +13,28 @@
     {
       "name": "component-developer",
       "description": "Comprehensive toolkit for building Keboola Python components with Agent Skills format",
-      "version": "3.3.0",
+      "version": "3.3.1",
       "source": "./plugins/component-developer",
       "category": "development"
     },
     {
       "name": "dataapp-developer",
       "description": "Toolkit for building and deploying Keboola Apps (Streamlit and Python/JS) — full lifecycle: choosing app type, deployment paths, storage access, authentication, DuckDB caching, styling, dashboard patterns, optional Kai chat, and the validate-build-verify dev workflow; and hosting an MCP server as a data app.",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "source": "./plugins/dataapp-developer",
       "category": "development"
     },
     {
       "name": "keboola-cli",
       "description": "Keboola project management and 10-agent review team for SQL, security, performance, financial logic, and template readiness analysis",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "source": "./plugins/keboola-cli",
       "category": "operations"
     },
     {
       "name": "keboola-git",
       "description": "Access Keboola-managed Git (Forgejo) repos for python-js data apps via the kbagent CLI — provision repos, mint push credentials, and copy source between GitHub and Keboola git with the 15MB/build-at-deploy path handled",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "./plugins/keboola-git",
       "category": "development"
     },

@@ -51,6 +51,6 @@ the semantic definition tells you that — read it instead of guessing.
 ## Related
 
 - `dataapp-development` skill — full app lifecycle; its
-  `references/storage-access.md` covers FQN quoting per backend and
-  `references/dev-workflow.md` covers the validate-first loop. Load this skill
+  `../dataapp-development/references/storage-access.md` covers FQN quoting per backend and
+  `../dataapp-development/references/dev-workflow.md` covers the validate-first loop. Load this skill
   alongside it when the data source is a semantic model.
