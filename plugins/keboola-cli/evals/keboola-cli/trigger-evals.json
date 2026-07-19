@@ -42,5 +42,29 @@
   {
     "query": "push my data app source to keboola-managed git",
     "should_trigger": false
+  },
+  {
+    "query": "fix this security finding: plaintext AWS secret key detected in an extractor configuration",
+    "should_trigger": true
+  },
+  {
+    "query": "which of our active flows are broken or haven't been refreshed for the past month?",
+    "should_trigger": true
+  },
+  {
+    "query": "review the SQL code in the data_quality_audit transformation for performance problems and improvements",
+    "should_trigger": true
+  },
+  {
+    "query": "zkontroluj mi kód v této transformaci, hlavně jestli je správně tabulka na výstupu",
+    "should_trigger": true
+  },
+  {
+    "query": "review src/component.py and check the api client separation follows keboola best practices",
+    "should_trigger": false
+  },
+  {
+    "query": "kolik záznamů je celkem v té finanční tabulce a za které měsíce?",
+    "should_trigger": false
   }
 ]

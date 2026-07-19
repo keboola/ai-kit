@@ -38,5 +38,17 @@
   {
     "query": "rotate my keboola storage API token",
     "should_trigger": false
+  },
+  {
+    "query": "I need a git repo for this data app but I don't have my own github account — use the keboola managed repo",
+    "should_trigger": true
+  },
+  {
+    "query": "potrebujem git repo pre túto data appku, nemám vlastný účet, použi keboola managed repo",
+    "should_trigger": true
+  },
+  {
+    "query": "how can I set up a GitHub integration for all our flows and configurations so we manage them programmatically?",
+    "should_trigger": false
   }
 ]

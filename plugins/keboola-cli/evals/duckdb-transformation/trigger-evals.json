@@ -38,5 +38,13 @@
   {
     "query": "create a new flow scheduling my transformations",
     "should_trigger": false
+  },
+  {
+    "query": "převeď tuhle snowflake transformaci na duckdb a uprav syntaxi, ať to projde",
+    "should_trigger": true
+  },
+  {
+    "query": "compare these two tables and tell me what's causing the differences in the totals",
+    "should_trigger": false
   }
 ]

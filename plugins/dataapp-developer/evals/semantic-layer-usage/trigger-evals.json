@@ -38,5 +38,9 @@
   {
     "query": "what tables exist in the in.c-crm bucket?",
     "should_trigger": false
+  },
+  {
+    "query": "can you visualise the semantic layer available in this project?",
+    "should_trigger": false
   }
 ]

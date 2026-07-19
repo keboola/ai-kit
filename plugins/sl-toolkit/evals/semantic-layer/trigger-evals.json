@@ -38,5 +38,21 @@
   {
     "query": "what buckets and tables are in my project?",
     "should_trigger": false
+  },
+  {
+    "query": "can you visualise the semantic layer available in this project?",
+    "should_trigger": true
+  },
+  {
+    "query": "navrhni, co použít pro PoC sémantické vrstvy — co už máme v metastore?",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to analyze gym attendance — which table should I use?",
+    "should_trigger": false
+  },
+  {
+    "query": "zjisti mi, kde jsou data internetového košíku zákazníků",
+    "should_trigger": false
   }
 ]

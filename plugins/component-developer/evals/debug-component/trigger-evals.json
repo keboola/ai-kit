@@ -38,5 +38,29 @@
   {
     "query": "my streamlit data app deployment is stuck in 'starting' state",
     "should_trigger": false
+  },
+  {
+    "query": "my custom python app job failed with a traceback ending in asyncio.run(main()) — help me debug and fix the config",
+    "should_trigger": true
+  },
+  {
+    "query": "component job ended in error: Failed to process output mapping: Source destination columns mismatch — why?",
+    "should_trigger": true
+  },
+  {
+    "query": "the extractor job says 'Invalid OAuth grant when fetching the sheet, try reauthenticating' — figure out what's actually wrong",
+    "should_trigger": true
+  },
+  {
+    "query": "job 509123 spadl s chybou 'Numeric value '' is not recognized' — zjisti proč a oprav to",
+    "should_trigger": true
+  },
+  {
+    "query": "my snowflake SQL transformation fails with 'SQL compilation error: syntax error line 53' — fix the query",
+    "should_trigger": false
+  },
+  {
+    "query": "among our active flows, which are broken or haven't refreshed in the past month?",
+    "should_trigger": false
   }
 ]

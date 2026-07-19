@@ -38,5 +38,13 @@
   {
     "query": "review my resume",
     "should_trigger": false
+  },
+  {
+    "query": "here's a code change someone's AI suggested for our connector — verify it's how you'd do it and that nothing breaks for existing configurations",
+    "should_trigger": true
+  },
+  {
+    "query": "zkontroluj SQL kód v této transformaci, jestli je výstupní tabulka správně",
+    "should_trigger": false
   }
 ]

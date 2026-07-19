@@ -38,5 +38,33 @@
   {
     "query": "set up a fresh keboola component repo",
     "should_trigger": false
+  },
+  {
+    "query": "move the order-items logic from its own transformation into this one and update all the mappings",
+    "should_trigger": true
+  },
+  {
+    "query": "add a description plus input and output mapping to the transactions_rebuild transformation so it has everything required to run",
+    "should_trigger": true
+  },
+  {
+    "query": "schedule this flow to run every monday at 6am",
+    "should_trigger": true
+  },
+  {
+    "query": "create a conditional flow that only continues when importedRowsCount is greater than zero",
+    "should_trigger": true
+  },
+  {
+    "query": "přemapuj výstup této transformace do bucketu in.c-marketing, do tabulek mailchimp_stats a mailchimp_clicks",
+    "should_trigger": true
+  },
+  {
+    "query": "why did this job fail with 'Numeric value '' is not recognized'",
+    "should_trigger": false
+  },
+  {
+    "query": "what is the ratio between new ARR and upsells this quarter?",
+    "should_trigger": false
   }
 ]

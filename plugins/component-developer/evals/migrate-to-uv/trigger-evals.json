@@ -38,5 +38,9 @@
   {
     "query": "review whether the uv migration PR is backward compatible",
     "should_trigger": true
+  },
+  {
+    "query": "migrate the deprecated ex-hubspot-crm extractor configurations to a current component",
+    "should_trigger": false
   }
 ]

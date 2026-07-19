@@ -38,5 +38,9 @@
   {
     "query": "what MCP tools does keboola expose for querying data?",
     "should_trigger": false
+  },
+  {
+    "query": "I have a draft glossary MCP server data app — help me preview it and redeploy if needed",
+    "should_trigger": true
   }
 ]

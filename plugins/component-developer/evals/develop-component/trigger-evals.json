@@ -46,5 +46,21 @@
   {
     "query": "build me a streamlit dashboard on top of my keboola project data",
     "should_trigger": false
+  },
+  {
+    "query": "turn this python script into a keboola component so it can run on a backend with more memory",
+    "should_trigger": false
+  },
+  {
+    "query": "update our HR connector to unpack the custom reports right after import — here's a suggested code change, make sure nothing breaks",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to extract text from receipts with OCR and produce a JSON per receipt — build this as a custom component",
+    "should_trigger": false
+  },
+  {
+    "query": "help me migrate my 5 configurations off the deprecated csv-import component to its replacement",
+    "should_trigger": false
   }
 ]
