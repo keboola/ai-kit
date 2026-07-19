@@ -1,0 +1,42 @@
+[
+  {
+    "query": "migrating keboola.ex-shopify from requirements.txt to uv, need help updating the Dockerfile and push.yml",
+    "should_trigger": true
+  },
+  {
+    "query": "move my component to the modern uv build system with ruff linting",
+    "should_trigger": true
+  },
+  {
+    "query": "convert this old pipenv-based keboola component to uv with a lockfile",
+    "should_trigger": true
+  },
+  {
+    "query": "our component still uses setup.py — modernize the packaging to uv like the current template",
+    "should_trigger": true
+  },
+  {
+    "query": "add a new dependency to my component and set up deterministic dependency resolution with uv",
+    "should_trigger": false
+  },
+  {
+    "query": "component build fails in CI after the base image update, can you debug it",
+    "should_trigger": false
+  },
+  {
+    "query": "start a new keboola component from scratch for the intercom api",
+    "should_trigger": false
+  },
+  {
+    "query": "migrate my snowflake transformation to duckdb",
+    "should_trigger": false
+  },
+  {
+    "query": "upgrade the python version in my non-keboola fastapi project to 3.12 with uv",
+    "should_trigger": false
+  },
+  {
+    "query": "review whether the uv migration PR is backward compatible",
+    "should_trigger": true
+  }
+]

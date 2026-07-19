@@ -1,0 +1,42 @@
+[
+  {
+    "query": "push my data app source to the keboola-managed git repo — I have the repo_url from kbagent",
+    "should_trigger": true
+  },
+  {
+    "query": "mint a push credential for the forgejo repo of my python-js data app",
+    "should_trigger": true
+  },
+  {
+    "query": "copy this github repo into keboola managed git and deploy the data app from it",
+    "should_trigger": true
+  },
+  {
+    "query": "my git push to the keboola repo fails with HTTP 413, the bundle is over 15MB",
+    "should_trigger": true
+  },
+  {
+    "query": "provision a keboola-managed git repo for my new python-js app and wire deploys to it",
+    "should_trigger": true
+  },
+  {
+    "query": "push my local keboola project configs with kbc push",
+    "should_trigger": false
+  },
+  {
+    "query": "create a github actions workflow for my component repo",
+    "should_trigger": false
+  },
+  {
+    "query": "deploy my streamlit app from the keboola UI, no git needed",
+    "should_trigger": false
+  },
+  {
+    "query": "clone our normal github monorepo and open a PR",
+    "should_trigger": false
+  },
+  {
+    "query": "rotate my keboola storage API token",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "query": "pull the latest configs from my keboola project to local files with the CLI",
+    "should_trigger": true
+  },
+  {
+    "query": "run a full project review — SQL quality, security, performance, the whole 10-agent team",
+    "should_trigger": true
+  },
+  {
+    "query": "kbc init for this project and set up the local sync workflow",
+    "should_trigger": true
+  },
+  {
+    "query": "diff my local keboola configs against what's deployed before I push",
+    "should_trigger": true
+  },
+  {
+    "query": "audit this keboola project for security issues and hardcoded credentials in transformations",
+    "should_trigger": true
+  },
+  {
+    "query": "assess whether this project is ready to be turned into a template",
+    "should_trigger": true
+  },
+  {
+    "query": "build a new python component for the intercom api",
+    "should_trigger": false
+  },
+  {
+    "query": "deploy a streamlit data app for the marketing team",
+    "should_trigger": false
+  },
+  {
+    "query": "my component job fails with exit code 2",
+    "should_trigger": false
+  },
+  {
+    "query": "write a DuckDB transformation that joins orders and customers",
+    "should_trigger": false
+  },
+  {
+    "query": "push my data app source to keboola-managed git",
+    "should_trigger": false
+  }
+]

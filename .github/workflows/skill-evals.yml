@@ -1,0 +1,57 @@
+name: Skill evals
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tier0-lint:
+    name: "Tier 0: static lint + case validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Run static lint + offline activation-case validation
+        working-directory: evals
+        run: uv run --group dev pytest -q
+
+  tier1-activation:
+    name: "Tier 1: skill activation routing"
+    runs-on: ubuntu-latest
+    # Needs an LLM classifier; runs only where the secret is available
+    # (skipped on forks). Deterministic grading, temperature 0.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Run activation evals
+        working-directory: evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY secret not available — skipping Tier 1 (fork PR?)"
+            exit 0
+          fi
+          uv run python activation/run_activation.py --ci
+
+      - name: Upload activation summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: activation-summary
+          path: evals/activation/results/summary.json
+          if-no-files-found: ignore

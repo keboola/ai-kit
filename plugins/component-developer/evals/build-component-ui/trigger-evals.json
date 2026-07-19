@@ -1,0 +1,42 @@
+[
+  {
+    "query": "I need to add a new configSchema field called 'incremental_key' to my extractor — should be a dropdown populated via sync action",
+    "should_trigger": true
+  },
+  {
+    "query": "conditional field in configSchema.json isn't showing up when I select 'incremental' from the mode dropdown, options.dependencies looks right to me",
+    "should_trigger": true
+  },
+  {
+    "query": "design the configuration UI for my new writer — users need to pick a destination table and toggle upsert mode",
+    "should_trigger": true
+  },
+  {
+    "query": "can you test my component's config schema in the schema tester and check the conditional fields work",
+    "should_trigger": true
+  },
+  {
+    "query": "add a password-type field for the api token to configRowSchema.json",
+    "should_trigger": true
+  },
+  {
+    "query": "add retry logic with exponential backoff to my API client, it's hitting 429s",
+    "should_trigger": false
+  },
+  {
+    "query": "scaffold a brand new keboola component for zendesk tickets, empty repo",
+    "should_trigger": false
+  },
+  {
+    "query": "review src/component.py and check whether the api client separation looks right",
+    "should_trigger": false
+  },
+  {
+    "query": "the job fails with exit code 1 right after start, here's the log",
+    "should_trigger": false
+  },
+  {
+    "query": "build a UI for my streamlit data app with the keboola design theme",
+    "should_trigger": false
+  }
+]

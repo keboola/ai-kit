@@ -1,0 +1,42 @@
+[
+  {
+    "query": "host an MCP server as a keboola data app so my team gets a private remote MCP endpoint",
+    "should_trigger": true
+  },
+  {
+    "query": "I want a self-hosted keboola MCP endpoint running on our own keboola compute with auth",
+    "should_trigger": true
+  },
+  {
+    "query": "deploy my FastMCP server to keboola as a data app with a client secret",
+    "should_trigger": true
+  },
+  {
+    "query": "can we run the keboola MCP server as a private single-tenant endpoint instead of the shared one?",
+    "should_trigger": true
+  },
+  {
+    "query": "wrap our internal streamable-http MCP server in a keboola data app deployment",
+    "should_trigger": true
+  },
+  {
+    "query": "build a streamlit dashboard data app for sales KPIs",
+    "should_trigger": false
+  },
+  {
+    "query": "connect claude desktop to the public keboola MCP server at mcp.us-east4",
+    "should_trigger": false
+  },
+  {
+    "query": "my MCP tool calls are failing with 401 against the shared endpoint, debug my token",
+    "should_trigger": false
+  },
+  {
+    "query": "create a new flow that runs my extractor and transformation on a schedule",
+    "should_trigger": false
+  },
+  {
+    "query": "what MCP tools does keboola expose for querying data?",
+    "should_trigger": false
+  }
+]
