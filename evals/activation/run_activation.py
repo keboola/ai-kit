@@ -65,19 +65,28 @@ def build_skill_list(skills: list[Skill]) -> str:
     return "\n".join(f"{s.name}: {s.description}" for s in skills)
 
 
-def parse_answer(text: str) -> list[str]:
-    """Extract the JSON array of skill names from the classifier's reply."""
-    match = re.search(r"\[.*?\]", text, re.DOTALL)
-    if not match:
-        return []
-    try:
-        data = json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return []
-    return [str(item) for item in data] if isinstance(data, list) else []
+def parse_answer(text: str) -> tuple[list[str], str | None]:
+    """Extract the JSON array of skill names from the classifier's reply.
+
+    Returns (skills, parse_error). Prose may contain bracket pairs before the
+    actual answer (e.g. 'Based on [the description] ... ["x"]'), so candidates
+    are tried LAST-first; a ```json fence wins outright. When nothing parses,
+    the raw reply is returned as parse_error so grading can distinguish a
+    parse failure from a genuine empty answer.
+    """
+    fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
+    candidates = [fenced.group(1)] if fenced else re.findall(r"\[.*?\]", text, re.DOTALL)
+    for candidate in reversed(candidates):
+        try:
+            data = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, list):
+            return [str(item) for item in data], None
+    return [], text
 
 
-async def classify(client, skill_list: str, query: str) -> list[str]:
+async def classify(client, skill_list: str, query: str) -> tuple[list[str], str | None]:
     response = await client.messages.create(
         model=CLASSIFIER_MODEL,
         max_tokens=200,
@@ -99,9 +108,9 @@ async def run_case_set(
 ) -> list[dict]:
     async def one(case):
         async with semaphore:
-            invoked = await classify(client, skill_list, case.query)
+            invoked, parse_error = await classify(client, skill_list, case.query)
         triggered = skill_name in invoked
-        return {
+        row = {
             "skill": skill_name,
             "plugin": case_set.plugin,
             "query": case.query,
@@ -110,6 +119,9 @@ async def run_case_set(
             "invoked_skills": invoked,
             "correct": triggered == case.should_trigger,
         }
+        if parse_error is not None:
+            row["parse_error"] = parse_error
+        return row
 
     return list(await asyncio.gather(*(one(c) for c in case_set.cases)))
 
@@ -168,7 +180,8 @@ def print_summary(summary: dict) -> None:
         for f in summary["failures"]:
             want = "should trigger" if f["should_trigger"] else "should NOT trigger"
             got = f["invoked_skills"] or "[]"
-            print(f"  [{f['skill']}] {want}, router chose {got}\n"
+            note = " [UNPARSEABLE REPLY]" if f.get("parse_error") else ""
+            print(f"  [{f['skill']}] {want}, router chose {got}{note}\n"
                   f"    query: {f['query'][:110]}")
 
 
@@ -180,13 +193,19 @@ async def main() -> int:
                         help="--ci: minimum overall accuracy (default 0.85)")
     parser.add_argument("--min-skill-accuracy", type=float, default=0.6,
                         help="--ci: minimum per-skill accuracy (default 0.6)")
+    parser.add_argument("--min-skill-recall", type=float, default=0.6,
+                        help="--ci: minimum per-skill recall (default 0.6). Recall is "
+                        "the metric Tier 1 protects — a dead description can still "
+                        "pass the accuracy floor on its negatives alone.")
     parser.add_argument("--dry-run", action="store_true", help="List cases, no API calls")
     parser.add_argument("--output", type=Path,
                         default=Path(__file__).parent / "results" / "summary.json")
     args = parser.parse_args()
 
     skills = discover_skills()
-    by_dir = {s.dir_name: s for s in skills}
+    # Composite key: dir names are only unique within a plugin; a bare
+    # dir-name map would silently mis-attribute on a cross-plugin collision.
+    by_key = {(s.plugin, s.dir_name): s for s in skills}
     case_sets = discover_activation_cases()
     if args.skill:
         case_sets = [cs for cs in case_sets if cs.skill_dir_name in args.skill]
@@ -195,8 +214,13 @@ async def main() -> int:
         print("No activation case sets found (plugins/*/evals/*/trigger-evals.json)")
         return 1
 
-    # Every case set must belong to a real skill (also enforced offline in pytest)
-    unknown = [cs.skill_dir_name for cs in case_sets if cs.skill_dir_name not in by_dir]
+    # Every case set must belong to a real skill in ITS plugin (also enforced
+    # offline in pytest)
+    unknown = [
+        f"{cs.plugin}:{cs.skill_dir_name}"
+        for cs in case_sets
+        if (cs.plugin, cs.skill_dir_name) not in by_key
+    ]
     if unknown:
         print(f"Case sets without a matching skill: {unknown}")
         return 1
@@ -223,7 +247,7 @@ async def main() -> int:
 
     results = []
     for cs in case_sets:
-        skill_name = by_dir[cs.skill_dir_name].name
+        skill_name = by_key[(cs.plugin, cs.skill_dir_name)].name
         results.extend(await run_case_set(client, skill_list, cs, skill_name, semaphore))
 
     summary = summarize(results)
@@ -243,6 +267,11 @@ async def main() -> int:
             if s["accuracy"] < args.min_skill_accuracy:
                 failures.append(
                     f"{s['skill']} accuracy {s['accuracy']:.1%} < {args.min_skill_accuracy:.1%}"
+                )
+            if s["recall"] is not None and s["recall"] < args.min_skill_recall:
+                failures.append(
+                    f"{s['skill']} recall {s['recall']:.1%} < {args.min_skill_recall:.1%} "
+                    "(description not activating on its own positives)"
                 )
         if failures:
             print("\nVERDICT: FAIL")

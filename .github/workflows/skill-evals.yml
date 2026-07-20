@@ -26,6 +26,8 @@ jobs:
   tier1-activation:
     name: "Tier 1: skill activation routing"
     runs-on: ubuntu-latest
+    # The paid tier only runs once the free deterministic tier is green.
+    needs: tier0-lint
     # Needs an LLM classifier; runs only where the secret is available
     # (skipped on forks). Deterministic grading, temperature 0.
     steps:
