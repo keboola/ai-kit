@@ -163,6 +163,20 @@ We follow semantic versioning. Update version numbers in:
 - `plugins/<name>/.claude-plugin/plugin.json`
 - `plugins/<name>/README.md`
 
+### Skill evals
+
+Every PR runs two eval tiers from [`evals/`](evals/README.md) (see the
+`Skill evals` workflow):
+
+- **Tier 0 — static lint:** frontmatter validity, skill `name` ↔ directory,
+  plugin/marketplace version consistency, dangling references.
+- **Tier 1 — activation:** each skill's `description:` is measured against
+  labeled utterances in `plugins/<plugin>/evals/<skill>/trigger-evals.json`
+  for routing precision/recall. Every skill must have a case set.
+
+Deeper behavior and live E2E tiers run from
+[keboola/KaiBench](https://github.com/keboola/KaiBench) (`docs/skill-evals.md`).
+
 ## License
 
 MIT licensed, see [LICENSE](./LICENSE) file.

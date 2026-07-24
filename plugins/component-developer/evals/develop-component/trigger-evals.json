@@ -1,0 +1,66 @@
+[
+  {
+    "query": "add incremental loading to my existing salesforce extractor in src/component.py — currently doing full load every time and it's too slow",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to add cursor-based pagination to the API client in my keboola component, it only fetches the first page",
+    "should_trigger": true
+  },
+  {
+    "query": "refactor my extractor to separate the API client from component.py per keboola best practices",
+    "should_trigger": true
+  },
+  {
+    "query": "implement a new endpoint in our existing hubspot extractor to also pull deals and activities",
+    "should_trigger": true
+  },
+  {
+    "query": "add state file support to my component so it remembers the last processed timestamp between runs",
+    "should_trigger": true
+  },
+  {
+    "query": "hey i need to build a keboola component for the stripe api, never done this before, where do i start",
+    "should_trigger": false
+  },
+  {
+    "query": "fresh repo, need to create keboola.wr-bigquery from scratch with the cookiecutter template",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to add a new configSchema field called 'incremental_key' — should be a dropdown populated via sync action",
+    "should_trigger": false
+  },
+  {
+    "query": "my component is throwing exit code 2, job id 384729483, can you find the root cause",
+    "should_trigger": false
+  },
+  {
+    "query": "write datadir tests for the incremental load scenario in my component",
+    "should_trigger": false
+  },
+  {
+    "query": "migrate keboola.ex-shopify from requirements.txt to uv and update the Dockerfile",
+    "should_trigger": false
+  },
+  {
+    "query": "build me a streamlit dashboard on top of my keboola project data",
+    "should_trigger": false
+  },
+  {
+    "query": "turn this python script into a keboola component so it can run on a backend with more memory",
+    "should_trigger": false
+  },
+  {
+    "query": "update our HR connector to unpack the custom reports right after import — here's a suggested code change, make sure nothing breaks",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to extract text from receipts with OCR and produce a JSON per receipt — build this as a custom component",
+    "should_trigger": false
+  },
+  {
+    "query": "help me migrate my 5 configurations off the deprecated csv-import component to its replacement",
+    "should_trigger": false
+  }
+]

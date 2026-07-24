@@ -1,0 +1,58 @@
+[
+  {
+    "query": "add a semantic-metric for monthly recurring revenue to our keboola metastore",
+    "should_trigger": true
+  },
+  {
+    "query": "inspect the semantic model — list all datasets and their relationships",
+    "should_trigger": true
+  },
+  {
+    "query": "update the SQL of the churn_rate metric in the semantic layer",
+    "should_trigger": true
+  },
+  {
+    "query": "delete the orphaned semantic-constraint that references a dropped column",
+    "should_trigger": true
+  },
+  {
+    "query": "what payload shape does the metastore API expect for a semantic-relationship?",
+    "should_trigger": true
+  },
+  {
+    "query": "validate the whole model — dangling references, AGG on string columns, the usual checks",
+    "should_trigger": true
+  },
+  {
+    "query": "migrate our power bi TMDL model into keboola",
+    "should_trigger": false
+  },
+  {
+    "query": "use the semantic model's metrics to build SQL for my dashboard app",
+    "should_trigger": false
+  },
+  {
+    "query": "write a duckdb transformation for revenue rollups",
+    "should_trigger": false
+  },
+  {
+    "query": "what buckets and tables are in my project?",
+    "should_trigger": false
+  },
+  {
+    "query": "can you visualise the semantic layer available in this project?",
+    "should_trigger": true
+  },
+  {
+    "query": "navrhni, co použít pro PoC sémantické vrstvy — co už máme v metastore?",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to analyze gym attendance — which table should I use?",
+    "should_trigger": false
+  },
+  {
+    "query": "zjisti mi, kde jsou data internetového košíku zákazníků",
+    "should_trigger": false
+  }
+]

@@ -1,6 +1,7 @@
 ---
 name: keboola-git
-description: Use when accessing a Keboola-managed Git (Forgejo) repo for a python-js data app via the kbagent CLI — provisioning the repo, finding its repo_url, minting a git_clone_url / push credential with create_python_js_data_app_git_credential, pushing source to Keboola git, copying source between GitHub and Keboola git, working around the ~15MB / HTTP 413 push cap with build-at-deploy, or deploying a data app from its managed git repo. Triggers: kbagent, Keboola managed git, Forgejo, data app repo, repo_url, git_clone_url, create git credential, push to Keboola git, build-at-deploy, HTTP 413, deploy from git.
+description: >-
+  Use when accessing a Keboola-managed Git (Forgejo) repo for a python-js data app via the kbagent CLI — provisioning the repo, finding its repo_url, minting a git_clone_url / push credential with create_python_js_data_app_git_credential, pushing source to Keboola git, copying source between GitHub and Keboola git, working around the ~15MB / HTTP 413 push cap with build-at-deploy, or deploying a data app from its managed git repo. Triggers: kbagent, Keboola managed git, Forgejo, data app repo, repo_url, git_clone_url, create git credential, push to Keboola git, build-at-deploy, HTTP 413, deploy from git.
 allowed-tools: ['*']
 ---
 

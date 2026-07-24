@@ -1,6 +1,6 @@
 ---
 name: kbc-security-auditor
-whenToUse: |
+description: |
   Use this agent to audit security and data privacy in Keboola projects. Activates when:
   - User asks to "check security", "audit credentials", "find PII", "review access"
   - Part of a project review team assessing security posture

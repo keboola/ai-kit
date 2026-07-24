@@ -1,6 +1,6 @@
 ---
 name: kbc-sql-reviewer
-whenToUse: |
+description: |
   Use this agent to review SQL quality in Keboola Snowflake transformations. Activates when:
   - User asks to "review SQL", "check SQL quality", "audit transformations"
   - Part of a project review team analyzing transformation code

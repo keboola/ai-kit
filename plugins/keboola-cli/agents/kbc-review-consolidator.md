@@ -1,6 +1,6 @@
 ---
 name: kbc-review-consolidator
-whenToUse: |
+description: |
   Use this agent to map data flow and consolidate review findings. Activates when:
   - Part of a project review team as the final consolidator
   - User asks to "map data flow", "trace data lineage", "show dependencies"

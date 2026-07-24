@@ -1,0 +1,50 @@
+[
+  {
+    "query": "can you review src/component.py and check if the api client separation looks correct according to keboola best practices",
+    "should_trigger": true
+  },
+  {
+    "query": "review this PR before we merge — it touches the configSchema and I want to be sure existing users don't break",
+    "should_trigger": true
+  },
+  {
+    "query": "audit my component before release: code quality and backward compatibility",
+    "should_trigger": true
+  },
+  {
+    "query": "does removing this output column break existing configurations downstream? check compatibility",
+    "should_trigger": true
+  },
+  {
+    "query": "do a pre-merge check on the changes to keboola.ex-google-ads",
+    "should_trigger": true
+  },
+  {
+    "query": "fix the failing job first, then we can talk about code quality",
+    "should_trigger": false
+  },
+  {
+    "query": "add the new feature for filtering rows by date to the extractor",
+    "should_trigger": false
+  },
+  {
+    "query": "review my SQL transformations in the keboola project for anti-patterns",
+    "should_trigger": false
+  },
+  {
+    "query": "write VCR tests for the new endpoints",
+    "should_trigger": false
+  },
+  {
+    "query": "review my resume",
+    "should_trigger": false
+  },
+  {
+    "query": "here's a code change someone's AI suggested for our connector — verify it's how you'd do it and that nothing breaks for existing configurations",
+    "should_trigger": true
+  },
+  {
+    "query": "zkontroluj SQL kód v této transformaci, jestli je výstupní tabulka správně",
+    "should_trigger": false
+  }
+]

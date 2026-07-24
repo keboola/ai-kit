@@ -78,5 +78,13 @@
   {
     "query": "my extractor started getting 429 rate limit errors from the API around line 87 in client.py — how do I add retry logic with exponential backoff",
     "should_trigger": false
+  },
+  {
+    "query": "we need to pull receipts from an internal OCR service into keboola and nothing exists yet — set up the component project",
+    "should_trigger": true
+  },
+  {
+    "query": "help me migrate the deprecated hubspot extractor configurations to the current replacement component",
+    "should_trigger": false
   }
 ]

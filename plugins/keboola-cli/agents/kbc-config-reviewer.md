@@ -1,6 +1,6 @@
 ---
 name: kbc-config-reviewer
-whenToUse: |
+description: |
   Use this agent to review Keboola component configurations. Activates when:
   - User asks to "review configs", "check configurations", "audit extractors/writers/flows"
   - Part of a project review team analyzing Keboola setup

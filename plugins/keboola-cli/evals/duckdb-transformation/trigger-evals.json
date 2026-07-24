@@ -1,0 +1,50 @@
+[
+  {
+    "query": "write a DuckDB transformation in keboola that joins orders and customers and aggregates by month",
+    "should_trigger": true
+  },
+  {
+    "query": "migrate this snowflake transformation to duckdb — what SQL syntax changes do I need",
+    "should_trigger": true
+  },
+  {
+    "query": "my duckdb transformation fails on case-sensitive column names, how does keboola handle quoting here",
+    "should_trigger": true
+  },
+  {
+    "query": "how do input/output blocks work for duckdb transformations and when should I use parquet",
+    "should_trigger": true
+  },
+  {
+    "query": "optimize this slow duckdb SQL in my keboola transformation",
+    "should_trigger": true
+  },
+  {
+    "query": "write a snowflake transformation for daily revenue rollups",
+    "should_trigger": false
+  },
+  {
+    "query": "my python component needs to parse parquet files",
+    "should_trigger": false
+  },
+  {
+    "query": "review the whole project's transformations for anti-patterns",
+    "should_trigger": false
+  },
+  {
+    "query": "use duckdb inside my streamlit data app for caching",
+    "should_trigger": false
+  },
+  {
+    "query": "create a new flow scheduling my transformations",
+    "should_trigger": false
+  },
+  {
+    "query": "převeď tuhle snowflake transformaci na duckdb a uprav syntaxi, ať to projde",
+    "should_trigger": true
+  },
+  {
+    "query": "compare these two tables and tell me what's causing the differences in the totals",
+    "should_trigger": false
+  }
+]

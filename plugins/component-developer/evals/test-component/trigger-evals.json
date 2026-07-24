@@ -1,0 +1,42 @@
+[
+  {
+    "query": "want to write datadir tests for the incremental load scenario in my component, the test data is already in tests/data/",
+    "should_trigger": true
+  },
+  {
+    "query": "set up VCR functional tests for my extractor so CI replays real HTTP interactions",
+    "should_trigger": true
+  },
+  {
+    "query": "improve test coverage for my keboola component, especially the config validation paths",
+    "should_trigger": true
+  },
+  {
+    "query": "my datadir test fails on column order — how should I structure expected outputs",
+    "should_trigger": true
+  },
+  {
+    "query": "add unit tests with mocked API responses for the client class",
+    "should_trigger": true
+  },
+  {
+    "query": "run the failing job again and tell me why it crashed with exit code 2",
+    "should_trigger": false
+  },
+  {
+    "query": "add a sync action that validates credentials when the user clicks test connection",
+    "should_trigger": false
+  },
+  {
+    "query": "create a new component from the cookiecutter template",
+    "should_trigger": false
+  },
+  {
+    "query": "check if my changes to the output schema are backward compatible before release",
+    "should_trigger": false
+  },
+  {
+    "query": "write pytest tests for my standalone python library (not a keboola project)",
+    "should_trigger": false
+  }
+]

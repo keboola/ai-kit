@@ -1,0 +1,42 @@
+[
+  {
+    "query": "migrate our Power BI semantic model into the keboola semantic layer",
+    "should_trigger": true
+  },
+  {
+    "query": "I extracted the TMDL folder from power bi with the modeling MCP — convert it to keboola semantic-layer JSON",
+    "should_trigger": true
+  },
+  {
+    "query": "translate these DAX measures from our .bim file into keboola semantic metrics",
+    "should_trigger": true
+  },
+  {
+    "query": "we're moving off Power BI — import its tables, measures and relationships into keboola's metastore",
+    "should_trigger": true
+  },
+  {
+    "query": "convert this pbip project's semantic model to keboola SL format",
+    "should_trigger": true
+  },
+  {
+    "query": "build a brand new semantic layer for our project from scratch (no existing BI model)",
+    "should_trigger": false
+  },
+  {
+    "query": "validate my keboola semantic model for dangling references",
+    "should_trigger": false
+  },
+  {
+    "query": "build a power bi dashboard on top of keboola data",
+    "should_trigger": false
+  },
+  {
+    "query": "query the semantic layer from my data app",
+    "should_trigger": false
+  },
+  {
+    "query": "export my keboola semantic layer INTO power bi",
+    "should_trigger": false
+  }
+]
