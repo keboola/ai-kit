@@ -1,6 +1,6 @@
 ---
 name: kbc-dwh-architect
-whenToUse: |
+description: |
   Use this agent for data model architecture review. Activates when:
   - User asks to "review data model", "check naming conventions", "audit bucket/table structure"
   - Part of a project review team analyzing dimensional model design

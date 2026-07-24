@@ -1,0 +1,46 @@
+[
+  {
+    "query": "search_semantic_context returned the revenue dataset — now write the SQL for the monthly trend chart in my app",
+    "should_trigger": true
+  },
+  {
+    "query": "I have the semantic model for orders, build the dashboard query from the metric definitions",
+    "should_trigger": true
+  },
+  {
+    "query": "use the semantic layer's customer_ltv metric in this report — make sure the SQL matches the model's physical mapping",
+    "should_trigger": true
+  },
+  {
+    "query": "get_semantic_context gave me display names like 'Net Revenue' — how do I turn that into a real query against the warehouse",
+    "should_trigger": true
+  },
+  {
+    "query": "the query built from the semantic model fails with 'invalid identifier NET_REVENUE' — ground it in the actual columns",
+    "should_trigger": true
+  },
+  {
+    "query": "create a new semantic-metric for churn rate in the metastore",
+    "should_trigger": false
+  },
+  {
+    "query": "validate my whole semantic layer model for dangling references",
+    "should_trigger": false
+  },
+  {
+    "query": "migrate our Power BI semantic model into keboola",
+    "should_trigger": false
+  },
+  {
+    "query": "add duckdb caching to my data app queries",
+    "should_trigger": false
+  },
+  {
+    "query": "what tables exist in the in.c-crm bucket?",
+    "should_trigger": false
+  },
+  {
+    "query": "can you visualise the semantic layer available in this project?",
+    "should_trigger": false
+  }
+]

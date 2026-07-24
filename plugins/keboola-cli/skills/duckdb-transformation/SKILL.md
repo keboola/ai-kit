@@ -1,5 +1,5 @@
 ---
-name: DuckDB Transformation
+name: duckdb-transformation
 description: >
   Expert knowledge for writing, optimizing, and migrating DuckDB transformations in Keboola.
   Covers SQL dialect, block orchestration, dynamic backends, Parquet format, case sensitivity,

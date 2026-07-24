@@ -1,0 +1,70 @@
+[
+  {
+    "query": "explain the structure of this keboola transformation config.json — what do the blocks and codes mean",
+    "should_trigger": true
+  },
+  {
+    "query": "edit the input mapping in my extractor's configuration file to add a new table",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the difference between config.json and config rows in the .keboola directory layout",
+    "should_trigger": true
+  },
+  {
+    "query": "analyze this keboola project structure — which configs feed which orchestrations",
+    "should_trigger": true
+  },
+  {
+    "query": "where do variable values get injected in a keboola configuration and how do I override them",
+    "should_trigger": true
+  },
+  {
+    "query": "write the configSchema.json UI for my new component parameter",
+    "should_trigger": false
+  },
+  {
+    "query": "debug why job 12345 failed",
+    "should_trigger": false
+  },
+  {
+    "query": "build a dashboard data app from my project",
+    "should_trigger": false
+  },
+  {
+    "query": "migrate my power bi model to the semantic layer",
+    "should_trigger": false
+  },
+  {
+    "query": "set up a fresh keboola component repo",
+    "should_trigger": false
+  },
+  {
+    "query": "move the order-items logic from its own transformation into this one and update all the mappings",
+    "should_trigger": true
+  },
+  {
+    "query": "add a description plus input and output mapping to the transactions_rebuild transformation so it has everything required to run",
+    "should_trigger": true
+  },
+  {
+    "query": "schedule this flow to run every monday at 6am",
+    "should_trigger": true
+  },
+  {
+    "query": "create a conditional flow that only continues when importedRowsCount is greater than zero",
+    "should_trigger": true
+  },
+  {
+    "query": "přemapuj výstup této transformace do bucketu in.c-marketing, do tabulek mailchimp_stats a mailchimp_clicks",
+    "should_trigger": true
+  },
+  {
+    "query": "why did this job fail with 'Numeric value '' is not recognized'",
+    "should_trigger": false
+  },
+  {
+    "query": "what is the ratio between new ARR and upsells this quarter?",
+    "should_trigger": false
+  }
+]

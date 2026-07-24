@@ -1,0 +1,42 @@
+[
+  {
+    "query": "how does keboola inject configuration into my component at runtime — where does config.json come from",
+    "should_trigger": true
+  },
+  {
+    "query": "what happens to my component's state file when a job fails halfway through",
+    "should_trigger": true
+  },
+  {
+    "query": "how are config rows executed — one container per row or one for all rows?",
+    "should_trigger": true
+  },
+  {
+    "query": "does keboola run my component in parallel for multiple configurations? what should the code assume",
+    "should_trigger": true
+  },
+  {
+    "query": "where do input tables physically appear inside the container when a job runs",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the weather in prague",
+    "should_trigger": false
+  },
+  {
+    "query": "build a data app that visualizes our sales pipeline",
+    "should_trigger": false
+  },
+  {
+    "query": "add a metric to the semantic layer for monthly recurring revenue",
+    "should_trigger": false
+  },
+  {
+    "query": "how do I create a new flow in the keboola UI",
+    "should_trigger": false
+  },
+  {
+    "query": "push my local configs to the keboola project with the CLI",
+    "should_trigger": false
+  }
+]

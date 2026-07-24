@@ -1,0 +1,42 @@
+[
+  {
+    "query": "is my component's Dockerfile aligned with the official keboola cookiecutter template?",
+    "should_trigger": true
+  },
+  {
+    "query": "show me the canonical push.yml github workflow for keboola components",
+    "should_trigger": true
+  },
+  {
+    "query": "update build_n_test.sh in my component to match the current template",
+    "should_trigger": true
+  },
+  {
+    "query": "what should pyproject.toml look like for a keboola python component by default",
+    "should_trigger": true
+  },
+  {
+    "query": "set up pre-commit-config.yaml for my component the standard keboola way",
+    "should_trigger": true
+  },
+  {
+    "query": "implement the incremental fetch logic in component.py",
+    "should_trigger": false
+  },
+  {
+    "query": "why does my job die with out of memory",
+    "should_trigger": false
+  },
+  {
+    "query": "write the configSchema for a new dropdown parameter",
+    "should_trigger": false
+  },
+  {
+    "query": "give me a default Dockerfile for my flask microservice",
+    "should_trigger": false
+  },
+  {
+    "query": "run the component tests and fix failures",
+    "should_trigger": false
+  }
+]
