@@ -1,6 +1,6 @@
 ---
 name: kbc-data-quality-analyst
-whenToUse: |
+description: |
   Use this agent to analyze live data quality via Keboola MCP. Activates when:
   - User asks to "check data quality", "analyze storage", "review actual data"
   - Part of a project review team checking live data in the Keboola project

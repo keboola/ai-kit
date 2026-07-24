@@ -1,6 +1,6 @@
 ---
 name: kbc-financial-analyst
-whenToUse: |
+description: |
   Use this agent to review financial calculations and business logic. Activates when:
   - User asks to "review financial logic", "check calculations", "audit P&L/Balance Sheet formulas"
   - Part of a project review team validating financial intelligence correctness

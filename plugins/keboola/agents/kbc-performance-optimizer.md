@@ -1,6 +1,6 @@
 ---
 name: kbc-performance-optimizer
-whenToUse: |
+description: |
   Use this agent to analyze pipeline performance and optimization opportunities. Activates when:
   - User asks to "optimize performance", "check slow queries", "review job times"
   - Part of a project review team assessing pipeline efficiency

@@ -1,0 +1,70 @@
+[
+  {
+    "query": "build me a streamlit dashboard on top of my keboola project showing revenue by month",
+    "should_trigger": true
+  },
+  {
+    "query": "my keboola data app is stuck in 'starting' after deploy, how do I see the logs and fix it",
+    "should_trigger": true
+  },
+  {
+    "query": "should this internal tool be a streamlit app or a python/js app in keboola? help me choose and set it up",
+    "should_trigger": true
+  },
+  {
+    "query": "the data app reloads the whole table on every widget click — add duckdb caching so it's fast",
+    "should_trigger": true
+  },
+  {
+    "query": "add password authentication to my keboola streamlit app before we share it with the client",
+    "should_trigger": true
+  },
+  {
+    "query": "deploy my dash app to keboola and wire it to read from the WORKSPACE schema",
+    "should_trigger": true
+  },
+  {
+    "query": "build a new keboola extractor component for the stripe api",
+    "should_trigger": false
+  },
+  {
+    "query": "review the SQL transformations in my keboola project",
+    "should_trigger": false
+  },
+  {
+    "query": "host an MCP server as a keboola data app so claude can connect to it remotely",
+    "should_trigger": false
+  },
+  {
+    "query": "push my source code to the keboola-managed git repo with kbagent",
+    "should_trigger": false
+  },
+  {
+    "query": "create a semantic layer metric for monthly active users",
+    "should_trigger": false
+  },
+  {
+    "query": "create a simple streamlit hello world data app — just a title and one line of text, keep it minimal",
+    "should_trigger": true
+  },
+  {
+    "query": "my data app's overview page loads slowly — suggest optimizations, maybe restrict the source data to this year",
+    "should_trigger": true
+  },
+  {
+    "query": "build a JS app that lets me write notes on support tickets into a storage table",
+    "should_trigger": true
+  },
+  {
+    "query": "find the latest dev version of my keboola data app and open it in preview for me",
+    "should_trigger": true
+  },
+  {
+    "query": "chtěl bych vytvořit datovou aplikaci na support tickety, která ukáže typické přehledy",
+    "should_trigger": true
+  },
+  {
+    "query": "turn this script into a python component so we can run it on a backend with more memory",
+    "should_trigger": false
+  }
+]

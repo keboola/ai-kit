@@ -1,6 +1,6 @@
 ---
 name: keboola-config-analyzer
-whenToUse: |
+description: |
   Use this agent to analyze and explain Keboola project configurations. Activates when the user needs to:
   - Understand what a Keboola transformation does
   - Analyze orchestration workflows

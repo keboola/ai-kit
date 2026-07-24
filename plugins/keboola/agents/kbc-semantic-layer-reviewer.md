@@ -1,6 +1,6 @@
 ---
 name: kbc-semantic-layer-reviewer
-whenToUse: |
+description: |
   Use this agent to review the semantic layer (DC_METRIC, metric_group, glossary). Activates when:
   - User asks to "review semantic layer", "check metrics", "audit metric definitions"
   - Part of a project review team validating the metric/glossary layer

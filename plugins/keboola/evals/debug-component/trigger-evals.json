@@ -1,0 +1,66 @@
+[
+  {
+    "query": "my component is throwing exit code 2, can you look at the error? job id is 384729483 in the keboola project",
+    "should_trigger": true
+  },
+  {
+    "query": "why is my keboola extractor job failing intermittently? it worked yesterday and the config didn't change",
+    "should_trigger": true
+  },
+  {
+    "query": "component runs locally but fails in keboola with 'user error: missing input table'",
+    "should_trigger": true
+  },
+  {
+    "query": "job 998877 ended with 'Component terminated. Possibly due to out of memory error'",
+    "should_trigger": true
+  },
+  {
+    "query": "my writer silently writes zero rows even though the input table has data — why",
+    "should_trigger": true
+  },
+  {
+    "query": "add incremental loading to my salesforce extractor, full loads are too slow",
+    "should_trigger": false
+  },
+  {
+    "query": "write unit tests for the transform function in my component",
+    "should_trigger": false
+  },
+  {
+    "query": "brand new component for the github api, where do i start",
+    "should_trigger": false
+  },
+  {
+    "query": "review this PR that changes the configSchema of a live component",
+    "should_trigger": false
+  },
+  {
+    "query": "my streamlit data app deployment is stuck in 'starting' state",
+    "should_trigger": false
+  },
+  {
+    "query": "my custom python app job failed with a traceback ending in asyncio.run(main()) — help me debug and fix the config",
+    "should_trigger": true
+  },
+  {
+    "query": "component job ended in error: Failed to process output mapping: Source destination columns mismatch — why?",
+    "should_trigger": true
+  },
+  {
+    "query": "the extractor job says 'Invalid OAuth grant when fetching the sheet, try reauthenticating' — figure out what's actually wrong",
+    "should_trigger": true
+  },
+  {
+    "query": "job 509123 spadl s chybou 'Numeric value '' is not recognized' — zjisti proč a oprav to",
+    "should_trigger": true
+  },
+  {
+    "query": "my snowflake SQL transformation fails with 'SQL compilation error: syntax error line 53' — fix the query",
+    "should_trigger": false
+  },
+  {
+    "query": "among our active flows, which are broken or haven't refreshed in the past month?",
+    "should_trigger": false
+  }
+]

@@ -1,6 +1,6 @@
 ---
 name: kbc-template-readiness
-whenToUse: |
+description: |
   Use this agent to assess how ready a Keboola project is for templatization. Activates when:
   - User asks to "check template readiness", "assess templatization", "what needs to be parameterized"
   - Part of a project review team evaluating reusability across clients
