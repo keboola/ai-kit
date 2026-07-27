@@ -135,7 +135,7 @@ on the returned list — the `?modelId` query param is unreliable.
 ```json
 {
   "name": "<model name>",
-  "data": { "name": "<model name>", "description": "...", "sqlDialect": "Snowflake" },
+  "data": { "name": "<model name>", "description": "...", "sql_dialect": "Snowflake" },
   "branch": "main",
   "schemaVersion": "1.0.0",
   "scope": "project"
@@ -248,10 +248,19 @@ and a bare `KEBOOLA` reference will fail at Snowflake query time.
   "name": "net_margin_critical",
   "constraintType": "range",
   "metrics": ["Net Profit Margin"],
-  "ruleExpression": { "bounds": { "min": -2.0, "max": 0.05 } },
+  "rule": "-2.0 <= Net Profit Margin <= 0.05",
+  "ruleExpression": { "operator": "between", "left": "Net Profit Margin", "bounds": { "min": -2.0, "max": 0.05 } },
   "severity": "error"
 }
 ```
+- **`rule` is REQUIRED** by the metastore — a plain-string logical expression using metric names
+  (e.g. `"profit <= revenue"`, `"-2.0 <= Net Profit Margin <= 0.05"`, `maxLength` 1000). Omitting it
+  returns **422 missing property 'rule'**.
+- **`ruleExpression` is OPTIONAL** and is a structured object `{operator, left, right, bounds}`
+  (`operator` ∈ `< <= = >= > != between in sum_equals ratio_between`). Send it **in addition to**
+  `rule` — downstream pipelines read `ruleExpression.bounds`; the API enforces `rule`.
+- The metastore validates `semantic-constraint` with **`additionalProperties: false`** — unlike
+  `semantic-model`, a stray/misspelled key is hard-rejected, so keep the payload clean.
 - `severity` API accepts only: `error` / `warning` / `info`
 - Encode 4-level health bands in the **name suffix**: `_critical` / `_warning` / `_healthy` / `_review`
 - Downstream pipelines parse the suffix; `severity` is secondary

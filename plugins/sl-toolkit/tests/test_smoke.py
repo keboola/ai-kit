@@ -1,7 +1,8 @@
 """Round-trip jsonschema validation for every metastore entity type.
 
-These tests would have caught the sql_dialect/sqlDialect divergence from PR #72:
-the model schema explicitly forbids snake_case spellings via `not.anyOf`.
+These tests guard against key-name drift from the metastore contract: the model schema
+requires snake_case `sql_dialect` and forbids the camelCase spelling via `not.anyOf`, and
+the constraint fixture must carry the required string `rule`.
 """
 import json
 from pathlib import Path
@@ -42,10 +43,20 @@ def test_data_shape(entity):
 
 
 def test_no_dialect_drift():
-    """Regression test for PR #72: sqlDialect must be camelCase, never snake_case."""
+    """The metastore requires snake_case `sql_dialect`; camelCase `sqlDialect` is ignored and
+    the required key ends up missing (422 on the first POST). Assert the correct spelling."""
     fixture = load(FIXTURES / "semantic-model.json")
-    assert "sqlDialect"  in fixture["data"], "semantic-model.data must use camelCase sqlDialect"
-    assert "sql_dialect" not in fixture["data"], "snake_case sql_dialect is the bug from #72"
+    assert "sql_dialect" in fixture["data"], "semantic-model.data must use snake_case sql_dialect"
+    assert "sqlDialect" not in fixture["data"], "camelCase sqlDialect is rejected by the metastore API"
+
+
+def test_constraint_requires_rule():
+    """The metastore semantic-constraint schema requires a string `rule` (required=[...,'rule',...]).
+    `ruleExpression` alone triggers 422 missing property 'rule'. Send both: `rule` for the API,
+    `ruleExpression` for downstream pipelines that read the bounds."""
+    fixture = load(FIXTURES / "semantic-constraint.json")["data"]
+    assert isinstance(fixture.get("rule"), str) and fixture["rule"], "constraint must include a string `rule`"
+    assert "ruleExpression" in fixture, "constraint should retain ruleExpression for downstream pipelines"
 
 
 def test_constraint_severity_suffix():
