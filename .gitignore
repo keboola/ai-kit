@@ -1,0 +1,4 @@
+
+# local tooling / OS noise
+.DS_Store
+.claude/
