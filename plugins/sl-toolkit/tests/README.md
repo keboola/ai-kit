@@ -13,9 +13,9 @@ python -m pytest plugins/sl-toolkit/tests/ -v
 
 | File | Covers |
 |---|---|
-| `test_smoke.py` | jsonschema round-trip for all 6 entity types (envelope + data shape), `sqlDialect` camelCase invariant, constraint severity suffix, FQN uses `KEBOOLA_<projectId>` |
+| `test_smoke.py` | jsonschema round-trip for all 6 entity types (envelope + data shape), `sql_dialect` snake_case invariant, constraint requires string `rule`, constraint severity suffix, FQN uses `KEBOOLA_<projectId>` |
 | `test_fqn.py` | `db_name()` token-verify success / cache hit / HTTP error fallback / malformed response. `fqn()` three-part construction with dotted schemas |
-| `test_skill_consistency.py` | Greps `SKILL.md` and command markdowns to assert: no hardcoded `KEBOOLA` fqn, `sqlDialect` not `sql_dialect`, no `allowed-tools` in reference-skill frontmatter, multi-cloud regex (`gcp\|aws\|azure`), no literal placeholder strings, push loop includes `semantic-constraint`, VERSION rule instructs probing |
+| `test_skill_consistency.py` | Greps `SKILL.md` and command markdowns to assert: no hardcoded `KEBOOLA` fqn, `sql_dialect` not `sqlDialect`, no `allowed-tools` in reference-skill frontmatter, multi-cloud regex (`gcp\|aws\|azure`), no literal placeholder strings, push loop includes `semantic-constraint`, VERSION rule instructs probing |
 
 ## Fixtures and schemas
 

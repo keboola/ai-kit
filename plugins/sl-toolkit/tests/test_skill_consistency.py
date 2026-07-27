@@ -1,7 +1,7 @@
 """Verify SKILL.md and command markdowns don't drift from canonical invariants.
 
-These tests grep the markdown so changes to SKILL.md that re-introduce the bugs
-Jordan flagged (hardcoded KEBOOLA, sql_dialect, allowed-tools, etc.) fail in CI.
+These tests grep the markdown so changes to SKILL.md that re-introduce known bugs
+(hardcoded KEBOOLA, camelCase sqlDialect, allowed-tools, etc.) fail in CI.
 """
 import re
 from pathlib import Path
@@ -43,11 +43,28 @@ def test_no_hardcoded_keboola_in_fqn_construction():
             )
 
 
-def test_sqldialect_is_camelcase():
-    """Regression: PR #72 sql_dialect bug. SKILL.md must use sqlDialect, never snake_case."""
+def test_sqldialect_is_snakecase():
+    """The metastore semantic-model schema requires snake_case `sql_dialect`
+    (see go-monorepo services/metastore/migrations/schema/semantic-model_schema_1.0.0.json:
+    required=["name","sql_dialect"]). camelCase `sqlDialect` is silently ignored, so the
+    required key is missing and the very first POST fails with 422. PR #72 pinned the wrong
+    spelling; this asserts the correct one."""
     text = read(SKILL_MD)
-    assert "sqlDialect"  in text, "SKILL.md must document sqlDialect"
-    assert "sql_dialect" not in text, "snake_case sql_dialect is the PR #72 regression"
+    assert "sql_dialect" in text, "SKILL.md must document snake_case sql_dialect (metastore contract)"
+    assert "sqlDialect" not in text, "camelCase sqlDialect is rejected by the metastore API"
+
+
+def test_constraint_rule_is_documented():
+    """The metastore semantic-constraint schema requires a string `rule`; documenting only
+    `ruleExpression` causes 422 missing property 'rule'. SKILL.md must show `rule` in the
+    semantic-constraint payload."""
+    text = read(SKILL_MD)
+    section = text[text.find("### semantic-constraint"):]
+    section = section[: section.find("\n---")]
+    assert '"rule"' in section, (
+        "SKILL.md semantic-constraint payload must include the required string `rule` — "
+        "ruleExpression alone is rejected by the metastore with 422 missing property 'rule'."
+    )
 
 
 def test_no_allowed_tools_wildcard_in_skill_frontmatter():

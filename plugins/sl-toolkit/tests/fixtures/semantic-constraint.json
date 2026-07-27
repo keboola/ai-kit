@@ -4,7 +4,8 @@
     "name": "net_margin_critical",
     "constraintType": "range",
     "metrics": ["Net Profit Margin"],
-    "ruleExpression": {"bounds": {"min": -2.0, "max": 0.05}},
+    "rule": "-2.0 <= Net Profit Margin <= 0.05",
+    "ruleExpression": {"operator": "between", "left": "Net Profit Margin", "bounds": {"min": -2.0, "max": 0.05}},
     "severity": "error",
     "modelUUID": "00000000-0000-0000-0000-000000000001"
   },

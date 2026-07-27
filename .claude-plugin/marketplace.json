@@ -48,7 +48,7 @@
     {
       "name": "sl-toolkit",
       "description": "Semantic layer toolkit for Keboola — inspect, validate, and build models via the metastore API. CRUD operations handled conversationally via the semantic-layer skill. (Renamed from sl-builder in v3.0.0.)",
-      "version": "3.0.0",
+      "version": "3.0.1",
       "source": "./plugins/sl-toolkit",
       "category": "development"
     }
