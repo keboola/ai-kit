@@ -42,10 +42,11 @@ def test_data_shape(entity):
 
 
 def test_no_dialect_drift():
-    """Regression test for PR #72: sqlDialect must be camelCase, never snake_case."""
+    """The metastore requires snake_case `sql_dialect`; camelCase `sqlDialect` is rejected
+    with a 422. This assertion was previously inverted."""
     fixture = load(FIXTURES / "semantic-model.json")
-    assert "sqlDialect"  in fixture["data"], "semantic-model.data must use camelCase sqlDialect"
-    assert "sql_dialect" not in fixture["data"], "snake_case sql_dialect is the bug from #72"
+    assert "sql_dialect" in fixture["data"], "semantic-model.data must use sql_dialect"
+    assert "sqlDialect" not in fixture["data"], "camelCase sqlDialect is rejected (422)"
 
 
 def test_constraint_severity_suffix():

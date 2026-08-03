@@ -2,16 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "semantic-model.data",
   "type": "object",
-  "required": ["name", "description", "sqlDialect"],
+  "required": ["name", "description", "sql_dialect"],
   "additionalProperties": true,
   "properties": {
     "name":        {"type": "string", "minLength": 1},
     "description": {"type": "string"},
-    "sqlDialect":  {"type": "string", "enum": ["Snowflake", "BigQuery", "Redshift", "Postgres"]}
+    "sql_dialect": {"type": "string", "enum": ["Snowflake", "BigQuery"]}
   },
   "not": {
     "anyOf": [
-      {"required": ["sql_dialect"]},
+      {"required": ["sqlDialect"]},
       {"required": ["sqldialect"]},
       {"required": ["SqlDialect"]}
     ]
