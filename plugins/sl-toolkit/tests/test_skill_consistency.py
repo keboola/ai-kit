@@ -43,11 +43,18 @@ def test_no_hardcoded_keboola_in_fqn_construction():
             )
 
 
-def test_sqldialect_is_camelcase():
-    """Regression: PR #72 sql_dialect bug. SKILL.md must use sqlDialect, never snake_case."""
+def test_sql_dialect_is_snake_case():
+    """The metastore requires snake_case `sql_dialect` and rejects camelCase `sqlDialect`
+    with a 422 ("missing property 'sql_dialect'"), verified against a live stack. This
+    assertion was previously inverted, which is why the skill shipped a payload the API
+    could not accept.
+
+    Matches the KEY as it appears in a payload (quoted), not the bare word — the gotchas
+    section legitimately names `sqlDialect` in prose to say it is rejected."""
     text = read(SKILL_MD)
-    assert "sqlDialect"  in text, "SKILL.md must document sqlDialect"
-    assert "sql_dialect" not in text, "snake_case sql_dialect is the PR #72 regression"
+    assert '"sql_dialect"' in text, "SKILL.md must document the sql_dialect key"
+    for bad in ('"sqlDialect"', "'sqlDialect'"):
+        assert bad not in text, f"{bad} as a payload key is rejected by the metastore (422)"
 
 
 def test_no_allowed_tools_wildcard_in_skill_frontmatter():

@@ -42,7 +42,7 @@ Supports GCP, AWS, and Azure stacks — metastore region derived automatically f
 
 ## Key design decisions
 
-**No PATCH endpoint** — all edits are DELETE old id + POST new, with rollback on POST failure.
+**Edits use PATCH** — `PATCH /api/v1/repository/{type}/{id}` updates in place, preserving the object's UUID and bumping its revision. Never DELETE + POST: that mints a new UUID, resets revision history, and breaks anything referencing the old one.
 
 **Constraint cascade on rename** — renaming a metric auto-updates constraint `metrics[]` references to prevent orphan FKs in `DIM_METRIC_THRESHOLD` tables.
 
