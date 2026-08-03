@@ -84,6 +84,12 @@ def api_post(path, body):
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read())
 
+def api_patch(path, body):
+    req = urllib.request.Request(
+        f"{METASTORE}{path}", json.dumps(body).encode(), H, method='PATCH')
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
 def api_delete(path):
     req = urllib.request.Request(f"{METASTORE}{path}", headers=H, method='DELETE')
     urllib.request.urlopen(req, timeout=15)
@@ -111,6 +117,7 @@ def db_name():
 ```
 GET    /api/v1/repository/{type}       → {"data": [...]}
 POST   /api/v1/repository/{type}       → {"data": {item}}
+PATCH  /api/v1/repository/{type}/{id}  → {"data": {item}}   # in-place update
 DELETE /api/v1/repository/{type}/{id}
 ```
 
@@ -135,7 +142,7 @@ on the returned list — the `?modelId` query param is unreliable.
 ```json
 {
   "name": "<model name>",
-  "data": { "name": "<model name>", "description": "...", "sqlDialect": "Snowflake" },
+  "data": { "name": "<model name>", "description": "...", "sql_dialect": "Snowflake" },
   "branch": "main",
   "schemaVersion": "1.0.0",
   "scope": "project"
@@ -312,15 +319,12 @@ or the constraint will create orphan FKs in downstream DIM_METRIC_THRESHOLD tabl
 
 ### Edit an entity
 
-The metastore has no PATCH — editing is DELETE old + POST updated.
+**Edit in place with `PATCH`.** Send only the fields that change — the object keeps its UUID and
+gains a revision, so history is preserved and anything referencing it by UUID stays valid.
 Always show the diff to the user and get confirmation before proceeding.
 
 ```python
 import urllib.error, re
-
-def envelope(name, data):
-    return {"name": name, "data": {**data, "modelUUID": MODEL_UUID},
-            "branch": "main", "schemaVersion": "1.0.0", "scope": "project"}
 
 # 1. Fetch and find item
 TYPE = 'semantic-metric'   # replace with actual type
@@ -331,15 +335,13 @@ target = next((i for i in items
 if not target:
     print("Not found. Available:", [i['attributes'].get('name') for i in items])
 
-# 2. Build updated attrs, save original for rollback
-original_attrs = {**target['attributes']}
-NEW_ATTRS = {**original_attrs}
-# apply changes, e.g.: NEW_ATTRS['sql'] = '<new sql>'
+# 2. Decide the change (a partial patch — not the whole object)
+OLD_NAME = target['attributes'].get('name', '')
+CHANGES  = {}                       # e.g. {'sql': '<new sql>'} or {'name': 'Total Revenue'}
+NEW_NAME = CHANGES.get('name', OLD_NAME)
 
 # 3. If renaming a metric — find constraints to cascade-update
-OLD_NAME = original_attrs.get('name', '')
-NEW_NAME = NEW_ATTRS.get('name', '')
-is_rename = TYPE == 'semantic-metric' and OLD_NAME != NEW_NAME
+is_rename = TYPE == 'semantic-metric' and NEW_NAME != OLD_NAME
 affected_constraints = []
 if is_rename:
     all_c = api_get("/api/v1/repository/semantic-constraint")
@@ -354,34 +356,32 @@ if is_rename:
     if affected_constraints:
         print(f"Constraints to auto-update: {[c['attributes']['name'] for c in affected_constraints]}")
 
-# 4. Delete old + POST updated (rollback on POST failure)
-api_delete(f"/api/v1/repository/{TYPE}/{target['id']}")
-new_name = NEW_ATTRS.get('name') or NEW_ATTRS.get('term')
+# 4. PATCH in place. Include `name` at the envelope top level only when it changed,
+#    so the metastore's own `meta.name` stays in sync with the payload.
+body = {"data": CHANGES}
+if is_rename or 'term' in CHANGES:
+    body["name"] = CHANGES.get('name') or CHANGES.get('term')
 try:
-    r = api_post(f"/api/v1/repository/{TYPE}", envelope(new_name, NEW_ATTRS))
-    print(f"✓ Updated: {r['data']['id']}")
+    r = api_patch(f"/api/v1/repository/{TYPE}/{target['id']}", body)
+    print(f"✓ Updated {r['data']['id']} (revision {r['data'].get('meta', {}).get('revision')})")
 except urllib.error.HTTPError as e:
-    print(f"✗ POST failed ({e.code}) — attempting rollback...")
-    orig_name = original_attrs.get('name') or original_attrs.get('term')
-    try:
-        api_post(f"/api/v1/repository/{TYPE}", envelope(orig_name, original_attrs))
-        print("✓ Rollback succeeded — original restored")
-    except Exception:
-        print("✗ Rollback also failed — check metastore manually")
+    # Nothing was deleted, so there is nothing to roll back — the object is untouched.
+    print(f"✗ PATCH failed ({e.code}): {e.read().decode()[:300]}")
     raise
 
-# 5. Cascade constraint updates on rename
+# 5. Cascade constraint updates on rename — also in place
 for c in affected_constraints:
-    c_attrs = {**c['attributes']}
-    c_attrs['metrics'] = [NEW_NAME if m == OLD_NAME else m for m in c_attrs.get('metrics', [])]
-    api_delete(f"/api/v1/repository/semantic-constraint/{c['id']}")
+    metrics = [NEW_NAME if m == OLD_NAME else m for m in (c['attributes'].get('metrics') or [])]
     try:
-        api_post("/api/v1/repository/semantic-constraint",
-                 envelope(c_attrs['name'], c_attrs))
-        print(f"  ✓ Constraint updated: {c_attrs['name']}")
+        api_patch(f"/api/v1/repository/semantic-constraint/{c['id']}", {"data": {"metrics": metrics}})
+        print(f"  ✓ Constraint updated: {c['attributes']['name']}")
     except urllib.error.HTTPError as e:
-        print(f"  ✗ {c_attrs['name']}: {e.code}")
+        print(f"  ✗ {c['attributes']['name']}: {e.code}")
 ```
+
+> **Do not edit by DELETE + POST.** It destroys the object's UUID and revision history, breaks
+> anything referencing it by UUID, and opens a window where the layer is missing an object if the
+> POST fails. `PATCH` has none of those problems.
 
 > **⚠ Dataset/relationship renames** are not cascaded. Renaming a dataset's *semantic name* is
 > safe. Changing its `tableId` breaks all metrics and relationships pointing to it — coordinate
@@ -421,6 +421,12 @@ joining on `CODE_METRIC` breaks silently if a metric is renamed. Prefer additive
 **Constraint severity has only 3 API levels** — `error`/`warning`/`info` isn't enough
 for 4-band health UIs. Encode real severity in the constraint name suffix instead.
 
+**`sql_dialect` is snake_case and a closed set** — exactly `'Snowflake'` or `'BigQuery'`,
+capitalized. camelCase `sqlDialect` is rejected with `422 missing property 'sql_dialect'`,
+and a lowercase value with `422 value must be one of 'Snowflake', 'BigQuery'`. Both errors
+surface only as a generic "Validation failed", so they are easy to misdiagnose. Take the
+project's real backend from the stack rather than assuming Snowflake.
+
 **modelUUID differs per project** — dev and prod have different UUIDs for the same
 logical model. When promoting, fetch the target project's model list to find its UUID,
 then replace `modelUUID` on each item before POSTing.
@@ -433,4 +439,7 @@ for t in ['semantic-metric','semantic-dataset','semantic-glossary',
               open(f'/tmp/sl_backup_{t}.json','w'), indent=2)
 ```
 
-**No PATCH endpoint** — the metastore has no update operation. Editing = DELETE old id + POST new.
+**Edit with PATCH, never DELETE + POST** — `PATCH /api/v1/repository/{type}/{id}` updates in place,
+preserving the object's UUID and bumping its revision. Deleting and re-posting mints a new UUID,
+resets revision history, breaks anything referencing the old UUID, and can leave the layer missing
+an object if the POST fails.

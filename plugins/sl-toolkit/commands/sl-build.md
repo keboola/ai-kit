@@ -320,7 +320,7 @@ if UPDATE_ID:
 else:
     uuid = api_post('/api/v1/repository/semantic-model', {
         'name': model['name'],
-        'data': {'name': model['name'], 'description': model['description'], 'sqlDialect': 'Snowflake'},
+        'data': {'name': model['name'], 'description': model['description'], 'sql_dialect': 'Snowflake'},
         'branch': 'main', 'schemaVersion': '1.0.0', 'scope': 'project'
     })['data']['id']
     print(f'✓ model created {uuid}')
