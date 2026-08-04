@@ -72,21 +72,16 @@ Notes:
 
 ### BRANCH_ID
 
-Defaults to `default` (production). Almost always leave it that way.
+`BRANCH_ID` selects **which branch's tables the app reads at runtime**. It says nothing about where the app runs: data apps themselves only live in the **production branch** — the platform does not deploy or run data apps from development branches. The two contexts need opposite things, so treat them separately.
 
-**Important context:** data apps themselves only live in the **production branch** — the platform does not deploy or run data apps from development branches. So `BRANCH_ID` is not about where the app runs (it always runs in production), but about which branch's tables the app reads from at runtime.
-
-You only need to set `BRANCH_ID` explicitly if:
-
-- The app needs to read tables that live in a **development branch** (e.g. previewing data from an in-progress migration before it lands in production).
-- In that case, find the numeric branch ID in the project UI under **Development Branches** — the URL of the branch shows it.
-
-For every other case → omit `BRANCH_ID` (or set it to `default`) and the app reads production tables.
-
-**Local dev with direct Query Service calls needs a numeric `BRANCH_ID`.** The string `"default"` is rejected by the Query Service with a parse error. Don't construct an HTTP call to `/v2/storage/dev-branches` — call `mcp__keboola__get_project_info` and read:
+**Local dev: you must set it, and it must be a numeric ID.** This is the normal local path, not an exception — the templates go through the Query Service, and the Query Service rejects the string `"default"` with a parse error. Don't construct an HTTP call to `/v2/storage/dev-branches` — call `mcp__keboola__get_project_info` and read:
 
 - `branch_id` — the numeric ID to paste into `.env.local`.
 - `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` and the app will read dev-branch tables locally.
+
+**Deployed on the platform: leave it out of the app config.** Keboola injects `BRANCH_ID` itself, and an unset value means the default (production) branch is used — that's already what you want, so there is nothing to pin. Setting it explicitly in the platform config is only for the dev-branch case below.
+
+**The one case for setting it explicitly, in either context:** the app needs to read tables that live in a **development branch** (e.g. previewing data from an in-progress migration before it lands in production). Then set `BRANCH_ID` to that branch's numeric ID — find it in the project UI under **Development Branches**, where the URL of the branch shows it.
 
 ## Preferred default for read-only apps: DuckDB-cached RO
 
@@ -249,7 +244,7 @@ Only the **dataset** (bucket) name is mangled — the **table** name keeps its o
 
 For BigQuery projects there's an alternative to the Query Service: post to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<workspace>/query`. **Prefer the Query Service** (above) for new apps; this endpoint is here as another option — e.g. when you want a synchronous call with native-typed rows, or you're maintaining an app already built on it. The call is synchronous (no submit/poll/paginate) and returns rows as dicts with native types — no string coercion needed. (On Snowflake projects this endpoint returns 404 — see the warning above.)
 
-Required env vars: `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (can be the string `"default"` here — the Storage API accepts it, unlike Query Service).
+Required env vars: `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (still pass the numeric ID, as everywhere else — the Storage API happens to tolerate the string `"default"` too, unlike the Query Service, but there's no reason to rely on that).
 
 Python:
 
