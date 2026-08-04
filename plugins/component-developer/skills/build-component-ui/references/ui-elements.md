@@ -643,21 +643,7 @@ Use with `format: "editor"` and `options.editor.mode`.
 > - Default mode is `application/json` when `options.editor.mode` is not specified
 > - JSON mode (`application/json`) supports field encryption — use `"type": "object"` (not `"string"`) so the UI can store an encrypted JSON object
 > - All other modes use `"type": "string"`
-> - A JSON-mode editor renders a note saying `#`-prefixed properties will be encrypted on save. Set `options.encryption_hint: false` when the field does not hold Keboola configuration (a vendor query filter, a request payload template), where encrypting a key would only hand the component ciphertext it cannot use. The option affects the note only — encryption behaviour is unchanged.
->
-> ```json
-> {
->   "filters": {
->     "type": "object",
->     "title": "Filters",
->     "format": "editor",
->     "options": {
->       "editor": { "mode": "application/json" },
->       "encryption_hint": false
->     }
->   }
-> }
-> ```
+> - JSON mode renders a note about `#`-prefixed properties being encrypted; hide it with `options.encryption_hint: false` when the field is not Keboola configuration (a vendor filter tree, a payload template)
 
 ### Available Modes
 
