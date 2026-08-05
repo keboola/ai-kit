@@ -73,7 +73,7 @@ For new apps, pass `configuration_id=""`. For updates, pass the existing configu
 
 For `authentication_type` defaults and the OIDC-downgrade footgun on updates, see [authentication.md](authentication.md) §MCP defaults.
 
-**Limitations:** Streamlit type only. No Git deployment mode via MCP. No Python/JS type via MCP today (planned — see [python-js-apps.md](python-js-apps.md) "Deployment via MCP — PLACEHOLDER").
+**Limitations:** On a truly filesystem-less client, Streamlit type only. Python/JS apps use the managed-git draft→promote flow (`modify_python_js_data_app` + `deploy_data_app`), where MCP manages the configs, triggers the deploys, and hands you an authenticated `git_clone_url` — but the client, not MCP, runs the git that moves the source (clone/commit/push/merge), so that flow needs a filesystem and belongs to Path B. Streamlit apps have no managed git repo, so there is no Streamlit git-deploy mode via MCP.
 
 **Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_streamlit_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
 
@@ -113,9 +113,10 @@ For **Streamlit** apps:
 - Code mode: edit local file, then push to git OR use `modify_streamlit_data_app` to paste the contents into the data app config.
 - Git mode: edit local file, `git push`, then `deploy_data_app` via MCP picks up the new commit.
 
-For **Python/JS** apps:
+For **Python/JS** apps (no Code mode for this type — source always lives in git). Two supported routes:
 
-- Must use git (no Code mode for this type). Edit locally, push to customer git, deploy. Today this means using `kbagent` (Path C) — MCP doesn't yet support Python/JS app deployment.
+- **MCP managed-git (draft→promote).** The Keboola MCP server provisions and owns the git repo for you. `modify_python_js_data_app` creates a persistent **prod app** (which owns the only managed repo) plus **drafts** parented to it; `create_python_js_data_app_git_credential` mints a clone URL; you clone/commit/push the draft branch yourself (MCP never runs git for you), then `deploy_data_app(action="deploy", configuration_id=DRAFT, mode="dev")` serves a preview. Once approved, merge the draft branch into `main`, `deploy_data_app(action="deploy", configuration_id=PROD)`, and `delete_python_js_data_app_draft`. **This is the path MCP clients — including Kai — use; no kbagent required.** Full walkthrough in [python-js-apps.md](python-js-apps.md) §Deployment via MCP.
+- **Customer-managed git + kbagent (Path C).** When the customer supplies their own GitHub/GitLab repo (PAT/SSH), use `kbagent data-app create/deploy`. Choose this for CLI-only environments or when the repo must live outside Keboola.
 
 Best fit for:
 
@@ -198,7 +199,7 @@ kbagent data-app password --app-id N    # if basic-auth
 | Your client                                | Recommended path                                                       |
 | ------------------------------------------ | ---------------------------------------------------------------------- |
 | Claude Desktop / claude.ai (no filesystem or with sandbox) | Path A (MCP-only) — Streamlit only. Compose code in-tool; don't drift into "local dev" mode even when a sandbox FS is available. |
-| Claude Code or local IDE agent             | Path B (filesystem + MCP) for Streamlit; Path C (kbagent) for Python/JS |
+| Claude Code or local IDE agent             | Path B (filesystem + MCP) for both Streamlit and Python/JS; Path C (kbagent) when on customer-managed git or CLI-only |
 | Agentic CLI without MCP                    | Path C (kbagent) for everything                                        |
 | CI/CD pipeline                             | Path C (kbagent) — non-interactive, scriptable                         |
 
@@ -207,7 +208,7 @@ If both Path B and Path C are available, prefer Path B for one-off changes and P
 **Decision shortcuts:**
 
 - You can't write to a local filesystem -> Path A.
-- You're building a Python or JS (non-Streamlit) app -> Path C (until MCP gains support).
+- You're building a Python or JS (non-Streamlit) app -> Path B via the MCP managed-git draft→promote flow (`modify_python_js_data_app` + `deploy_data_app`), or Path C (kbagent) if you're on customer-managed git or CLI-only.
 - You want to iterate on a Streamlit dashboard with screenshots -> Path B.
 - You're scripting deploys in CI -> Path C.
 - You need to set or rotate secrets -> Path C.

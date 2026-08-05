@@ -14,7 +14,7 @@
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`)
 - Git commit locking
 - Bootstrap hook (advanced)
-- Deployment via MCP — PLACEHOLDER
+- Deployment via MCP (managed-git draft→promote)
 
 ## The /app contract
 
@@ -291,12 +291,32 @@ Exit code **153** means the locked commit no longer exists in the remote (force-
 
 Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh` is the only customizable stage of the entrypoint flow — derived images can replace it to bake `keboola-config/` into the image, skip git clone, or materialise source from non-git locations. See the base image docs ([glossary.md](glossary.md) §base image).
 
-## Deployment via MCP (Keboola-managed git) — PLACEHOLDER
+## Deployment via MCP (managed-git draft→promote)
 
-Future flow: provision a Keboola-managed git repo for the Python/JS app through MCP tooling, so customers don't have to supply their own GitHub/GitLab.
+The Keboola MCP server orchestrates Python/JS data-app deployment through a **managed-git draft→promote** flow: Keboola provisions and owns the git repo for the app, so the customer doesn't have to supply their own GitHub/GitLab. MCP manages the configs and triggers the deploys, but the client runs the git that moves the source (see below). This is the path MCP clients (including Kai) use — no kbagent required.
 
-Planned developer flow: feature branch -> preview deployment -> merge to main -> production deployment.
+**MCP never runs git for you.** The tools mint authenticated clone URLs and manage configs/deploys; all git work (clone, branch, commit, push, merge, branch-delete) is yours. This flow therefore needs a filesystem with git available.
 
-**Status today: not yet finished.** Agents working on Python/JS apps fall back to **customer-provided git** (private GitHub/GitLab with PAT or SSH key) as the only supported path.
+**Two-app model.** Every Python/JS project has one persistent **prod app** that owns the only managed repo, plus zero or more **drafts** parented to it. A draft is an external-git config that pins a branch of the prod repo and deploys as a *dev version* (hot reload + auto-auth iframe preview). Source changes always go through a draft branch the user previews and approves — never edit prod's `main` directly. `main` only advances by merging an approved draft branch.
 
-When the platform support lands, this section expands. If it grows past ~50 lines, split it into its own reference.
+Tools:
+
+- `modify_python_js_data_app` — creates or updates a Python/JS app config. Create with `slug` and no `parent_configuration_id` → a **prod app** (gets its own managed repo). Create with `parent_configuration_id=<prod cfg id>` (and optional `branch`, defaulting to `init`) → a **draft** pinned to a branch of the prod repo. The update path (passing `configuration_id`) changes name/description/`authentication_type`/`auto_suspend_after_seconds`/`storage`; source changes go through git, not this tool.
+- `create_python_js_data_app_git_credential(configuration_id=<PROD>)` — mints a one-time HTTPS `git_clone_url` (returned only at creation). Always call against the **prod** app; drafts have no repo of their own. When creating a draft, its clone URL is minted automatically — no separate call needed.
+- `deploy_data_app(action="deploy", configuration_id=<DRAFT>, mode="dev")` — deploys a draft as a dev preview. For prod, `deploy_data_app(action="deploy", configuration_id=<PROD>)` with no `mode`. The `action` argument is required (`"deploy"` or `"stop"`).
+- `get_data_apps(configuration_ids=[<PROD>])` — returns prod detail including `repo_url` and a `drafts: [...]` array (use it to resume an unfinished draft).
+- `delete_python_js_data_app_draft(configuration_id=<DRAFT>)` — tears down a draft after its branch is promoted. Always run this once promoted.
+
+Create-a-new-app flow:
+
+1. `modify_python_js_data_app(name="My App", description="...", slug="demo")` → `(configuration_id=PROD, repo_url)`. PROD owns the only managed repo.
+2. `modify_python_js_data_app(name="My App", description="...", slug="demo-draft", parent_configuration_id=PROD, branch="init")` → `(configuration_id=DRAFT, git_clone_url, branch="init")`.
+3. You: `git clone <git_clone_url>`; `git checkout init` (creating it if the repo is empty); write source; `git push origin init`.
+4. `deploy_data_app(action="deploy", configuration_id=DRAFT, mode="dev")` → preview URL serving the `init` branch. Iterate with the user.
+5. Once approved — you: `git checkout main`; `git merge init`; `git push origin main`; `git push origin --delete init`.
+6. `deploy_data_app(action="deploy", configuration_id=PROD)` → prod URL now serves the merged `main`.
+7. `delete_python_js_data_app_draft(configuration_id=DRAFT)`.
+
+Editing an existing app is the same, except you start by minting a fresh credential against the known prod config (`create_python_js_data_app_git_credential(configuration_id=PROD)`) and branch off `main` with a descriptive draft branch name (e.g. `add-revenue-filter`). To resume an abandoned draft, `get_data_apps(configuration_ids=[PROD])` lists its `drafts` with their pinned branches.
+
+**Customer-managed git alternative.** When the customer supplies their own private GitHub/GitLab repo (PAT or SSH key) instead of Keboola's managed repo, deploy via `kbagent` — see [deployment-paths.md](deployment-paths.md) §Path C. Reach for this in CLI-only environments or when the repo must live outside Keboola.

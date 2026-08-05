@@ -35,8 +35,8 @@ If unsure → `references/choosing-app-type.md`. Short version:
 
 `references/deployment-paths.md` covers all three:
 
-- **Path A — Claude Desktop / web (MCP-only, no filesystem):** Use `modify_streamlit_data_app` / `deploy_data_app` MCP tools (Streamlit only today).
-- **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to customer git, deploy via MCP or kbagent.
+- **Path A — Claude Desktop / web (MCP-only, no filesystem):** Use `modify_streamlit_data_app` / `deploy_data_app` MCP tools. Streamlit only on a filesystem-less client; the MCP Python/JS flow needs git, so it belongs to Path B.
+- **Path B — Claude Code / local agent with filesystem + MCP:** Both Streamlit and Python/JS. Python/JS deploys via the MCP managed-git draft→promote flow (`modify_python_js_data_app` + `deploy_data_app`) — the path MCP clients like Kai use; Streamlit via `modify_streamlit_data_app` or git. `kbagent` is an alternative when on customer-managed git.
 - **Path C — CLI agent (`kbagent`):** Full lifecycle via `kbagent data-app` command group.
 
 ### 4. Any cross-cutting concerns?
