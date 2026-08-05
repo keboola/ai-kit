@@ -72,6 +72,8 @@ Set the data app's built-in authentication to **None**. Keboola's app-level OIDC
 
 Deploy with `#MCP_PUBLIC_URL` empty → copy the app URL Keboola shows (`https://<slug>-<cfg>.hub.<region>.keboola.com`, no trailing slash, no `/mcp`) → set `#MCP_PUBLIC_URL` → redeploy so the OAuth-shape discovery docs advertise the real origin.
 
+`#MCP_PUBLIC_URL` is inherently instance-specific — every app has its own URL, so no two apps can share the value. **If you duplicate an existing MCP data-app config, config duplication copies all secrets verbatim, including `#MCP_PUBLIC_URL`.** The copy then advertises the *source* app's origin in its discovery docs, so it deploys and runs fine but a fresh client's OAuth handshake redirects to the old app and fails. Always re-run the two-pass dance on a duplicated app: reset `#MCP_PUBLIC_URL` to the copy's own URL and redeploy before connecting a client.
+
 ## Verify
 
 Logs first (authoritative): look for `success: mcp-server entered RUNNING state` in the deploy logs (via `kbagent … data-app logs` or the Keboola Terminal Log tab). Then:
