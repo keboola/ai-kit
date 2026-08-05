@@ -88,7 +88,7 @@ def test_skill_scripts_are_executable(skill):
 # the BASH_SOURCE self-location convention. Keep this list short and justified.
 SELF_LOCATE_EXEMPT = {
     # environment installer (configures Playwright MCP); reads no skill files
-    "component-developer:build-component-ui/install.sh",
+    "keboola:build-component-ui/install.sh",
 }
 
 

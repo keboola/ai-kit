@@ -1,0 +1,59 @@
+{
+  "name": "keboola",
+  "version": "1.0.0",
+  "description": "Unified Keboola AI toolkit — Python component development, data app building and deployment, project management and a 10-agent review team (CLI), Keboola-managed Git (Forgejo) access, Power BI semantic-model migration, and semantic layer inspect/validate/build with conversational CRUD. Consolidates the former component-developer, dataapp-developer, keboola-cli, keboola-git, powerbi-to-sl, and sl-toolkit plugins.",
+  "author": {
+    "name": "Keboola :(){:|:&};: s.r.o.",
+    "email": "support@keboola.com"
+  },
+  "keywords": [
+    "keboola",
+    "component",
+    "python",
+    "extractor",
+    "writer",
+    "application",
+    "ui",
+    "schema",
+    "configuration",
+    "conditional-fields",
+    "testing",
+    "data-app",
+    "streamlit",
+    "deployment",
+    "duckdb",
+    "data-pipeline",
+    "etl",
+    "sync",
+    "review",
+    "financial",
+    "sql",
+    "security",
+    "performance",
+    "data-quality",
+    "transformation",
+    "migration",
+    "kbagent",
+    "managed-git",
+    "forgejo",
+    "build-at-deploy",
+    "deploy",
+    "python-js",
+    "powerbi",
+    "semantic-layer",
+    "metastore"
+  ],
+  "mcpServers": {
+    "keboola": {
+      "type": "http",
+      "url": "https://mcp.us-east4.gcp.keboola.com/mcp"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server@latest"
+      ]
+    }
+  }
+}

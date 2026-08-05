@@ -1,9 +1,0 @@
-{
-  "name": "powerbi-to-sl",
-  "version": "1.0.0",
-  "description": "Migrate an existing Microsoft Power BI semantic model into a Keboola semantic layer model. Accepts TMDL folders (Power BI Modeling MCP --readonly) or per-table JSON (legacy get_semantic_model output). Brownfield companion to sl-toolkit.",
-  "author": {
-    "name": "Keboola s.r.o.",
-    "email": "support@keboola.com"
-  }
-}

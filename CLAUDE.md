@@ -2,11 +2,17 @@
 
 ## Plugin Development
 
-When adding new commands, agents, or skills to a plugin:
-1. Update the plugin's README.md with documentation
-2. Bump the version in the plugin's `.claude-plugin/plugin.json`
-3. Bump the version in `.claude-plugin/marketplace.json` for the corresponding plugin entry
-4. Update the root README.md feature list for the affected plugin (add/remove items from the list)
+This repo ships a **single** plugin, `keboola` (at `plugins/keboola`), whose
+skills are grouped by area (components, data apps, CLI, git, powerbi, semantic
+layer). Skills live flat under `skills/<skill-name>/SKILL.md` — the grouping is
+documentation in the READMEs, not directory nesting.
+
+When adding new commands, agents, or skills to the plugin:
+1. Add the skill under `plugins/keboola/skills/<skill-name>/` (its `name:` frontmatter must equal the directory name), command under `commands/`, or agent under `agents/`
+2. Update `plugins/keboola/README.md`, filing the new item under the right area
+3. Bump the version in `plugins/keboola/.claude-plugin/plugin.json`
+4. Bump the `keboola` plugin entry's version in `.claude-plugin/marketplace.json` (and the marketplace's own `version` if the change is breaking)
+5. Update the root `README.md` area list
 
 ## Skill Script Path Conventions
 
