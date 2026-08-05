@@ -369,6 +369,7 @@ Options control field behavior and appearance.
 | `editor.placeholder` | string | Placeholder text for empty editor |
 | `editor.autofocus` | boolean | Auto-focus editor on load |
 | `editor.lint` | boolean | Enable linting (for JSON mode) |
+| `encryption_hint` | boolean | Set to `false` to hide the "properties prefixed with `#` will be encrypted" note under a JSON-mode editor |
 | `only_keys` | boolean | SSH form: show only keys (not full tunnel) |
 
 ### Behavior Options
@@ -642,6 +643,7 @@ Use with `format: "editor"` and `options.editor.mode`.
 > - Default mode is `application/json` when `options.editor.mode` is not specified
 > - JSON mode (`application/json`) supports field encryption — use `"type": "object"` (not `"string"`) so the UI can store an encrypted JSON object
 > - All other modes use `"type": "string"`
+> - JSON mode renders a note about `#`-prefixed properties being encrypted; hide it with `options.encryption_hint: false` when the field is not Keboola configuration (a vendor filter tree, a payload template)
 
 ### Available Modes
 
