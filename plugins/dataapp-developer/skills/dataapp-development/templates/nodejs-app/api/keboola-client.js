@@ -58,7 +58,9 @@ export function resolveKeboolaEnv() {
     token: token.value,
     queryServiceUrl: queryServiceUrl.value || deriveQueryServiceUrl(url.value),
     workspace: resolveWorkspaceId(),
-    branch: branch.value,
+    // Optional: 'default' is the production branch. A numeric branch ID is only
+    // needed to read a development branch's tables (branched storage).
+    branch: branch.value || 'default',
   };
 }
 
@@ -83,7 +85,6 @@ function getClient() {
 export async function runQuery(sql) {
   const { branch, workspace } = resolveKeboolaEnv();
   const missing = [];
-  if (!branch) missing.push('BRANCH_ID');
   if (!workspace) missing.push('WORKSPACE_ID (or KBC_WORKSPACE_MANIFEST_PATH)');
   if (missing.length > 0) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 
