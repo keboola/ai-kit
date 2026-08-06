@@ -74,14 +74,14 @@ Notes:
 
 `BRANCH_ID` selects **which branch's tables the app reads at runtime**. It says nothing about where the app runs: data apps themselves only live in the **production branch** — the platform does not deploy or run data apps from development branches. The two contexts need opposite things, so treat them separately.
 
-**Local dev: you must set it, and it must be a numeric ID.** This is the normal local path, not an exception — the templates go through the Query Service, and the Query Service rejects the string `"default"` with a parse error. Don't construct an HTTP call to `/v2/storage/dev-branches` — call `mcp__keboola__get_project_info` and read:
+**Local dev: you always set it, and it must be a numeric ID.** There's no local case where you leave it out — the templates go through the Query Service, and the Query Service rejects the string `"default"` with a parse error. In most cases the value is the **main (production) branch's** numeric ID, which is exactly what `mcp__keboola__get_project_info` returns as `branch_id` when `is_development_branch` is `false`. Don't construct an HTTP call to `/v2/storage/dev-branches` — call `mcp__keboola__get_project_info` and read:
 
 - `branch_id` — the numeric ID to paste into `.env.local`.
-- `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` and the app will read dev-branch tables locally.
+- `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` by accident and the app will read dev-branch tables locally.
 
-**Deployed on the platform: leave it out of the app config.** Keboola injects `BRANCH_ID` itself, and an unset value means the default (production) branch is used — that's already what you want, so there is nothing to pin. Setting it explicitly in the platform config is only for the dev-branch case below.
+Locally, the only reason to use anything other than the main branch's ID: the app needs to read tables that live in a **development branch** (e.g. previewing data from an in-progress migration before it lands in production). Then point `BRANCH_ID` at that branch's numeric ID — find it in the project UI under **Development Branches**, where the URL of the branch shows it.
 
-**The one case for setting it explicitly, in either context:** the app needs to read tables that live in a **development branch** (e.g. previewing data from an in-progress migration before it lands in production). Then set `BRANCH_ID` to that branch's numeric ID — find it in the project UI under **Development Branches**, where the URL of the branch shows it.
+**Deployed on the platform: leave it out of the app config.** Keboola injects `BRANCH_ID` itself, and an unset value means the default (production) branch is used — that's already what you want, so there is nothing to pin. Here the **development branch** case is the one reason to set it explicitly: when the deployed app has to read a dev branch's tables, set `BRANCH_ID` to that branch's numeric ID (same UI lookup as above).
 
 ## Preferred default for read-only apps: DuckDB-cached RO
 
