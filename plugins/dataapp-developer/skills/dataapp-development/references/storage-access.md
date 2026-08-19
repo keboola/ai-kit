@@ -121,7 +121,7 @@ Use this when:
 Two paths to call the workspace:
 
 - **MCP-injected `query_data`** — when `modify_streamlit_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
-- **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/query-service` (JS/TS). The SDK handles submit + poll + paginate; you call `executeQuery({ branchId, workspaceId, statements })` and get back columns + rows.
+- **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/api-client`'s `queryService` client (JS/TS). The SDK handles submit + poll + paginate; you call `executeQuery(...)` and get back columns + rows.
 
 **On Snowflake, do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That older Storage API workspace-query endpoint returns `workspace.workspaceNotFound` 404s on Snowflake projects — use the Query Service instead. On BigQuery it does work and is a valid alternative (see "Alternative: Storage API workspace-query endpoint" below), but default to the Query Service on both backends.
 
@@ -172,21 +172,28 @@ cols = [c.name for c in result.columns]
 rows = [dict(zip(cols, row)) for row in result.data]
 ```
 
-JS/TS (`@keboola/query-service`):
+JS/TS (`@keboola/api-client`'s `queryService` client):
 
 ```javascript
-import { Client } from '@keboola/query-service';
+import { createQueryServiceClient } from '@keboola/api-client/queryService';
 
 const baseUrl =
   process.env.QUERY_SERVICE_URL ||
   process.env.KBC_URL.replace('://connection.', '://query.');
-const client = new Client({ baseUrl, token: process.env.KBC_TOKEN });
-
-const [result] = await client.executeQuery({
-  branchId: process.env.BRANCH_ID,           // numeric
-  workspaceId: process.env.WORKSPACE_ID,
-  statements: ['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
+const client = createQueryServiceClient({
+  baseUrl,
+  auth: { type: 'sapi-token', token: process.env.KBC_TOKEN },
+  middlewares: [],
 });
+
+const [result] = await client.executeQuery(
+  process.env.BRANCH_ID,      // numeric
+  process.env.WORKSPACE_ID,
+  {
+    statements: ['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
+    transactional: true,
+  },
+);
 const cols = result.columns.map((c) => c.name);
 const rows = result.data.map((row) =>
   Object.fromEntries(cols.map((name, i) => [name, row[i]])),
@@ -305,7 +312,7 @@ A few things worth noting on the BQ path that differ from Query Service:
 - **Rows arrive as objects keyed by column name**, not arrays + separate columns metadata. Iterate directly.
 - **Cell values are native types** (numbers, booleans, ISO strings for timestamps) — the string-cell coercion you do on the Query Service path is unnecessary here.
 - **No submit/poll/paginate.** The endpoint returns the full result in one synchronous response. For very large result sets, add a `LIMIT` on the SQL side; the response doesn't paginate.
-- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/query-service` client — you only adjust the SQL (backtick quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
+- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/api-client` `queryService` client — you only adjust the SQL (backtick quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
 
 ## Read-write direct access (Storage Access)
 
@@ -341,7 +348,7 @@ Env vars set when Storage Access is enabled:
 
 Library:
 - Python: `keboola-query-service`
-- JS/TS: `@keboola/query-service`
+- JS/TS: `@keboola/api-client`'s `queryService` client (`@keboola/api-client/queryService`)
 
 ### Wrap the SDK in a single module
 
@@ -398,20 +405,24 @@ storage = Storage()  # module-level singleton
 
 ```typescript
 import { readFileSync } from 'node:fs';
-import { Client } from '@keboola/query-service';
+import { createQueryServiceClient } from '@keboola/api-client/queryService';
 
 const branchId = process.env.BRANCH_ID!;
 const workspaceId = JSON.parse(
   readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
 ).workspaceId as string;
 
-const client = new Client({
+const client = createQueryServiceClient({
   baseUrl: process.env.QUERY_SERVICE_URL!,
-  token: process.env.KBC_TOKEN!,
+  auth: { type: 'sapi-token', token: process.env.KBC_TOKEN! },
+  middlewares: [],
 });
 
 export async function select<T = Record<string, unknown>>(sql: string): Promise<T[]> {
-  const [result] = await client.executeQuery({ branchId, workspaceId, statements: [sql] });
+  const [result] = await client.executeQuery(branchId, workspaceId, {
+    statements: [sql],
+    transactional: true,
+  });
   const cols = result.columns.map((c) => c.name);
   return result.data.map((row: unknown[]) =>
     Object.fromEntries(cols.map((name, i) => [name, row[i]])) as T,
@@ -419,7 +430,7 @@ export async function select<T = Record<string, unknown>>(sql: string): Promise<
 }
 
 export async function execute(sql: string): Promise<void> {
-  await client.executeQuery({ branchId, workspaceId, statements: [sql] });
+  await client.executeQuery(branchId, workspaceId, { statements: [sql], transactional: true });
 }
 ```
 
@@ -534,7 +545,7 @@ First-class `SQL.literal()` / `SQL.ident()` / `sql.format()` helpers are in deve
 
 ## Query Service return shape — cells come back as strings
 
-Applies to the Query Service path on **both Snowflake and BigQuery** — direct RO workspace queries and Storage Access reads/writes via `keboola-query-service` / `@keboola/query-service`. On either backend, every cell comes back as a **string** regardless of SQL type. Verified on BigQuery: `INT64 42` → `"42"`, `FLOAT64 3.14` → `"3.14"`, `BOOL TRUE` → `"true"`, `NUMERIC 99.95` → `"99.95"`, `TIMESTAMP` → a string, and SQL `NULL` → `None`/`null`. The only native-typed path is the Storage API workspace endpoint (the BigQuery alternative above) — that's why its examples skip the coercion below.
+Applies to the Query Service path on **both Snowflake and BigQuery** — direct RO workspace queries and Storage Access reads/writes via `keboola-query-service` / `@keboola/api-client`'s `queryService` client. On either backend, every cell comes back as a **string** regardless of SQL type. Verified on BigQuery: `INT64 42` → `"42"`, `FLOAT64 3.14` → `"3.14"`, `BOOL TRUE` → `"true"`, `NUMERIC 99.95` → `"99.95"`, `TIMESTAMP` → a string, and SQL `NULL` → `None`/`null`. The only native-typed path is the Storage API workspace endpoint (the BigQuery alternative above) — that's why its examples skip the coercion below.
 
 `result.columns` carries the declared type so you know what to coerce, but the type names are driver-dependent: Snowflake reports lowercase internal names (`fixed`, `real`, `text`, `timestamp_ntz`), BigQuery reports uppercase (`INTEGER`, `FLOAT`, `NUMERIC`, `BOOLEAN`, `DATE`, `TIMESTAMP`).
 
@@ -556,7 +567,7 @@ df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
 
 The DataFrame's dtype stays `object` (string) until you explicitly convert. Convert at the boundary — once, right after the query — not inside every chart.
 
-**JavaScript (when using `@keboola/query-service` directly):** zip `result.data` with `result.columns` to produce objects, and coerce numeric columns. Inspect the actual `column.type` values returned by the API for your project — they're driver-dependent (Snowflake reports lowercase internal names like `"text"`, `"fixed"`, `"real"`, `"timestamp_ntz"`; BigQuery reports uppercase `"INTEGER"`, `"FLOAT"`, `"NUMERIC"`, `"BOOLEAN"`, `"DATE"`, `"TIMESTAMP"`). Don't hand the raw `result.data` straight to the UI layer.
+**JavaScript (when using `@keboola/api-client`'s `queryService` client directly):** zip `result.data` with `result.columns` to produce objects, and coerce numeric columns. Inspect the actual `column.type` values returned by the API for your project — they're driver-dependent (Snowflake reports lowercase internal names like `"text"`, `"fixed"`, `"real"`, `"timestamp_ntz"`; BigQuery reports uppercase `"INTEGER"`, `"FLOAT"`, `"NUMERIC"`, `"BOOLEAN"`, `"DATE"`, `"TIMESTAMP"`). Don't hand the raw `result.data` straight to the UI layer.
 
 ```javascript
 function toObjects(result) {

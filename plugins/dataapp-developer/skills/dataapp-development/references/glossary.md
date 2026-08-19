@@ -76,11 +76,11 @@ See `references/kai-integration.md` for the embed patterns.
 
 Python SDK: https://github.com/keboola/query-service-api-python-sdk
 
-JS/TS SDK: https://github.com/keboola/query-service-api-js-sdk
+JS/TS: `@keboola/api-client`'s `queryService` client (https://github.com/keboola/ui, `packages/api-client`) — the formerly-standalone `query-service-api-js-sdk` repo is retired; its `executeQuery`/pagination behavior now lives here.
 
 Used when the app writes back to Storage tables via the Query Service (Snowflake projects with the **Storage Access** feature enabled). Provides authenticated `execute_query` against a permission-scoped workspace.
 
-First-class SQL helpers (`SQL.literal()`, `SQL.ident()`, `sql.format()`) are in development in both SDKs. Until released, use the manual sanitization pattern shown in `references/storage-access.md` (allowlists for strings, type-coercion for numbers).
+First-class SQL helpers (`SQL.literal()`, `SQL.ident()`, `sql.format()`) are in development for the Python SDK. Until released, use the manual sanitization pattern shown in `references/storage-access.md` (allowlists for strings, type-coercion for numbers).
 
 Install:
 
@@ -89,7 +89,7 @@ Install:
 uv add keboola-query-service
 
 # JS
-npm install @keboola/query-service
+npm install @keboola/api-client
 ```
 
 ### keboola-streamlit (helper utilities)

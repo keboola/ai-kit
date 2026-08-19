@@ -1,11 +1,12 @@
 // Centralized Keboola Query Service client for the Node.js data app.
 //
-// Uses @keboola/query-service which targets https://query.<stack>.keboola.com/api/v1/...
+// Uses @keboola/api-client's queryService client, which targets
+// https://query.<stack>.keboola.com/api/v1/...
 // Do NOT POST to /v2/storage/.../workspaces/<id>/query — that's the legacy Storage API
 // workspace-query endpoint, it 404s on most Snowflake projects.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { Client } from '@keboola/query-service';
+import { createQueryServiceClient } from '@keboola/api-client/queryService';
 
 function normalizeWorkspaceId(raw) {
   if (!raw) return null;
@@ -72,7 +73,11 @@ function getClient() {
         'Ask the user to populate .env or .env.local.',
     );
   }
-  _client = new Client({ baseUrl: queryServiceUrl, token });
+  _client = createQueryServiceClient({
+    baseUrl: queryServiceUrl,
+    auth: { type: 'sapi-token', token },
+    middlewares: [],
+  });
   return _client;
 }
 
@@ -87,10 +92,9 @@ export async function runQuery(sql) {
   if (!workspace) missing.push('WORKSPACE_ID (or KBC_WORKSPACE_MANIFEST_PATH)');
   if (missing.length > 0) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 
-  const [result] = await getClient().executeQuery({
-    branchId: String(branch),
-    workspaceId: String(workspace),
+  const [result] = await getClient().executeQuery(String(branch), String(workspace), {
     statements: [sql],
+    transactional: true,
   });
   const cols = result.columns.map((c) => c.name.toLowerCase());
   return result.data.map((row) => {
