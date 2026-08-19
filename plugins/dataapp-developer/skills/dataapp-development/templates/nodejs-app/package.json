@@ -9,7 +9,7 @@
     "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --watch server.js"
   },
   "dependencies": {
-    "@keboola/query-service": "^0.1.0",
+    "@keboola/query-service": "^0.1.5",
     "express": "^4.21.2"
   },
   "engines": {
