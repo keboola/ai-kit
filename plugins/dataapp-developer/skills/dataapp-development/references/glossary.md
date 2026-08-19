@@ -76,7 +76,7 @@ See `references/kai-integration.md` for the embed patterns.
 
 Python SDK: https://github.com/keboola/query-service-api-python-sdk
 
-JS/TS: `@keboola/api-client`'s `queryService` client (https://github.com/keboola/ui, `packages/api-client`) — the formerly-standalone `query-service-api-js-sdk` repo is retired; its `executeQuery`/pagination behavior now lives here.
+JS/TS: `@keboola/api-client`'s `queryService` client + `queryService` SDK (https://github.com/keboola/ui, `packages/api-client`) — the formerly-standalone `query-service-api-js-sdk` repo is retired; `executeQuery`/`waitForJob`/pagination now live in `createQueryServiceSdk` (`@keboola/api-client/sdk/queryService`), composed on top of the plain `queryService` client (`@keboola/api-client/queryService`).
 
 Used when the app writes back to Storage tables via the Query Service (Snowflake projects with the **Storage Access** feature enabled). Provides authenticated `execute_query` against a permission-scoped workspace.
 

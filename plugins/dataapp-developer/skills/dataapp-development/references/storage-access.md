@@ -121,7 +121,7 @@ Use this when:
 Two paths to call the workspace:
 
 - **MCP-injected `query_data`** — when `modify_streamlit_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
-- **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/api-client`'s `queryService` client (JS/TS). The SDK handles submit + poll + paginate; you call `executeQuery(...)` and get back columns + rows.
+- **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/api-client`'s `queryService` client + `queryService` SDK (JS/TS: `createQueryServiceSdk({ queryServiceClient })`). The SDK handles submit + poll + paginate; you call `executeQuery(...)` and get back columns + rows.
 
 **On Snowflake, do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That older Storage API workspace-query endpoint returns `workspace.workspaceNotFound` 404s on Snowflake projects — use the Query Service instead. On BigQuery it does work and is a valid alternative (see "Alternative: Storage API workspace-query endpoint" below), but default to the Query Service on both backends.
 
@@ -172,21 +172,23 @@ cols = [c.name for c in result.columns]
 rows = [dict(zip(cols, row)) for row in result.data]
 ```
 
-JS/TS (`@keboola/api-client`'s `queryService` client):
+JS/TS (`@keboola/api-client`'s `queryService` client + `queryService` SDK):
 
 ```javascript
 import { createQueryServiceClient } from '@keboola/api-client/queryService';
+import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
 
 const baseUrl =
   process.env.QUERY_SERVICE_URL ||
   process.env.KBC_URL.replace('://connection.', '://query.');
-const client = createQueryServiceClient({
+const queryServiceClient = createQueryServiceClient({
   baseUrl,
   auth: { type: 'sapi-token', token: process.env.KBC_TOKEN },
   middlewares: [],
 });
+const sdk = createQueryServiceSdk({ queryServiceClient });
 
-const [result] = await client.executeQuery(
+const [result] = await sdk.executeQuery(
   process.env.BRANCH_ID,      // numeric
   process.env.WORKSPACE_ID,
   {
@@ -348,7 +350,7 @@ Env vars set when Storage Access is enabled:
 
 Library:
 - Python: `keboola-query-service`
-- JS/TS: `@keboola/api-client`'s `queryService` client (`@keboola/api-client/queryService`)
+- JS/TS: `@keboola/api-client`'s `queryService` client (`@keboola/api-client/queryService`) + `queryService` SDK (`@keboola/api-client/sdk/queryService`)
 
 ### Wrap the SDK in a single module
 
@@ -406,20 +408,22 @@ storage = Storage()  # module-level singleton
 ```typescript
 import { readFileSync } from 'node:fs';
 import { createQueryServiceClient } from '@keboola/api-client/queryService';
+import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
 
 const branchId = process.env.BRANCH_ID!;
 const workspaceId = JSON.parse(
   readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
 ).workspaceId as string;
 
-const client = createQueryServiceClient({
+const queryServiceClient = createQueryServiceClient({
   baseUrl: process.env.QUERY_SERVICE_URL!,
   auth: { type: 'sapi-token', token: process.env.KBC_TOKEN! },
   middlewares: [],
 });
+const sdk = createQueryServiceSdk({ queryServiceClient });
 
 export async function select<T = Record<string, unknown>>(sql: string): Promise<T[]> {
-  const [result] = await client.executeQuery(branchId, workspaceId, {
+  const [result] = await sdk.executeQuery(branchId, workspaceId, {
     statements: [sql],
     transactional: true,
   });
@@ -430,7 +434,7 @@ export async function select<T = Record<string, unknown>>(sql: string): Promise<
 }
 
 export async function execute(sql: string): Promise<void> {
-  await client.executeQuery(branchId, workspaceId, { statements: [sql], transactional: true });
+  await sdk.executeQuery(branchId, workspaceId, { statements: [sql], transactional: true });
 }
 ```
 
