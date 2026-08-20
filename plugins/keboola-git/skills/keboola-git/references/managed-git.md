@@ -156,7 +156,7 @@ object storage, etc.). You cannot split it.
 | Static assets 404 after deploy / blank page | `cp` destination didn't match where `next build` put `server.js` | Destination mirrors the Next.js workspace root — `find .next/standalone -name server.js` and copy `static`/`public` alongside it |
 | Committed `frontend/.next` ~55MB | Build artifacts checked into the repo | `git rm -r --cached`, gitignore, build in `setup.sh` |
 | 15.3MB `sharp` binary | macOS-built native dep, wrong arch for Linux | Don't track it; `npm ci` in container reinstalls the correct Linux binary |
-| `git push keboola :main` / delete fails | Pre-receive hook **declines branch deletes** | Branches only advance; never rely on deleting a remote branch |
+| Stale draft branch reused by a later draft — preview serves outdated code, no error | The merged draft branch was never deleted, and a bare `git checkout <branch>` in a fresh clone resolves to the stale `origin/<branch>` tip instead of branching off `main` (AJDA-3161) | Delete the branch after promoting: `git push keboola --delete <branch>` (permitted — stock Forgejo, no branch protection, no pre-receive hook). When branching, state the base: `git fetch && git checkout -B <branch> origin/main`. To resume a branch on purpose, check `git rev-list --count <branch>..origin/main` is 0 first |
 | Force-push rejected / dangerous | Shared managed branch | Never force-push managed/shared branches |
 | Credential leaked into a commit or log | `git_clone_url` echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
 | `logs` / `password` command errors on auth | Manage token not in env | Add `--allow-env-manage-token` and ensure the manage token is exported |

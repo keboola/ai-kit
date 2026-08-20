@@ -74,7 +74,7 @@ git clone --single-branch --branch <branch> <source-repo> app && cd app
 git remote add keboola "$URL"
 git push keboola HEAD:main
 ```
-- The pre-receive hook **declines branch deletes** — pushing new commits to `main` or a draft branch advances normally, but you cannot delete a remote branch.
+- **Delete a draft branch once it is merged** — `git push keboola --delete <branch>`. Managed repos are stock Forgejo with no branch protection and no pre-receive hook, so deletes are permitted; the push credential carries collaborator `write`. (An earlier version of this skill claimed deletes were declined. They are not — and skipping the delete is what leaves a stale draft branch behind for the next draft to silently check out, see AJDA-3161.)
 - Never force-push a shared/managed branch.
 
 ## 4. The 15MB / HTTP 413 cap + build-at-deploy (CRITICAL)
