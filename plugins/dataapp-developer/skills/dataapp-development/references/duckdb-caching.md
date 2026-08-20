@@ -233,6 +233,19 @@ Use DuckDB when:
 
 You can combine both: DuckDB for the shared cache + `@st.cache_data` for derived per-session aggregations.
 
+## Verifying the cache is complete
+
+A cache silently holding a fraction of the table is worse than no cache — the dashboard stays fast and green while every KPI built on it is wrong. After each `refresh()`, compare `rowCount`/`_row_count` against the table's real row count from `get_table`'s `rows_count` field (or `SELECT COUNT(*)` against the source), and log/alert on a mismatch instead of trusting the pull silently succeeded:
+
+```javascript
+const expected = await getExpectedRowCount(); // e.g. mcp get_table().rows_count
+if (rowCount !== expected) {
+  console.error(`[duck] cache mismatch: pulled ${rowCount}, source has ${expected}`);
+}
+```
+
+This catches exactly the failure mode of pulling through a truncating query path (e.g. an unpatched SDK, or a hand-rolled query capped at a default page size) — the pull "succeeds" with a plausible-looking row count that's actually a silent truncation.
+
 ## Template
 
 Runnable starters live at:
