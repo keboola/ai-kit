@@ -25,7 +25,7 @@ All `git` and `kbagent` operations run from the **user's project root** or a **s
 
 ## Prerequisites
 
-1. **kbagent installed** and on `PATH` (`kbagent --version`). Install: see the kbagent docs / `kbagent:kbagent` skill.
+1. **kbagent installed** and on `PATH` (`kbagent --version`). kbagent lives at `https://github.com/keboola/cli` (a separate marketplace from this repo): `/plugin marketplace add keboola/cli` then `/plugin install kbagent@keboola-agent-cli`, or install the standalone CLI directly — see `https://github.com/keboola/cli#install`.
 2. **Project registered** with kbagent (one-time per project):
    ```bash
    kbagent --json project add --project <alias> --stack <stack-url> --storage-token "$KBC_TOKEN"
