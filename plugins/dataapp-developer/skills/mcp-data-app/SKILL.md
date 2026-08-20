@@ -51,11 +51,12 @@ user's repo.
 2. **Scaffold** — `bash <skill>/scripts/scaffold.sh <target-dir>` (or copy
    `template/`). Apply swap points for non-Keboola servers.
 3. **Configure secrets** — `#KBC_STORAGE_API_URL`, `#KBC_STORAGE_TOKEN`,
-   `#MCP_API_KEY` (`openssl rand -hex 32`); `#MCP_PUBLIC_URL` after first deploy.
+   `#MCP_API_KEY` (`openssl rand -hex 32`). The app's public URL comes from the
+   platform's `KBC_APP_PUBLIC_URL`; no `#MCP_PUBLIC_URL` secret needed.
    Details + optional vars in `reference/deploy.md §Secrets`.
 4. **Push to git & deploy** — pick ONE driver (kbagent / keboola-git / hosted
    MCP tools incl. Kai / manual UI). App-level auth = **None**; auto-suspend
-   ≥ 24h; run the two-pass `#MCP_PUBLIC_URL` dance. See `reference/deploy.md`.
+   ≥ 24h. Single deploy pass. See `reference/deploy.md`.
 5. **Verify** — logs first, then `curl /healthz`, the two `.well-known/oauth-*`
    docs, and `401` on `/mcp`. See `reference/deploy.md §Verify`.
 6. **Connect a client** — bearer, claude.ai OAuth-shape, or Kai. See

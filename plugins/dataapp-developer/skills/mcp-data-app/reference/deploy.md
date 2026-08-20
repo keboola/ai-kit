@@ -45,13 +45,10 @@ Same three tools as the kbagent driver, called directly as MCP tools rather than
 
 1. Apps → Create App → Python/JS Data App.
 2. Point it at the repo URL and branch containing the scaffolded app.
-3. Add the four secrets (see Secrets below).
+3. Add the three secrets (see Secrets below).
 4. Set App-level auth to **No auth** (see App-level auth = None (critical) below).
 5. Set auto-suspend to ≥ 24h.
 6. Deploy.
-7. Copy the app URL Keboola shows.
-8. Set `#MCP_PUBLIC_URL` to that URL.
-9. Redeploy.
 
 ## Secrets
 
@@ -60,7 +57,7 @@ Same three tools as the kbagent driver, called directly as MCP tools rather than
 | `#KBC_STORAGE_API_URL` | Yes | Your Keboola stack, e.g. `https://connection.us-east4.gcp.keboola.com` |
 | `#KBC_STORAGE_TOKEN` | Yes | Storage API token scoping this app to a project |
 | `#MCP_API_KEY` | Yes | Generate with `openssl rand -hex 32` |
-| `#MCP_PUBLIC_URL` | Yes, second pass | See Two-pass MCP_PUBLIC_URL below |
+| `#MCP_PUBLIC_URL` | No | Override only. See The app's own URL below |
 
 Via kbagent: `kbagent --allow-env-manage-token data-app secrets-set --project <alias> --app-id <id> '#KEY=VAL'` then redeploy.
 
@@ -68,11 +65,11 @@ Via kbagent: `kbagent --allow-env-manage-token data-app secrets-set --project <a
 
 Set the data app's built-in authentication to **None**. Keboola's app-level OIDC strips the `Authorization` header before it reaches the container, breaking both the bearer and OAuth-shape flows. `#MCP_API_KEY` is the security boundary. See `dataapp-development/references/authentication.md` (the "None — implement your own auth in code" option).
 
-## Two-pass MCP_PUBLIC_URL
+## The app's own URL
 
-Deploy with `#MCP_PUBLIC_URL` empty → copy the app URL Keboola shows (`https://<slug>-<cfg>.hub.<region>.keboola.com`, no trailing slash, no `/mcp`) → set `#MCP_PUBLIC_URL` → redeploy so the OAuth-shape discovery docs advertise the real origin.
+The OAuth-shape discovery docs must advertise the app's own origin. Keboola injects `KBC_APP_PUBLIC_URL` into every data-app container with exactly that value (`https://<slug>-<appId>.hub.<region>.keboola.com`), and `server.py` reads it. **No secret, and no second deploy pass, is needed.**
 
-`#MCP_PUBLIC_URL` is inherently instance-specific — every app has its own URL, so no two apps can share the value. **If you duplicate an existing MCP data-app config, config duplication copies all secrets verbatim, including `#MCP_PUBLIC_URL`.** The copy then advertises the *source* app's origin in its discovery docs, so it deploys and runs fine but a fresh client's OAuth handshake redirects to the old app and fails. Always re-run the two-pass dance on a duplicated app: reset `#MCP_PUBLIC_URL` to the copy's own URL and redeploy before connecting a client.
+`#MCP_PUBLIC_URL` is an override for the case where the app is reached at some other origin (custom domain, reverse proxy). It wins over the platform value, which has one consequence worth knowing: **config duplication copies all secrets verbatim, so a copy of an app that sets the override keeps advertising the source app's origin.** The copy deploys and runs fine and only a fresh client's OAuth handshake breaks. Remove `#MCP_PUBLIC_URL` from the copy — don't reset it to the new URL — so it falls back to the platform value and stays correct through any future duplication.
 
 ## Verify
 
@@ -84,4 +81,4 @@ curl -sS https://<app-url>/.well-known/oauth-protected-resource
 curl -sS -i https://<app-url>/mcp | head -5   # expect 401 + WWW-Authenticate
 ```
 
-The discovery JSON must show `MCP_PUBLIC_URL`, not `127.0.0.1:5000`; if it shows localhost, `#MCP_PUBLIC_URL` wasn't set — fix and redeploy.
+The discovery JSON must show this app's own URL. Another app's URL means an `#MCP_PUBLIC_URL` override was carried over by config duplication — remove it and redeploy. `127.0.0.1:5000` means neither the override nor `KBC_APP_PUBLIC_URL` was present, which on Keboola should not happen.
