@@ -64,7 +64,7 @@
 
 **Cause:** Calling `{KBC_URL}/v2/storage/branch/<b>/workspaces/<w>/query` on a Snowflake project. That endpoint serves BigQuery workspaces, not Snowflake ones.
 
-**Fix:** Switch to the Query Service via `keboola-query-service` / `@keboola/query-service` — the preferred path on both backends. See [storage-access.md](storage-access.md) §Direct RO workspace queries.
+**Fix:** Switch to the Query Service via `keboola-query-service` (Python) / `@keboola/api-client`'s `queryService` client + SDK (JS) — the preferred path on both backends. See [storage-access.md](storage-access.md) §Direct RO workspace queries.
 
 ## Workspace ID value has `WORKSPACE_<id>` prefix
 

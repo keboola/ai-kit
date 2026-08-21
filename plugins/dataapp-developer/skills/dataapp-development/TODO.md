@@ -36,7 +36,7 @@ Sections we know are incomplete because the underlying pattern isn't firm yet. M
 
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
 - **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_streamlit_data_app` covers Python/JS.
-- **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/query-service` (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
+- **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/api-client`'s `queryService` client (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
   - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.
   - `KAI_TOKEN` secret workaround for embedding Kai chat without manual user token entry. Belongs in `kai-integration.md` once the contract with `kai-client` is firm.

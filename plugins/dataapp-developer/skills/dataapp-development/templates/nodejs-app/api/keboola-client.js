@@ -1,11 +1,13 @@
 // Centralized Keboola Query Service client for the Node.js data app.
 //
-// Uses @keboola/query-service which targets https://query.<stack>.keboola.com/api/v1/...
+// Uses @keboola/api-client's queryService client + queryService SDK, which target
+// https://query.<stack>.keboola.com/api/v1/...
 // Do NOT POST to /v2/storage/.../workspaces/<id>/query — that's the legacy Storage API
 // workspace-query endpoint, it 404s on most Snowflake projects.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { Client } from '@keboola/query-service';
+import { createQueryServiceClient } from '@keboola/api-client/queryService';
+import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
 
 function normalizeWorkspaceId(raw) {
   if (!raw) return null;
@@ -64,9 +66,9 @@ export function resolveKeboolaEnv() {
   };
 }
 
-let _client = null;
-function getClient() {
-  if (_client) return _client;
+let _sdk = null;
+function getSdk() {
+  if (_sdk) return _sdk;
   const { queryServiceUrl, token } = resolveKeboolaEnv();
   if (!queryServiceUrl || !token) {
     throw new Error(
@@ -74,8 +76,13 @@ function getClient() {
         'Ask the user to populate .env or .env.local.',
     );
   }
-  _client = new Client({ baseUrl: queryServiceUrl, token });
-  return _client;
+  const queryServiceClient = createQueryServiceClient({
+    baseUrl: queryServiceUrl,
+    auth: { type: 'sapi-token', token },
+    middlewares: [],
+  });
+  _sdk = createQueryServiceSdk({ queryServiceClient });
+  return _sdk;
 }
 
 // Returns rows as objects { column_name: value }, lowercased keys, with naive numeric
@@ -88,11 +95,18 @@ export async function runQuery(sql) {
   if (!workspace) missing.push('WORKSPACE_ID (or KBC_WORKSPACE_MANIFEST_PATH)');
   if (missing.length > 0) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 
-  const [result] = await getClient().executeQuery({
-    branchId: String(branch),
-    workspaceId: String(workspace),
+  const [result] = await getSdk().executeQuery(String(branch), String(workspace), {
     statements: [sql],
+    transactional: true,
   });
+  // Belt-and-braces: executeQuery auto-paginates, but if a future SDK regression silently
+  // truncated again, this turns it into a loud failure instead of a quietly-wrong dashboard.
+  if (result.numberOfRows !== undefined && result.data.length !== result.numberOfRows) {
+    throw new Error(
+      `Query returned ${result.data.length} rows but numberOfRows is ${result.numberOfRows} — ` +
+        'results were truncated.',
+    );
+  }
   const cols = result.columns.map((c) => c.name.toLowerCase());
   return result.data.map((row) => {
     const out = {};
