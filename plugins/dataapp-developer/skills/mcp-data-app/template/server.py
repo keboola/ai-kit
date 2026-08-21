@@ -27,10 +27,14 @@ Required env vars (set as data-app secrets):
 Optional env vars:
     KBC_WORKSPACE_SCHEMA    Schema for SQL transformation tools. Find it in
                             your project's Snowflake/BigQuery workspace.
-    MCP_PUBLIC_URL          Externally reachable origin, no trailing slash,
-                            no `/mcp`. Required for the OAuth-shape flow so
-                            discovery documents advertise correct URLs.
-                            Defaults to http://localhost:5000 for local dev.
+    MCP_PUBLIC_URL          Override for this app's externally reachable
+                            origin, no trailing slash, no `/mcp`. Normally
+                            leave unset: on Keboola the platform injects
+                            KBC_APP_PUBLIC_URL with the app's own URL, which
+                            is used automatically. Set this only when the app
+                            is reached at a different origin (custom domain,
+                            reverse proxy). Falls back to
+                            http://localhost:5000 for local dev.
     PORT                    Defaults to 5000 (Keboola data-app convention).
     LOG_LEVEL               Defaults to INFO.
 """
@@ -70,7 +74,15 @@ log = logging.getLogger("keboola-mcp-data-app")
 
 # --- Required env vars ------------------------------------------------------
 MCP_API_KEY = os.environ["MCP_API_KEY"]
-MCP_PUBLIC_URL = os.environ.get("MCP_PUBLIC_URL", "http://localhost:5000").rstrip("/")
+# Origin advertised by the OAuth-shape discovery documents. Keboola injects
+# KBC_APP_PUBLIC_URL with the app's own public URL, so no manual configuration
+# is needed on the platform. MCP_PUBLIC_URL remains an explicit override for an
+# app reached at a different origin (custom domain, reverse proxy).
+MCP_PUBLIC_URL = (
+    os.environ.get("MCP_PUBLIC_URL")
+    or os.environ.get("KBC_APP_PUBLIC_URL")
+    or "http://localhost:5000"
+).rstrip("/")
 
 # Build the Keboola MCP Server config from KBC_*-prefixed env vars; see
 # keboola_mcp_server.config.Config for the full list of fields.
