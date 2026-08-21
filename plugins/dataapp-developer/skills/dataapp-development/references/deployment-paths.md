@@ -73,7 +73,7 @@ For new apps, pass `configuration_id=""`. For updates, pass the existing configu
 
 For `authentication_type` defaults and the OIDC-downgrade footgun on updates, see [authentication.md](authentication.md) §MCP defaults.
 
-**Limitations:** Streamlit type only. No Git deployment mode via MCP. No Python/JS type via MCP today (planned — see [python-js-apps.md](python-js-apps.md) "Deployment via MCP — PLACEHOLDER").
+**Limitations:** `modify_streamlit_data_app` is Streamlit-only, and Code mode only — no Git deployment mode through it. Python/JS apps have their own tool, `modify_python_js_data_app`, which also provisions a managed git repo — see [python-js-apps.md](python-js-apps.md) §Deployment from Keboola-managed git.
 
 **Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_streamlit_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
 
@@ -115,7 +115,7 @@ For **Streamlit** apps:
 
 For **Python/JS** apps:
 
-- Must use git (no Code mode for this type). Edit locally, push to customer git, deploy. Today this means using `kbagent` (Path C) — MCP doesn't yet support Python/JS app deployment.
+- Must use git (no Code mode for this type). Edit locally, push to customer or Keboola-managed git, deploy. Either MCP (`modify_python_js_data_app`) or `kbagent` (Path C) can create and deploy the app; check which tools your MCP server actually exposes before assuming.
 
 Best fit for:
 
@@ -207,7 +207,7 @@ If both Path B and Path C are available, prefer Path B for one-off changes and P
 **Decision shortcuts:**
 
 - You can't write to a local filesystem -> Path A.
-- You're building a Python or JS (non-Streamlit) app -> Path C (until MCP gains support).
+- You're building a Python or JS (non-Streamlit) app -> Path B or C; `modify_python_js_data_app` covers it via MCP, `kbagent data-app create` via CLI.
 - You want to iterate on a Streamlit dashboard with screenshots -> Path B.
 - You're scripting deploys in CI -> Path C.
 - You need to set or rotate secrets -> Path C.

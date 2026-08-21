@@ -4,6 +4,7 @@
 
 ## Contents
 - Getting the env vars for local development (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`, `BRANCH_ID`)
+- Enabling Storage Access (required for any workspace query)
 - Preferred default for read-only apps: DuckDB-cached RO
 - Direct RO workspace queries (Query Service SDK; BigQuery dialect + alternative Storage API endpoint)
 - Read-write direct access (Storage Access wrapper + SQL injection validation)
@@ -87,6 +88,44 @@ For every other case → omit `BRANCH_ID` (or set it to `default`) and the app r
 
 - `branch_id` — the numeric ID to paste into `.env.local`.
 - `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` and the app will read dev-branch tables locally.
+
+## Enabling Storage Access (required for ANY workspace query)
+
+Every pattern below — DuckDB-cached RO, direct RO queries, read-write — runs against the app's
+ephemeral workspace, and the platform only provisions one when the app configuration asks for it:
+
+```json
+{ "runtime": { "workspace": { "enabled": true } } }
+```
+
+That flag is what makes Keboola inject `WORKSPACE_ID`, `QUERY_SERVICE_URL` and
+`KBC_WORKSPACE_MANIFEST_PATH` at deploy. A **read-only** app needs nothing else — no input
+mapping, no output mapping. Write access additionally needs the project feature and an output
+mapping; see "Read-write direct access" below.
+
+Who sets it:
+
+| Path | Behavior |
+|---|---|
+| MCP `modify_python_js_data_app` | Sets it for you, when the project has the `data-apps-storage-workspace` feature. Without that feature it falls back to injecting `WORKSPACE_ID` through `parameters.dataApp.secrets` instead. |
+| `kbagent data-app create` | **Does not set it.** Add it before the first deploy. |
+| UI app creation | Advanced Settings → Storage Access. |
+
+Adding it to an existing config:
+
+```bash
+kbagent config update --project P --component-id keboola.data-apps --config-id CFG --merge \
+  --set 'runtime.workspace.enabled=true'
+# then redeploy PINNED to the new version -- a plain redeploy will not pick it up:
+VERSION=$(kbagent --json data-app detail --project P --app-id N \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['config_version_storage'])")
+kbagent data-app deploy --project P --app-id N --config-version "$VERSION" --wait
+```
+
+**The failure mode is silent.** Without a workspace the app still builds, still reports
+`state=running`, and still passes its health probe — it simply cannot read any data. The only
+signal is the app's own startup error in the container log (`Missing env vars: WORKSPACE_ID`).
+Verify from the logs, not from `state`.
 
 ## Preferred default for read-only apps: DuckDB-cached RO
 
