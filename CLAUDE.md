@@ -19,12 +19,12 @@ is published here but lives in another repo:
 {
   "name": "kbagent",
   "description": "...",
-  "version": "0.86.0",
+  "version": "0.89.0",
   "source": {
     "source": "git-subdir",
     "url": "https://github.com/keboola/cli.git",
     "path": "plugins/kbagent",
-    "ref": "v0.86.0"
+    "ref": "v0.89.0"
   },
   "category": "development"
 }
