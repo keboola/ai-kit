@@ -58,6 +58,7 @@ Same three tools as the kbagent driver, called directly as MCP tools rather than
 | `#KBC_STORAGE_TOKEN` | Yes | Storage API token scoping this app to a project |
 | `#MCP_API_KEY` | Yes | Generate with `openssl rand -hex 32` |
 | `#MCP_PUBLIC_URL` | No | Override only. See The app's own URL below |
+| `#KBC_WORKSPACE_ID` | No | Pin tool calls to a specific workspace (e.g. this app's own `WORKSPACE_ID`) instead of the default per-branch one |
 
 Via kbagent: `kbagent --allow-env-manage-token data-app secrets-set --project <alias> --app-id <id> '#KEY=VAL'` then redeploy.
 
