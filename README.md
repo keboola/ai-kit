@@ -37,6 +37,12 @@ claude-kit/
 └── LICENSE                  # MIT license
 ```
 
+Not every published plugin lives under `plugins/`. `kbagent` is an **external
+entry**: it is published by this marketplace but sourced from
+[`keboola/cli`](https://github.com/keboola/cli) (`plugins/kbagent`), pinned to a
+release tag. It installs like any other plugin here — there is no second
+marketplace to add.
+
 ## Available Plugins
 
 ### Component Developer Plugin
@@ -73,6 +79,24 @@ A toolkit for building and deploying data apps to Keboola — Streamlit developm
 - 🔌 **MCP hosting**: host any MCP server (Keboola MCP as the worked example) as a single-tenant data app — bearer + OAuth-shape auth, deploy via kbagent / keboola-git / hosted MCP tools
 
 **[→ View Data App Developer Plugin Documentation](./plugins/dataapp-developer/README.md)**
+
+### kbagent Plugin
+
+**Location**: external — [`keboola/cli`](https://github.com/keboola/cli/tree/main/plugins/kbagent), pinned to a release tag
+
+An AI-friendly interface to Keboola Connection projects via the `kbagent` CLI — explore configs, jobs and lineage, sync configs as files, manage dev branches, and debug SQL in workspaces.
+
+```bash
+/plugin install kbagent
+```
+
+**Features:**
+- 🎯 **Skills**: `kbagent` (configs, jobs, lineage, dev branches, workspace SQL, GitOps sync, Storage, data apps, flows, semantic layer), `kbagent-cicd-migration` (port a `kbc` pipeline to `kbagent`), `kbagent-promotion-pipeline` (dev → prod promotion via GitHub Actions)
+- ⚡ **Commands**: `/keboola`, `/review`
+- 🤖 **Agents**: `keboola-expert`, `kbagent-pr-reviewer`
+- 🔗 **Sourced from `keboola/cli`**: the plugin is generated and CI-validated against the live command tree in that repo; its release job opens the PR here that bumps the pin
+
+**[→ View kbagent Plugin Documentation](https://github.com/keboola/cli/tree/main/plugins/kbagent)**
 
 ### Keboola CLI Plugin
 
