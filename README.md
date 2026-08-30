@@ -111,6 +111,7 @@ A project management and review toolkit for Keboola projects. Includes CLI sync 
 - 📊 **Financial Intelligence**: Multi-ERP awareness (NetSuite, SAP, Oracle, D365, QuickBooks, Xero), SaaS metrics, budget variance
 - 🔒 **Security Audit**: Credential scanning, PII detection, GDPR/CCPA compliance checks
 - 🦆 **DuckDB Transformation**: SQL dialect, block orchestration, dynamic backends, Snowflake migration, best practices
+- 🚑 **Job Error Triage**: disciplined single-failure loop — read the error log, one diagnosis, one proposed diff, one gated write, verify it applied before reporting success
 
 **[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
 
