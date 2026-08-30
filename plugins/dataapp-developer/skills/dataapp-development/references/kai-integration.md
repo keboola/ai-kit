@@ -9,6 +9,7 @@
 - Authentication
 - Pattern A — Streamlit embed
 - Pattern B — JS data-app embed (SSE proxy)
+- Restricting tools
 - Pre-built skills
 - DIY alternative — Anthropic SDK directly
 
@@ -224,6 +225,50 @@ location /api/chat {
     proxy_http_version 1.1;
     proxy_set_header Connection '';
 }
+```
+
+## Restricting tools
+
+Constrain what Kai may do in a chat — allowlist specific tools, deny others, or force read-only mode. Pass `tool_restrictions` to `send_message` (Python) or `toolRestrictions` in the `/api/chat` body (JS). Useful when the embed should only *read* project data, or when you want to expose a narrow set of tools for a focused workflow.
+
+**First-message-wins.** The backend persists restrictions from the **first** message of a chat and silently ignores `toolRestrictions` sent on follow-up messages. Set them on the opening `send_message` for a `chat_id`; to change them, start a new chat (`KaiClient.new_chat_id()`).
+
+`ToolRestrictions` has three optional, independent fields:
+- `allowed_tools` (`allowedTools`) — allowlist: only these tools may run.
+- `disallowed_tools` (`disallowedTools`) — denylist: these tools are blocked.
+- `read_only_mode` (`readOnlyMode`) — block all mutating tools regardless of the lists.
+
+**Python** — construct `ToolRestrictions` (accepts snake_case or camelCase) and pass it to `send_message`:
+
+```python
+from kai_client import KaiClient, ToolRestrictions
+
+async for event in client.send_message(
+    chat_id,
+    "Show me my tables, but don't change anything",
+    tool_restrictions=ToolRestrictions(
+        allowed_tools=["list_tables", "get_table_detail"],
+        disallowed_tools=["run_job"],
+        read_only_mode=True,
+    ),
+):
+    ...
+```
+
+It serializes to `toolRestrictions: { allowedTools, disallowedTools, readOnlyMode }` on `POST /api/chat`.
+
+**JS** — include `toolRestrictions` in the first proxied `/api/chat` body (see Pattern B):
+
+```javascript
+body: JSON.stringify({
+  chatId,
+  message: prompt,
+  toolRestrictions: {
+    allowedTools: ['list_tables', 'get_table_detail'],
+    disallowedTools: ['run_job'],
+    readOnlyMode: true,
+  },
+}),
 ```
 
 ## Pre-built skills
