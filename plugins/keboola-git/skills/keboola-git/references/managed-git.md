@@ -126,7 +126,7 @@ both over-cap *and* the wrong architecture for the Linux deploy runtime.
    #   cp -r public       .next/standalone/frontend/public
    ```
    For the surrounding setup.sh / nginx / supervisord wiring, see the
-   `dataapp-developer:dataapp-deployment` skill.
+   `dataapp-developer:dataapp-development` skill.
 4. **Re-run the working-tree size guard** (must return nothing).
 5. **Guard git *history*, not just the working tree.** `git push` sends every object reachable
    from the pushed ref, so a build committed in an *earlier* commit still 413s even after step 2.

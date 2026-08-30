@@ -169,14 +169,16 @@ build-backend = "setuptools.build_meta"
 
 If migrating from `requirements.txt`, move all deps into the `dependencies` array. Delete `requirements.txt` after the move so it doesn't bit-rot alongside `pyproject.toml`.
 
-## Preferred shape for dashboarding: single Node + static frontend
+## Preferred shape for dashboarding (standalone / lightweight client): single Node + static frontend
 
-This is the dashboarding default. Express (or similar) on a single internal port (e.g. `:3000`) serving BOTH:
+This is the dashboarding default **for standalone Claude Code / kbagent use and other lightweight, no-bundler clients.** Express (or similar) on a single internal port (e.g. `:3000`) serving BOTH:
 
 - `/api/*` JSON endpoints that call `runQuery` against the Keboola workspace.
 - The static frontend at `/` (`public/index.html` + `public/app.js` + CSS).
 
 The frontend loads Tailwind and Chart.js via CDN. No bundler, no build step, no `npm run build` to remember. One supervisord program, one nginx location block, one `setup.sh` line (`npm install`). The whole thing fits in a single repo with a flat structure.
+
+> **In Kai (and other bundler-based runtimes):** do NOT use the CDN/no-bundler shape. Kai ships a React/Vite + npm sandbox and mandates React/Vite/npm for the frontend — the CDN/vanilla approach above is banned there (see the co-loaded `dataapp-building-kai-extras` skill). The CDN option remains the documented default for standalone/lightweight clients only.
 
 Why this shape wins for dashboards:
 
