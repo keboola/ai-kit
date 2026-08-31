@@ -34,7 +34,7 @@ Bidirectional copy of a data app's source between GitHub and Keboola git.
 
 ## ✅ Prerequisites
 
-- **kbagent** installed and on `PATH` (`kbagent --version`). See the `keboola-cli` plugin / kbagent docs.
+- **kbagent** installed and on `PATH` (`kbagent --version`). Install: `https://github.com/keboola/cli#install` (`/plugin marketplace add keboola/cli` then `/plugin install kbagent@keboola-agent-cli` for the Claude Code skill). Not the `keboola-cli` plugin in this repo — that one wraps the older `kbc` CLI (`developers.keboola.com/cli`), a different tool.
 - Project registered: `kbagent --json project add --project <alias> --stack <stack-url> --storage-token "$KBC_TOKEN"`.
 - `export KBAGENT_CONVERSATION_ID=$(uuidgen)` once per shell session.
 - A **manage token** in the environment for `data-app logs` / `password` / `delete` (used with `--allow-env-manage-token`).
@@ -49,4 +49,3 @@ Bidirectional copy of a data app's source between GitHub and Keboola git.
 ## Related
 
 - [`dataapp-developer`](../dataapp-developer) — `dataapp-deployment` skill for `keboola-config/` (setup.sh, nginx, supervisord) and `dataapp-dev` for Streamlit.
-- [`keboola-cli`](../keboola-cli) — broader kbagent project management and review.
