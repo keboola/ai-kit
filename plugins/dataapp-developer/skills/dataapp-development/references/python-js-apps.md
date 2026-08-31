@@ -14,7 +14,7 @@
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`)
 - Git commit locking
 - Bootstrap hook (advanced)
-- Deployment via MCP — PLACEHOLDER
+- Deployment from Keboola-managed git
 
 ## The /app contract
 
@@ -291,12 +291,30 @@ Exit code **153** means the locked commit no longer exists in the remote (force-
 
 Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh` is the only customizable stage of the entrypoint flow — derived images can replace it to bake `keboola-config/` into the image, skip git clone, or materialise source from non-git locations. See the base image docs ([glossary.md](glossary.md) §base image).
 
-## Deployment via MCP (Keboola-managed git) — PLACEHOLDER
+## Deployment from Keboola-managed git
 
-Future flow: provision a Keboola-managed git repo for the Python/JS app through MCP tooling, so customers don't have to supply their own GitHub/GitLab.
+Python/JS apps do not need customer-provided git. A **Keboola-managed repo** (Forgejo, at
+`git.<stack>/keboola/app-<app-id>.git`) can be provisioned for the app, so the customer supplies
+no GitHub/GitLab at all. Customer-provided git (private GitHub/GitLab with PAT or SSH key)
+remains fully supported — pick either.
 
-Planned developer flow: feature branch -> preview deployment -> merge to main -> production deployment.
+Two ways to provision:
 
-**Status today: not yet finished.** Agents working on Python/JS apps fall back to **customer-provided git** (private GitHub/GitLab with PAT or SSH key) as the only supported path.
+- **MCP** — `modify_python_js_data_app` creates or updates a Python/JS app and returns the
+  managed `repo_url` on create. (`modify_streamlit_data_app` is the Streamlit-only equivalent;
+  it does not cover Python/JS.)
+- **kbagent** —
+  ```bash
+  kbagent data-app create --project P --name "My App" --slug my-app \
+    --use-managed-git-repo --auth password --no-deploy
+  kbagent data-app git-repo --project P --app-id N          # clone URLs
+  kbagent data-app git-credentials-create --project P --app-id N \
+    --type http_token --permissions readWrite                # one-time push secret
+  ```
 
-When the platform support lands, this section expands. If it grows past ~50 lines, split it into its own reference.
+Then push your source and deploy. The repo plumbing — credential handling, the ~15 MB / HTTP 413
+push cap, build-at-deploy — is covered by the `keboola-git` plugin's `keboola-git` skill.
+
+**`--use-managed-git-repo` only provisions a NEW empty repo.** It cannot point an app at an
+existing app's repo; a second app sharing one repo has to be configured as "external git" against
+the managed URL with its own minted credential.

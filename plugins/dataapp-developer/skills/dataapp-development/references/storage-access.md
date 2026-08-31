@@ -4,6 +4,7 @@
 
 ## Contents
 - Getting the env vars for local development (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`, `BRANCH_ID`)
+- Enabling Storage Access (required for any workspace query)
 - Preferred default for read-only apps: DuckDB-cached RO
 - Direct RO workspace queries (Query Service SDK; BigQuery dialect + alternative Storage API endpoint)
 - Read-write direct access (Storage Access wrapper + SQL injection validation)
@@ -87,6 +88,38 @@ For every other case → omit `BRANCH_ID` (or set it to `default`) and the app r
 
 - `branch_id` — the numeric ID to paste into `.env.local`.
 - `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` and the app will read dev-branch tables locally.
+
+## Enabling Storage Access (required for ANY workspace query)
+
+Every pattern below — DuckDB-cached RO, direct RO queries, read-write — runs against the app's
+ephemeral workspace, which the platform provisions only when the app configuration asks for it:
+
+```json
+{ "runtime": { "workspace": { "enabled": true } } }
+```
+
+That flag is what makes Keboola inject `WORKSPACE_ID`, `QUERY_SERVICE_URL` and
+`KBC_WORKSPACE_MANIFEST_PATH` at deploy. A **read-only** app needs nothing else — no input
+mapping, no output mapping. Write access additionally needs the project feature and an output
+mapping; see §Read-write direct access below.
+
+**Every creation path sets it for you**, so normally there is nothing to do:
+
+| Path | Behavior |
+|---|---|
+| `kbagent data-app create` | On by default since kbagent 0.87.0; `--no-workspace` is the opt-out. Older versions never set it. |
+| MCP `modify_python_js_data_app` | Sets it when the project has the `data-apps-storage-workspace` feature. Without that feature it falls back to injecting `WORKSPACE_ID` through `parameters.dataApp.secrets` instead. |
+| UI app creation | Advanced Settings → Storage Access. |
+
+The decision left to you is the reverse one: **pass `--no-workspace` for an app that never touches
+Storage**, so it isn't given a workspace it will never query.
+
+**When the flag is missing, the failure is silent.** The app still builds, still reports
+`state=running`, and still passes its health probe — it simply reads zero rows. The only signal is
+the app's own startup error in the container log (`Missing env vars: WORKSPACE_ID`). Verify from the
+logs, not from `state`. Apps created on kbagent ≤ 0.86.0, or with `--no-workspace`, predate or
+opt out of the default and need retrofitting — see
+[troubleshooting.md](troubleshooting.md) §Missing Storage Access env var.
 
 ## Preferred default for read-only apps: DuckDB-cached RO
 

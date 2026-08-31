@@ -13,7 +13,8 @@
 - `workspace.workspaceNotFound` 404
 - Workspace ID value has `WORKSPACE_<id>` prefix
 - 500 from missing env var
-- `KeyError` on Storage Access env var
+- Missing Storage Access env var (`WORKSPACE_ID` / `BRANCH_ID`)
+- Config change has no effect after redeploy
 - Query Service auth error with narrow-scoped token
 - `Insufficient privileges` on write
 - Reading logs (incl. Streamlit silent exceptions)
@@ -78,13 +79,49 @@
 
 **Fix:** Add the secret. UI: Configuration → Secrets → `#KEY=value`. kbagent: `kbagent data-app secrets-set --app-id N --secret '#KEY=value'` then `data-app deploy --wait`. Secret names get `#` stripped, dashes→underscores, uppercased: `#my-key` → env `MY_KEY`.
 
-## `KeyError: 'BRANCH_ID'` (or any Storage Access env var) on app start
+## `Missing env vars: WORKSPACE_ID` / `KeyError: 'BRANCH_ID'` (any Storage Access env var) on app start
 
-**Cause:** Storage Access isn't enabled on the component config (production), or local `.env` / `.env.local` is missing the variable.
+**Cause:** the app configuration never asked for a workspace, so the platform provisioned none and injected nothing. `kbagent data-app create` (0.87.0+) and MCP `modify_python_js_data_app` both set `runtime.workspace.enabled=true` by default, so in production this means one of: the app was created on kbagent ≤ 0.86.0 (before the default), it was created with `--no-workspace`, or the UI's Advanced Settings → Storage Access was left off. Or, in local dev, `.env` / `.env.local` is missing the variable.
+
+The app **still deploys, reports `state=running`, and passes its health probe** — it just cannot read data. This log line is the only signal.
 
 **Fix:**
-- **Production:** UI → Advanced Settings → enable Storage Access and add writable tables with `unload_strategy: "direct-grant"`. Redeploy.
+- **Production:** set `runtime.workspace.enabled=true` on the config, then redeploy. Pin the new version explicitly — on a pure managed-git app a plain redeploy will not pick it up (see the next entry), and pinning is harmless on the paths that resolve it themselves:
+  ```bash
+  kbagent config update --project P --component-id keboola.data-apps --config-id CFG --merge \
+    --set 'runtime.workspace.enabled=true'
+  VERSION=$(kbagent --json data-app detail --project P --app-id N \
+    | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['config_version_storage'])")
+  kbagent data-app deploy --project P --app-id N --config-version "$VERSION" --wait
+  ```
+  UI equivalent: Advanced Settings → Storage Access. Apps created by `kbagent data-app create`
+  (0.87.0+) or MCP `modify_python_js_data_app` already have the flag. For read-only that flag is all you need;
+  **writable** tables additionally require the project feature and an output mapping with
+  `unload_strategy: "direct-grant"`. See [storage-access.md](storage-access.md) §Enabling Storage Access.
 - **Local dev:** add the four variables to `.env` / `.env.local`. See [storage-access.md](storage-access.md) §Getting the env vars for local development.
+
+## Config change has no effect after redeploy
+
+**Cause:** the operator renders the app's `config.json` from a **pinned** Storage config version, and it restarts the pod only when that pin changes — the config's *content* is not part of the restart hash. So if the pin does not advance, the container keeps rendering the OLD config. Affects any `config.json` change — `git.branch`, `runtime.workspace.enabled`, secrets. A cold `stop` → `deploy` does **not** help (the new pod re-clones, but from the config rendered at the old pinned version), and no error is reported: the deploy says `state=running`.
+
+Whether `kbagent data-app deploy` advances the pin depends on where the app's source lives:
+
+- **Streamlit or external git** (`parameters.dataApp.git` present in the config) — deploy resolves the latest Storage version and pins to it. Config changes deploy normally.
+- **Pure managed git** (`--use-managed-git-repo`, and no `parameters.dataApp.git` block) — deploy **deliberately omits** `configVersion`, because the source resolves through `app.managedGitRepoId` and pinning a config with no git block makes the runtime demand `dataApp.git.repository`. The side effect is that nothing advances the pin, so config changes do not reach the container.
+
+**Diagnose:**
+```bash
+kbagent --json data-app detail --project P --app-id N | python3 -c "
+import sys,json;d=json.load(sys.stdin)['data']
+print(d['config_version_storage'], d['config_version_deployed'])"
+```
+Different numbers mean the app is serving a stale config.
+
+**Fix:** pass the pin explicitly — `--config-version` is the escape hatch that always wins over the resolution above.
+```bash
+kbagent data-app deploy --project P --app-id N --config-version <config_version_storage> --wait
+```
+Read `config_version_storage` fresh rather than reusing one captured earlier; a version from before an intervening config edit deploys a stale config, which is the very failure this entry describes.
 
 ## Query Service auth error with a narrow-scoped Storage API token
 
@@ -107,7 +144,7 @@ Three options:
 
 - **MCP `mcp__keboola__get_data_apps(configuration_ids=[cfg_id])`** — latest 20 log lines via `deployment_info.logs`. Preferred from an agent / Claude Code session.
 - **Keboola UI Terminal Log tab** — near-real-time `stdout`/`stderr`. "Download Logs" gives the full file. Logs are deleted when the app stops.
-- **kbagent CLI** — a `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+- **kbagent CLI** — `kbagent data-app logs --project P --app-id N --lines 200` tails the container logs, and is the most complete view outside the UI (the MCP tail is capped at 20 lines). Raise `--lines` when one service's restart loop drowns out another's startup. A **stopped** app returns `400 ... is not running` — start it first. Some subcommands (`password`, and depending on stack `logs`) need a Manage API token: run interactively, or pass `--allow-env-manage-token` with `KBC_MANAGE_API_TOKEN` set.
 
 ### Streamlit-specific footgun: silent exceptions
 

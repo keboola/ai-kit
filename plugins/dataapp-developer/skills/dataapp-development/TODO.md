@@ -9,13 +9,13 @@ Open Linear issues whose resolution will change what the skill teaches. Until th
 - **[AI-3219](https://linear.app/keboola/issue/AI-3219/) — Discussion with @miro: branched workspaces + dev-branch app support.** Umbrella issue for the three platform questions below. Drives skill changes for RW apps and the "where does an app live" framing.
 - **AI-3219 #1 — Branched workspaces for write-enabled apps.** Currently the only way to develop a RW app locally is a workspace with writes to production tables. Skill can't ship clean RW guidance until there's a path to a branched workspace.
 - **[PROF-114](https://linear.app/keboola/issue/PROF-114/) — Data Apps in development branches.** If accepted, drafts/previews of an app config bound to a dev branch become a real concept; skill needs to be rewritten for the new model. If rejected, document the production-only constraint more firmly.
-- **[AI-3218](https://linear.app/keboola/issue/AI-3218/) — `workspace.enabled=true` by default.** Removes the "if your app was created via UI you may need to flip workspace on first" caveat from SKILL.md and `deployment-paths.md`.
+- **~~AI-3218 — `workspace.enabled=true` by default~~ — RESOLVED at the tooling layer.** The platform-level default was re-filed as [AJDA-2924](https://linear.app/keboola/issue/AJDA-2924/) and canceled 2026-08-11, so the config flag stays explicit. But both creation paths now write it: MCP `modify_python_js_data_app` already did, and `kbagent data-app create` gained `--workspace / --no-workspace` **defaulting ON** in 0.87.0 ([AI-3753](https://linear.app/keboola/issue/AI-3753/), [keboola/cli#626](https://github.com/keboola/cli/pull/626)). `storage-access.md` §Enabling Storage Access is written for that default; revisit only if the platform default lands after all.
 
 ## MCP server (`keboola/mcp-server`)
 
 Gaps that force the skill to recommend kbagent or filesystem paths for things MCP should cover.
 
-- **`modify_streamlit_data_app` is Streamlit-only.** No Python/JS app creation or modification via MCP. Blocks Path A for dashboarding apps. See `references/python-js-apps.md` §"Deployment via MCP — PLACEHOLDER".
+- ~~**`modify_streamlit_data_app` is Streamlit-only** — no Python/JS via MCP.~~ **Outdated.** `modify_python_js_data_app` covers Python/JS creation/update, managed-git provisioning and drafts. See `references/python-js-apps.md` §Deployment from Keboola-managed git.
 - **No Git deployment mode via MCP.** `modify_streamlit_data_app` only supports Code mode. Git-mode apps (the recommended choice for multi-file projects) require the Configuration API or kbagent.
 - **No log-reading tool beyond the 20-line tail.** `get_data_apps(...).deployment_info.logs` returns only the most recent lines. For real debugging the agent has to direct the user to the Keboola UI Terminal Log tab.
 - **No workspace management.** Cannot create / grant / list / delete workspaces via MCP. Local-dev workspace setup falls back to UI or kbagent.
@@ -27,15 +27,18 @@ Gaps that force the skill to recommend kbagent or filesystem paths for things MC
 
 Smaller gaps; kbagent already covers most of the data-app lifecycle.
 
-- **`kbagent data-app logs`** — referenced as a follow-up in `references/troubleshooting.md`. Without it, log reading falls through to the UI link surfaced by `data-app deploy --wait`.
+- ~~**`kbagent data-app logs`**~~ **Shipped** (verified on kbagent 0.84.2); documented in `references/troubleshooting.md` §Reading logs. Rough edges: a stopped app returns `400 ... is not running` instead of serving its last logs, and output is JSON-per-line with hard wrapping, awkward to grep without reassembling.
 - **Direct-grant workspace creation.** Once the platform answer on AI-3219 #1 is in, kbagent likely needs an affordance for the local-dev branched-workspace flow.
+- ~~**`data-app create` does not set `runtime.workspace.enabled`**~~ **Shipped** in kbagent 0.87.0 as `--workspace / --no-workspace`, default ON — [AI-3753](https://linear.app/keboola/issue/AI-3753/), [keboola/cli#626](https://github.com/keboola/cli/pull/626).
+- **A pure managed-git app's config changes do not deploy.** `data-app deploy` resolves the latest Storage version and pins it for external-git apps, but deliberately omits `configVersion` when the app has a managed repo and no `parameters.dataApp.git` block — so nothing advances the operator's pin and `config.json` changes never reach the container. Needs an explicit `--config-version`. The underlying platform behavior (pod restart keyed on the pin, not the config content) is [CFTL-716](https://linear.app/keboola/issue/CFTL-716/).
+- **`data-app create --use-managed-git-repo` does not persist `parameters.dataApp.git`.** A later deploy fails with `dataApp.git.repository is required in /data/config.json`; the repo URL has to be written by hand.
 
 ## Skill content — deferred or placeholder
 
 Sections we know are incomplete because the underlying pattern isn't firm yet. Mostly tracked by Linear above, but listed here as the writing tasks.
 
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
-- **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_streamlit_data_app` covers Python/JS.
+- ~~**`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.**~~ **Done.** Replaced with §Deployment from Keboola-managed git.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/api-client`'s `queryService` client (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
   - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.
