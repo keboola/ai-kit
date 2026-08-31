@@ -27,6 +27,11 @@ Apply this pattern when all of:
 - Data freshness in minutes (5–60) is acceptable for users.
 - The cached dataset fits in container memory — rule of thumb, hundreds of MB max.
 
+**Prerequisite:** the cache is loaded from the app's Storage workspace, so the app configuration
+needs `runtime.workspace.enabled: true`. Creation paths normally set it for you, but without it this
+pattern fails silently — the app deploys, reports `state=running`, and serves an empty dashboard.
+See [storage-access.md](storage-access.md) §Enabling Storage Access.
+
 ## When to skip DuckDB caching
 
 Fall back to direct access when:

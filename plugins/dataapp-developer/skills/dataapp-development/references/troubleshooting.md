@@ -81,12 +81,12 @@
 
 ## `Missing env vars: WORKSPACE_ID` / `KeyError: 'BRANCH_ID'` (any Storage Access env var) on app start
 
-**Cause:** the app configuration never asked for a workspace, so the platform provisioned none and injected nothing. Or, in local dev, `.env` / `.env.local` is missing the variable.
+**Cause:** the app configuration never asked for a workspace, so the platform provisioned none and injected nothing. `kbagent data-app create` (0.87.0+) and MCP `modify_python_js_data_app` both set `runtime.workspace.enabled=true` by default, so in production this means one of: the app was created on kbagent ≤ 0.86.0 (before the default), it was created with `--no-workspace`, or the UI's Advanced Settings → Storage Access was left off. Or, in local dev, `.env` / `.env.local` is missing the variable.
 
 The app **still deploys, reports `state=running`, and passes its health probe** — it just cannot read data. This log line is the only signal.
 
 **Fix:**
-- **Production:** set `runtime.workspace.enabled=true` on the config, then redeploy **pinned to the new version** (a plain redeploy will not pick it up — see the next entry):
+- **Production:** set `runtime.workspace.enabled=true` on the config, then redeploy. Pin the new version explicitly — on a pure managed-git app a plain redeploy will not pick it up (see the next entry), and pinning is harmless on the paths that resolve it themselves:
   ```bash
   kbagent config update --project P --component-id keboola.data-apps --config-id CFG --merge \
     --set 'runtime.workspace.enabled=true'
@@ -94,15 +94,20 @@ The app **still deploys, reports `state=running`, and passes its health probe** 
     | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['config_version_storage'])")
   kbagent data-app deploy --project P --app-id N --config-version "$VERSION" --wait
   ```
-  UI equivalent: Advanced Settings → Storage Access. Apps created through MCP
-  `modify_python_js_data_app` already have the flag. For read-only that flag is all you need;
+  UI equivalent: Advanced Settings → Storage Access. Apps created by `kbagent data-app create`
+  (0.87.0+) or MCP `modify_python_js_data_app` already have the flag. For read-only that flag is all you need;
   **writable** tables additionally require the project feature and an output mapping with
   `unload_strategy: "direct-grant"`. See [storage-access.md](storage-access.md) §Enabling Storage Access.
 - **Local dev:** add the four variables to `.env` / `.env.local`. See [storage-access.md](storage-access.md) §Getting the env vars for local development.
 
 ## Config change has no effect after redeploy
 
-**Cause:** the deployment is pinned to a Storage config version and a redeploy does not advance the pin, so the container renders the OLD config. Affects any `config.json` change — `git.branch`, `runtime.workspace.enabled`, secrets. A cold `stop` → `deploy` does **not** help, and no error is reported: the deploy says `state=running`.
+**Cause:** the operator renders the app's `config.json` from a **pinned** Storage config version, and it restarts the pod only when that pin changes — the config's *content* is not part of the restart hash. So if the pin does not advance, the container keeps rendering the OLD config. Affects any `config.json` change — `git.branch`, `runtime.workspace.enabled`, secrets. A cold `stop` → `deploy` does **not** help (the new pod re-clones, but from the config rendered at the old pinned version), and no error is reported: the deploy says `state=running`.
+
+Whether `kbagent data-app deploy` advances the pin depends on where the app's source lives:
+
+- **Streamlit or external git** (`parameters.dataApp.git` present in the config) — deploy resolves the latest Storage version and pins to it. Config changes deploy normally.
+- **Pure managed git** (`--use-managed-git-repo`, and no `parameters.dataApp.git` block) — deploy **deliberately omits** `configVersion`, because the source resolves through `app.managedGitRepoId` and pinning a config with no git block makes the runtime demand `dataApp.git.repository`. The side effect is that nothing advances the pin, so config changes do not reach the container.
 
 **Diagnose:**
 ```bash
@@ -112,10 +117,11 @@ print(d['config_version_storage'], d['config_version_deployed'])"
 ```
 Different numbers mean the app is serving a stale config.
 
-**Fix:** deploy with an explicit pin. `--config-version` claims to default to latest; it does not.
+**Fix:** pass the pin explicitly — `--config-version` is the escape hatch that always wins over the resolution above.
 ```bash
 kbagent data-app deploy --project P --app-id N --config-version <config_version_storage> --wait
 ```
+Read `config_version_storage` fresh rather than reusing one captured earlier; a version from before an intervening config edit deploys a stale config, which is the very failure this entry describes.
 
 ## Query Service auth error with a narrow-scoped Storage API token
 
