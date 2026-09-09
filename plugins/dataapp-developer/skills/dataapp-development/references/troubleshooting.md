@@ -108,8 +108,10 @@ spending time on the causes below.
 - **Recognise it by the read/write split:** same workspace, same token, same table — `SELECT`
   works, DML is denied. That is this bug, not a misconfiguration. Stop and report it rather than
   re-checking the config.
-- There is no app-side workaround. Writing through a transformation's standard output mapping is a
-  different feature, not a fix for this one.
+- **Use the Storage API instead** — `files/prepare` → upload → `import-async`. It does not go
+  through the Query Service, so it is unaffected, and it needs only the `KBC_TOKEN` the app
+  already has. Verified end-to-end on BigQuery (~10 s for a few hundred rows). See
+  [storage-access.md](storage-access.md) §Writing via the Storage API.
 
 Snowflake is unaffected; the causes below apply there.
 

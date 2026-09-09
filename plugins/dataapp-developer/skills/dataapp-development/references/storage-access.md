@@ -327,9 +327,9 @@ below. Goes through the Query Service. No caching — every read must reflect th
 > workspace's service account while Query Service runs as the user it mints via `/credentials`,
 > which gets read only. Tracked as [DMD-1259](https://linear.app/keboola/issue/DMD-1259) — check
 > whether it is still open before relying on this section for a BigQuery project.
-> **Do not design a BigQuery app around writing to Storage from the app** while it is open — and
-> if a user asks for one, say so up front rather than building it and hitting the wall at deploy.
-> The rest of this section applies to Snowflake.
+> **On BigQuery, write through the Storage API instead** — see "Writing via the Storage API"
+> below. Say so up front when a user asks for a BigQuery write-back app, rather than wiring the
+> Query Service and hitting the wall at deploy. The rest of this section applies to Snowflake.
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
@@ -611,6 +611,38 @@ function toObjects(result) {
 ```
 
 Over-coercing (calling `Number(raw)` on every cell) is just as bad as under-coercing — a zero-padded string like `"00"` becomes the number `0`, and any downstream `.localeCompare()` call crashes because numbers don't have it. Coerce only the columns you know are numeric.
+
+## Writing via the Storage API (the BigQuery write path)
+
+Works on both backends and does **not** touch the Query Service, so it is unaffected by
+[DMD-1259](https://linear.app/keboola/issue/DMD-1259). Use it whenever the app must write on
+BigQuery. Needs only `KBC_URL` and `KBC_TOKEN`, both already injected — no writable-table
+config, and no `runtime.workspace.enabled`.
+
+Three steps, all on the Storage API:
+
+1. `POST /v2/storage/files/prepare` with `name`, `sizeBytes`, `federationToken=1`,
+   `isEncrypted=1` → returns a file `id` plus per-provider upload params
+   (`gcsUploadParams` on GCP, `s3UploadParams` on AWS, `absUploadParams` on Azure).
+2. Upload the gzipped CSV to the returned location with the credentials it hands you.
+3. `POST /v2/storage/tables/<tableId>/import-async` with `dataFileId=<id>` and
+   `incremental=1` (append) or `0` (replace the table), then poll
+   `GET /v2/storage/jobs/<jobId>` until `status` is `success`.
+
+Deleting rows is `DELETE /v2/storage/tables/<tableId>/rows?whereColumn=<col>&whereValues[]=<v>`,
+also an async job.
+
+Trade-offs to state to the user before choosing it:
+
+- **Latency is a job, not a query.** Measured ~10 s end to end for a table of a few hundred
+  rows. Fine for "user edits a value and saves"; wrong for a keystroke-by-keystroke autosave.
+- **Import semantics, not DML.** There is no `UPDATE`. To change one row, read the current rows,
+  replace the one you want in memory, and re-import the whole table with `incremental: false`
+  (cheap up to thousands of rows), or delete-then-append.
+- **Row delete filters one column only**, so a composite key cannot be targeted directly — the
+  full-rewrite approach above sidesteps that.
+- Every import is a Storage job, so it shows up in the project's job list and counts toward job
+  limits.
 
 ## Input mapping — discouraged for new apps
 
