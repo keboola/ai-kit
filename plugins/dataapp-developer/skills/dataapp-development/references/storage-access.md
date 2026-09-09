@@ -318,16 +318,18 @@ A few things worth noting on the BQ path that differ from Query Service:
 
 ## Read-write direct access (Storage Access)
 
-Real-time read AND write to Keboola Storage through the Query Service. No caching — every read must reflect the latest state.
+Real-time reads on both backends, plus writes **on Snowflake only** — see the BigQuery callout
+below. Goes through the Query Service. No caching — every read must reflect the latest state.
 
-> **BigQuery: writes do not work today.** Reads are fine; `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE`
-> fail with `Permission bigquery.tables.updateData denied` however the table is configured, and
-> redeploying does not help. The table grant lands on the workspace's service account while Query
-> Service runs as the user it mints via `/credentials`, which gets read only. Tracked as
-> [DMD-1259](https://linear.app/keboola/issue/DMD-1259); verified still failing 2026-09-09.
-> **Do not design a BigQuery app around writing to Storage from the app** until that is fixed — and
+> **BigQuery: app-side writes are blocked by a platform bug.** Reads are fine;
+> `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` fail with `Permission bigquery.tables.updateData denied`
+> however the table is configured, and redeploying does not help. The table grant lands on the
+> workspace's service account while Query Service runs as the user it mints via `/credentials`,
+> which gets read only. Tracked as [DMD-1259](https://linear.app/keboola/issue/DMD-1259) — check
+> whether it is still open before relying on this section for a BigQuery project.
+> **Do not design a BigQuery app around writing to Storage from the app** while it is open — and
 > if a user asks for one, say so up front rather than building it and hitting the wall at deploy.
-> Snowflake writes work as described below.
+> The rest of this section applies to Snowflake.
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
