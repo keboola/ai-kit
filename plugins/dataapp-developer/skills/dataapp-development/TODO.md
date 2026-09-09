@@ -48,7 +48,7 @@ The skill has been validated end-to-end in three sessions, but not against every
 - **Python-only app (Flask + `uv`)** template path has never been live-tested.
 - **kbagent end-to-end** path — partial coverage (used in one debug session for `data-app deploy --wait`). Hasn't been driven from scratch (`data-app create` → secrets → first deploy → iteration → deploy).
 - **Kai integration** path — no live test against a real `kai-client` deployment.
-- **BigQuery project** — identifier quoting, bucket→dataset mangling, read queries, the Query Service return shape (string cells, like Snowflake), and `INSERT` DML (via the Query Service: `rows_affected` populated, round-trip confirmed, statements share a session) are verified on a real BQ project (AJDA-2835, AJDA-2840). Still untested: a `direct-grant` write to a real Storage table from a *deployed* app (needs an app with a `direct-grant` output mapping; the SQL-execution layer itself is verified).
+- **BigQuery project** — identifier quoting, bucket→dataset mangling, read queries, the Query Service return shape (string cells, like Snowflake), and `INSERT` DML (via the Query Service: `rows_affected` populated, round-trip confirmed, statements share a session) are verified on a real BQ project (AJDA-2835, AJDA-2840). **Tested 2026-09-09 — it fails.** A `direct-grant` write to a real Storage table from a *deployed* app is denied on BigQuery (`bigquery.tables.updateData`), with reads on the same table from the same workspace succeeding. Platform bug [DMD-1259](https://linear.app/keboola/issue/DMD-1259), not a skill gap; redeploying does not work around it. `storage-access.md` and `troubleshooting.md` now warn about it.
 
 ## Asset / link hygiene
 

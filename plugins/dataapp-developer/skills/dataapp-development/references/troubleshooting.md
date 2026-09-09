@@ -94,6 +94,24 @@
 
 ## `Insufficient privileges` / write blocked by the Query Service
 
+**On BigQuery, first rule out the platform bug — writes are currently broken.** Reads succeed while
+`INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` fail with `Permission bigquery.tables.updateData denied`, no
+matter how the table is configured. The direct-grant table IAM is granted to the workspace's own
+service account, but Query Service executes as a separate user it mints via its `/credentials`
+endpoint, and that user receives only project-level read. Tracked as
+[DMD-1259](https://linear.app/keboola/issue/DMD-1259) (open since 2026-04).
+
+- **Redeploying does not fix it.** Re-provisioning the workspace re-runs the grant for the
+  workspace SA, never for the `/credentials` user. Verified 2026-09-09 with a table added fresh to
+  the config and a workspace created afterwards: read 9 rows, `DELETE` denied.
+- **Recognise it by the read/write split:** same workspace, same token, same table — `SELECT`
+  works, DML is denied. That is this bug, not a misconfiguration. Stop and report it rather than
+  re-checking the config.
+- There is no app-side workaround. Writing through a transformation's standard output mapping is a
+  different feature, not a fix for this one.
+
+Snowflake is unaffected; the causes below apply there.
+
 **Cause:** Destination table not in `storage.output.tables` with `unload_strategy: "direct-grant"` (production), or the local workspace lacks write grants on the table (local dev).
 
 **Fix:**
