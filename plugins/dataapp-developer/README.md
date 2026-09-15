@@ -1,6 +1,6 @@
 # Data App Developer Plugin
 
-Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`, which covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 14 topical references and 5 runnable templates, plus `semantic-layer-usage` for grounding apps and queries in a semantic model without mistaking logical names for physical Storage identifiers.
+Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`, which covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 15 topical references and 5 runnable templates, plus `semantic-layer-usage` for grounding apps and queries in a semantic model without mistaking logical names for physical Storage identifiers.
 
 ## Available Skills
 
@@ -11,9 +11,10 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 **What it covers:**
 
 - Choosing an app type (Streamlit vs single Node + static vs combined Python+Node)
+- Python/JS prod app and drafts — resolving which app to build into, and why an empty `configuration_id` creates a second app and a second repo
 - Streamlit apps — Code/Git deployment, theming, secrets, AgGrid Enterprise
 - Python/JS apps — `/app` contract, nginx + supervisord, single-Node dashboarding default, multi-server Python+Node when needed
-- Three deployment paths — MCP-only (Claude Desktop), Claude Code + MCP, kbagent CLI
+- Three deployment paths — MCP-only (Claude Desktop), Claude Code + MCP, kbagent CLI (Python/JS is git-backed on all three)
 - Storage access — RO workspace (default), RW direct via Query Service, input mapping (legacy)
 - Authentication — None / Basic / OIDC / GitHub / GitLab / JumpCloud
 - DuckDB caching for read-only apps (Python and Node patterns)
@@ -34,6 +35,7 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 **Use cases:**
 
 - Build a new Keboola App from scratch
+- Build into an app the Keboola Apps page already created, instead of creating a second one
 - Add features to an existing app (filters, pages, metrics)
 - Deploy or redeploy via MCP, kbagent, or push-and-redeploy
 - Debug deployment or runtime issues
@@ -77,7 +79,7 @@ plugins/dataapp-developer/
 ├── skills/
 │   ├── dataapp-development/
 │   │   ├── SKILL.md          # router
-│   │   ├── references/       # 14 topical references
+│   │   ├── references/       # 15 topical references
 │   │   └── templates/        # 5 runnable starter templates
 │   ├── mcp-data-app/
 │   │   ├── SKILL.md          # router
@@ -91,7 +93,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.5.0
+1.6.0
 
 ## Maintainer
 
