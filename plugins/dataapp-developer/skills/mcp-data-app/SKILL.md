@@ -70,6 +70,7 @@ user's repo.
 | How the auth works + connect recipes (incl. Kai) | `reference/auth-and-clients.md` |
 | Wrap a non-Keboola server / stdio bridge | `reference/adapting-to-any-server.md` |
 | MCP-specific errors (421, SSE, discovery) | `reference/troubleshooting.md` |
+| Which app to deploy into (an empty `configuration_id` creates a second one) | `dataapp-development/references/python-js-prod-and-drafts.md` |
 | Container mechanics (POST /, uv, nginx 8888) | `dataapp-development/references/python-js-apps.md` |
 | Managed-git deploy plumbing | `keboola-git` skill |
 

@@ -46,7 +46,7 @@ Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoin
 | Frontend bundler | No | No | Yes |
 | Backend language | Python | Node | Python + Node |
 | Deploy mode | Code or Git | Git only | Git only |
-| MCP support today | Yes (`modify_streamlit_data_app`) | No (use kbagent or git) | No (use kbagent or git) |
+| MCP support today | Yes (`modify_streamlit_data_app`) | Yes (`modify_python_js_data_app` + git) | Yes (`modify_python_js_data_app` + git) |
 | Cold-start time | Fast | Fastest | Slowest |
 
 ## Migration notes
@@ -54,5 +54,6 @@ Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoin
 - **Streamlit → Python/JS** is a common path once a Streamlit app outgrows its sidebar-and-main shape. Migrating from Streamlit to single Node + static can give a team layout control and reduce cold-start time.
 - **Streamlit is on a deprecation path.** New apps that exceed the simple-UI threshold should default to Python/JS. Existing Streamlit apps don't need to be migrated until you hit a Streamlit limitation.
 - The Python/JS app type does not currently support paste-in-UI "Code" deployment; only Git deployment. Streamlit retains "Code" mode.
+- A Python/JS app is a **prod** config that owns the git repo plus **drafts** that branch off it. Before any `modify_python_js_data_app` call, read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): an empty `configuration_id` creates a second app, and the app you want usually exists already.
 
 For read-only dashboarding apps (all three shapes), default to a DuckDB cache in front of the workspace — see [duckdb-caching.md](duckdb-caching.md). Querying Snowflake on every render is wasteful; caching is the default, not an optimization.

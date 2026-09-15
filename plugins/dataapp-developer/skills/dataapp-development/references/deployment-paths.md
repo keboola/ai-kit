@@ -64,16 +64,20 @@ Available tools:
 - `modify_streamlit_data_app` — creates or updates the source code IN the data app configuration (no separate git repo).
 - `deploy_data_app(action="deploy", configuration_id=...)` — deploys or restarts the app.
 - `deploy_data_app(action="stop", configuration_id=...)` — suspends.
-- `get_data_apps([cfg_id])` — returns the latest 20 log lines for debugging.
+- `get_data_apps([cfg_id])` — returns the latest 20 log lines for debugging, and for a Python/JS prod app its `drafts: [...]`.
+- `modify_python_js_data_app` — creates a Python/JS prod app (with a Keboola-managed git repo), creates a draft off one, or updates an app's metadata. **Read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) before calling it** — the create and draft-create shapes differ by one argument.
+- `create_python_js_data_app_git_credential(configuration_id)` — mints a one-time `git_clone_url` for a prod app's managed repo.
 - `query_data`, `get_table`, `get_project_info` — for validating data before writing code.
 
 After `modify_streamlit_data_app`, ALWAYS call `deploy_data_app(action="deploy")` — without this, changes do not take effect. The existing running app keeps serving the previous code.
 
 For new apps, pass `configuration_id=""`. For updates, pass the existing configuration ID and a non-empty `change_description`.
 
+**Python/JS apps work differently.** Source reaches the platform only through the app's git repo, so this path needs a runner that can speak git. See [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md).
+
 For `authentication_type` defaults and the OIDC-downgrade footgun on updates, see [authentication.md](authentication.md) §MCP defaults.
 
-**Limitations:** Streamlit type only. No Git deployment mode via MCP. No Python/JS type via MCP today (planned — see [python-js-apps.md](python-js-apps.md) "Deployment via MCP — PLACEHOLDER").
+**Limitations:** the `source_code`-in-the-tool-call flow above is Streamlit-only, and there is no Git deployment mode for Streamlit via MCP. Python/JS apps are supported via MCP, but always through git — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md).
 
 **Don't write the source to a local file first.** Even when the runtime gives you a sandbox filesystem (Claude Desktop does), the `source_code` argument is the source of truth — the platform stores it directly in the data-app configuration. Drafting to `/home/claude/streamlit_app.py` and then re-emitting it as the tool argument doubles your output tokens for no benefit. Compose the code directly into the `modify_streamlit_data_app` call. If you want a review step before deploy, draft the code in your reply, get user confirmation, then make the tool call once.
 
@@ -115,7 +119,8 @@ For **Streamlit** apps:
 
 For **Python/JS** apps:
 
-- Must use git (no Code mode for this type). Edit locally, push to customer git, deploy. Today this means using `kbagent` (Path C) — MCP doesn't yet support Python/JS app deployment.
+- Must use git (no Code mode for this type). Work happens on a **draft** branched off the prod app's repo, never on a second app — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md).
+- Edit locally, push to the repo (Keboola-managed or customer-provided), then `deploy_data_app` via MCP or `kbagent data-app deploy`. Both MCP and kbagent drive the same tools here.
 
 Best fit for:
 
@@ -197,8 +202,8 @@ kbagent data-app password --app-id N    # if basic-auth
 
 | Your client                                | Recommended path                                                       |
 | ------------------------------------------ | ---------------------------------------------------------------------- |
-| Claude Desktop / claude.ai (no filesystem or with sandbox) | Path A (MCP-only) — Streamlit only. Compose code in-tool; don't drift into "local dev" mode even when a sandbox FS is available. |
-| Claude Code or local IDE agent             | Path B (filesystem + MCP) for Streamlit; Path C (kbagent) for Python/JS |
+| Claude Desktop / claude.ai (no filesystem or with sandbox) | Path A (MCP-only) — Streamlit, or Python/JS if the runner can speak git. Compose Streamlit code in-tool; don't drift into "local dev" mode even when a sandbox FS is available. |
+| Claude Code or local IDE agent             | Path B (filesystem + MCP). Either MCP or kbagent drives Python/JS — pick one per session |
 | Agentic CLI without MCP                    | Path C (kbagent) for everything                                        |
 | CI/CD pipeline                             | Path C (kbagent) — non-interactive, scriptable                         |
 
@@ -206,10 +211,10 @@ If both Path B and Path C are available, prefer Path B for one-off changes and P
 
 **Decision shortcuts:**
 
-- You can't write to a local filesystem -> Path A.
-- You're building a Python or JS (non-Streamlit) app -> Path C (until MCP gains support).
+- You can't write to a local filesystem -> Path A, and Streamlit only (Python/JS needs git).
+- You're building a Python or JS (non-Streamlit) app -> any path with git; read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) first.
 - You want to iterate on a Streamlit dashboard with screenshots -> Path B.
 - You're scripting deploys in CI -> Path C.
 - You need to set or rotate secrets -> Path C.
 
-See [streamlit-apps.md](streamlit-apps.md) and [python-js-apps.md](python-js-apps.md) for the per-type build details once you've picked a path.
+See [streamlit-apps.md](streamlit-apps.md) and [python-js-apps.md](python-js-apps.md) for the per-type build details once you've picked a path. For Python/JS, [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) decides which app you build into.

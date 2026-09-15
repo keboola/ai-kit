@@ -14,7 +14,7 @@
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`)
 - Git commit locking
 - Bootstrap hook (advanced)
-- Deployment via MCP — PLACEHOLDER
+- Deployment via MCP (Keboola-managed git)
 
 ## The /app contract
 
@@ -291,12 +291,12 @@ Exit code **153** means the locked commit no longer exists in the remote (force-
 
 Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh` is the only customizable stage of the entrypoint flow — derived images can replace it to bake `keboola-config/` into the image, skip git clone, or materialise source from non-git locations. See the base image docs ([glossary.md](glossary.md) §base image).
 
-## Deployment via MCP (Keboola-managed git) — PLACEHOLDER
+## Deployment via MCP (Keboola-managed git)
 
-Future flow: provision a Keboola-managed git repo for the Python/JS app through MCP tooling, so customers don't have to supply their own GitHub/GitLab.
+Python/JS apps deploy from git. The MCP tools do not carry source the way `modify_streamlit_data_app` does; they provision the repo, mint a push credential, and trigger deploys, and you drive `git` yourself.
 
-Planned developer flow: feature branch -> preview deployment -> merge to main -> production deployment.
+The repo can be **Keboola-managed** (provisioned with the prod app, the default for anything started from the Apps page) or **customer-provided** (GitHub/GitLab with a PAT or SSH key). Both are supported.
 
-**Status today: not yet finished.** Agents working on Python/JS apps fall back to **customer-provided git** (private GitHub/GitLab with PAT or SSH key) as the only supported path.
+For a Keboola-managed repo the app is really two configurations: a **prod** app that owns the repo, and **drafts** that branch off it for iteration. Which one you build into, the full tool sequence, and the one argument that decides whether you create a draft or a stray second app are all in **[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md)**. Read it before the first `modify_python_js_data_app` call.
 
-When the platform support lands, this section expands. If it grows past ~50 lines, split it into its own reference.
+Git plumbing for the managed repo, the ~15MB / HTTP 413 push cap, and the build-at-deploy recipe live in the `keboola-git` skill.
