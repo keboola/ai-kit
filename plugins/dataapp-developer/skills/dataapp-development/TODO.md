@@ -15,7 +15,7 @@ Open Linear issues whose resolution will change what the skill teaches. Until th
 
 Gaps that force the skill to recommend kbagent or filesystem paths for things MCP should cover.
 
-- **`modify_streamlit_data_app` is Streamlit-only.** No Python/JS app creation or modification via MCP. Blocks Path A for dashboarding apps. See `references/python-js-apps.md` §"Deployment via MCP — PLACEHOLDER".
+- **Python/JS via MCP needs a git-capable runner.** `modify_python_js_data_app` and `create_python_js_data_app_git_credential` are live (see `references/python-js-prod-and-drafts.md`), but source only reaches the platform through `git push`. A pure MCP client with no shell still can't ship a Python/JS app. The `source_code`-in-the-tool-call convenience remains Streamlit-only.
 - **No Git deployment mode via MCP.** `modify_streamlit_data_app` only supports Code mode. Git-mode apps (the recommended choice for multi-file projects) require the Configuration API or kbagent.
 - **No log-reading tool beyond the 20-line tail.** `get_data_apps(...).deployment_info.logs` returns only the most recent lines. For real debugging the agent has to direct the user to the Keboola UI Terminal Log tab.
 - **No workspace management.** Cannot create / grant / list / delete workspaces via MCP. Local-dev workspace setup falls back to UI or kbagent.
@@ -35,11 +35,14 @@ Smaller gaps; kbagent already covers most of the data-app lifecycle.
 Sections we know are incomplete because the underlying pattern isn't firm yet. Mostly tracked by Linear above, but listed here as the writing tasks.
 
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
-- **`python-js-apps.md` §Deployment via MCP — PLACEHOLDER.** Fill in once `modify_streamlit_data_app` covers Python/JS.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/api-client`'s `queryService` client (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
   - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.
   - `KAI_TOKEN` secret workaround for embedding Kai chat without manual user token entry. Belongs in `kai-integration.md` once the contract with `kai-client` is firm.
+
+## Evals
+
+- **Only trigger evals exist today.** All 18 `trigger-evals.json` files assert whether a skill activates. The AJDA-3263 failure was not an activation failure — the skill was reachable and the agent still sent the wrong arguments. Hard rule 10 is therefore untested by CI. A behavioural tier that stubs `modify_python_js_data_app` and asserts on the arguments would catch a regression; until then the rule is kept short enough that loading `SKILL.md` is sufficient.
 
 ## Live test coverage
 
@@ -48,6 +51,7 @@ The skill has been validated end-to-end in three sessions, but not against every
 - **Python-only app (Flask + `uv`)** template path has never been live-tested.
 - **kbagent end-to-end** path — partial coverage (used in one debug session for `data-app deploy --wait`). Hasn't been driven from scratch (`data-app create` → secrets → first deploy → iteration → deploy).
 - **Kai integration** path — no live test against a real `kai-client` deployment.
+- **Prod-app-and-drafts flow** (`references/python-js-prod-and-drafts.md`) — written from the `keboola/mcp-server` tool contract and the AJDA-3263 measurement, not yet driven end to end from a fresh Apps-page app (rename prod → draft → push → `mode="dev"` preview → merge → prod deploy). Two claims to confirm on that run: what `deploy_data_app(mode="dev")` does about authentication for the preview, and whether a dev deployment follows the branch or stays pinned by commit locking.
 - **BigQuery project** — identifier quoting, bucket→dataset mangling, read queries, the Query Service return shape (string cells, like Snowflake), and `INSERT` DML (via the Query Service: `rows_affected` populated, round-trip confirmed, statements share a session) are verified on a real BQ project (AJDA-2835, AJDA-2840). **Tested 2026-09-09 — it fails.** A `direct-grant` write to a real Storage table from a *deployed* app is denied on BigQuery (`bigquery.tables.updateData`), with reads on the same table from the same workspace succeeding. Platform bug [DMD-1259](https://linear.app/keboola/issue/DMD-1259), not a skill gap; redeploying does not work around it. `storage-access.md` and `troubleshooting.md` now warn about it.
 
 ## Asset / link hygiene

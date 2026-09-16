@@ -22,15 +22,22 @@ Always pass `--json` to `tool call` so output is parseable.
 # List existing data apps (find configuration_id, data_app_id, repo_url)
 kbagent --json tool call get_data_apps --project <alias> --input '{}'
 
-# Provision a new python-js data app (creates the managed repo)
+# Create a prod app + its managed repo -- ONLY when get_data_apps returned no python-js app.
+# An empty configuration_id creates every time; to branch off an existing app instead, see
+# the drafts flow referenced below.
 kbagent --json tool call modify_python_js_data_app --project <alias> \
   --input '{"name":"<Display Name>","slug":"<slug>","description":"<desc>"}'
 ```
 **Returns:** `configuration_id`, `data_app_id`, `repo_url`
 (`https://git.<stack>/keboola/app-<data_app_id>.git`).
 
-Two-app model: the **prod** config owns the only repo. Draft branches are advanced from
-prod; there is not a separate repo per draft.
+Prod-and-drafts model: the **prod** config owns the only repo, and drafts branch off it.
+There is not a separate repo per draft. An empty `configuration_id` with no
+`parent_configuration_id` **creates a prod app and a repo every time**, and the repo can
+never be attached to an existing app afterwards. When your context already names the app
+(the page you were opened on, an id in the request) use it directly; otherwise check
+`get_data_apps` first. Full rules:
+`plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 
 ### Mint a push credential (one-time secret)
 
@@ -126,7 +133,7 @@ both over-cap *and* the wrong architecture for the Linux deploy runtime.
    #   cp -r public       .next/standalone/frontend/public
    ```
    For the surrounding setup.sh / nginx / supervisord wiring, see the
-   `dataapp-developer:dataapp-deployment` skill.
+   `dataapp-developer:dataapp-development` skill.
 4. **Re-run the working-tree size guard** (must return nothing).
 5. **Guard git *history*, not just the working tree.** `git push` sends every object reachable
    from the pushed ref, so a build committed in an *earlier* commit still 413s even after step 2.

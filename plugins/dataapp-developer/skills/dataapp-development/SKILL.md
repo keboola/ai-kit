@@ -1,6 +1,6 @@
 ---
 name: dataapp-development
-description: Use when building, modifying, deploying, or debugging Keboola Apps (Streamlit or Python/JS). Covers the full lifecycle — choosing app type, configuring keboola-config/, storage access (RO workspace, RW Query Service, input mapping), authentication, DuckDB caching for performance, default Keboola styling, dashboard patterns, optional Kai chat integration, and the three client paths (MCP-only, Claude Code with filesystem, kbagent CLI).
+description: Use when building, modifying, deploying, or debugging Keboola Apps (Streamlit or Python/JS). Covers the full lifecycle — choosing app type, the Python/JS prod-app-and-drafts model (never create a second app), configuring keboola-config/, storage access (RO workspace, RW Query Service, input mapping), authentication, DuckDB caching for performance, default Keboola styling, dashboard patterns, optional Kai chat integration, and the three client paths (MCP-only, Claude Code with filesystem, kbagent CLI).
 ---
 
 # Keboola App Development
@@ -17,7 +17,8 @@ Answer these questions in order. Each answer routes to the right reference.
 
 | Task | Where to look first |
 |---|---|
-| Build a new app from scratch | `references/choosing-app-type.md` → type-specific reference → `references/deployment-paths.md` |
+| Build a new app from scratch | `references/choosing-app-type.md` → type-specific reference → `references/deployment-paths.md`. **Python/JS: read `references/python-js-prod-and-drafts.md` first** — a prod app usually exists already |
+| Anything that will call `modify_python_js_data_app` | `references/python-js-prod-and-drafts.md`, before the call |
 | Modify an existing app (add feature, fix bug) | `references/dev-workflow.md` for the change loop |
 | Deploy or redeploy | `references/deployment-paths.md` |
 | Debug a deployment or runtime issue | `references/troubleshooting.md` |
@@ -35,8 +36,8 @@ If unsure → `references/choosing-app-type.md`. Short version:
 
 `references/deployment-paths.md` covers all three:
 
-- **Path A — Claude Desktop / web (MCP-only, no filesystem):** Use `modify_streamlit_data_app` / `deploy_data_app` MCP tools (Streamlit only today).
-- **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to customer git, deploy via MCP or kbagent.
+- **Path A — Claude Desktop / web (MCP-only, no filesystem):** Streamlit via `modify_streamlit_data_app` / `deploy_data_app`; Python/JS via `modify_python_js_data_app` + `create_python_js_data_app_git_credential` + git + `deploy_data_app` (see `references/python-js-prod-and-drafts.md`; needs a git-capable runner).
+- **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to the app's git repo (Keboola-managed or customer-provided), deploy via MCP or kbagent.
 - **Path C — CLI agent (`kbagent`):** Full lifecycle via `kbagent data-app` command group.
 
 ### 4. Any cross-cutting concerns?
@@ -77,3 +78,4 @@ The Keboola MCP server exposes a `docs_query` tool that searches the official Ke
 7. **Pick one Keboola path per session.** Before any project-mutating call, run BOTH detection checks (`which kbagent` + scan for `mcp__*[Kk]eboola*` tools) and ask the user which to use if more than one is present. Don't silently pick. See `references/deployment-paths.md` §Pick one path per session.
 8. **MCP-only flows: compose source directly into the tool call.** When the chosen path is `modify_streamlit_data_app`, the `source_code` argument **is** the deployment artifact — don't pre-write a local copy. See `references/deployment-paths.md` Path A.
 9. **For local-dev credentials: pre-fill what you can, ask for what's missing, then offer to run.** Never grep the filesystem or scan unrelated env vars for tokens. See `references/storage-access.md` §Getting the env vars for local development.
+10. **An empty id means create.** For any Keboola tool where an empty `configuration_id` switches update into create (`modify_python_js_data_app`, `modify_streamlit_data_app`), the id is the decision, not a detail. Never send an empty one without saying in your reply that you are creating a new resource and why no existing one fits. For Python/JS apps a create also provisions a git repo that can never be attached later, and `parent_configuration_id` is what makes the call a draft instead. See `references/python-js-prod-and-drafts.md`.

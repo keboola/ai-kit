@@ -66,5 +66,13 @@
   {
     "query": "turn this script into a python component so we can run it on a backend with more memory",
     "should_trigger": false
+  },
+  {
+    "query": "I already have an empty python/js app in keboola with a managed git repo — build a revenue dashboard into it",
+    "should_trigger": true
+  },
+  {
+    "query": "build this into the app that's already open here instead of making a new one",
+    "should_trigger": true
   }
 ]

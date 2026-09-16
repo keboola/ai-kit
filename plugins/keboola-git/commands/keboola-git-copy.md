@@ -35,9 +35,19 @@ that drives it.
 
 ## `to-keboola` (GitHub → Keboola)
 
-1. **Resolve or provision the app.**
+1. **Resolve the app. Creating one is the last resort.**
    - If `--config` given: confirm with `get_data_apps` and read its `data_app_id` / `repo_url`.
-   - Else: provision with `modify_python_js_data_app` (use `--app-name`); capture `configuration_id`, `data_app_id`, `repo_url`.
+   - Else run `get_data_apps`. Exactly one python-js prod app means use it, however empty it
+     looks. Several means ask the user which.
+   - Only when the project has **no** python-js app at all: create the prod app with
+     `modify_python_js_data_app` (use `--app-name`), and say so in your reply first. An empty
+     `configuration_id` creates an app **and a managed repo that can never be attached to an
+     existing app afterwards**.
+   - Capture `configuration_id`, `data_app_id`, `repo_url`.
+   - This command copies onto the prod app's `main`. To stage changes on a branch behind a
+     preview instead, use the drafts flow in
+     `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`
+     rather than this command.
 2. **Mint a push credential** with `create_python_js_data_app_git_credential` → `git_clone_url` into `$URL`.
 3. **Clone the source** (single-branch) into `./.keboola-git-work/app`.
 4. **Size guard (working tree):** `find . -size +15M -not -path '*/.git/*'`.
@@ -45,7 +55,7 @@ that drives it.
      untrack + gitignore the build dir and `node_modules/`; set `keboola-config/setup.sh` to
      `cd frontend && npm ci && npm run build`, then copy `static` + `public` to wherever the build
      put `server.js` (`find .next/standalone -name server.js` — single-package vs monorepo differ).
-     Commit the source-only tree. (See the `dataapp-developer:dataapp-deployment` skill for setup.sh wiring.)
+     Commit the source-only tree. (See the `dataapp-developer:dataapp-development` skill for setup.sh wiring.)
    - Re-run the working-tree guard; it must return nothing.
 5. **History guard (CRITICAL):** a build committed in an earlier commit still 413s — `git push`
    sends all reachable history, the `find` guard only sees the working tree. Check:

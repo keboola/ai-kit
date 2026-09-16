@@ -13,7 +13,7 @@ Keboola python-js data apps can host their source in a **Keboola-managed Git rep
 
 **Use this for:** reading or writing a managed Forgejo repo for a python-js data app; moving an app's source between GitHub and Keboola git; pushing source and deploying from the managed repo.
 
-**Not for:** authoring the contents of `keboola-config/` (nginx, supervisord, setup.sh) — that's the `dataapp-developer:dataapp-deployment` skill. Not for Streamlit app development — that's `dataapp-developer:dataapp-dev`. This skill assumes the app source already exists somewhere; it handles the *git plumbing* to get it into Keboola and deployed.
+**Not for:** authoring the contents of `keboola-config/` (nginx, supervisord, setup.sh) — that's the `dataapp-developer:dataapp-development` skill, which also covers Streamlit app development. This skill assumes the app source already exists somewhere; it handles the *git plumbing* to get it into Keboola and deployed.
 
 ## Working Directory Context
 
@@ -45,12 +45,21 @@ kbagent --json tool call get_data_apps --project <alias> --input '{}'
 Note the `configuration_id`, `data_app_id`, and `repo_url`
 (`https://git.<stack>/keboola/app-<data_app_id>.git`).
 
-**Provision a new app + repo:**
+**Create a prod app + repo — only when `get_data_apps` above returned no python-js app:**
 ```bash
 kbagent --json tool call modify_python_js_data_app --project <alias> \
   --input '{"name":"<Display Name>","slug":"<slug>","description":"<desc>"}'
 ```
-Returns `configuration_id`, `data_app_id`, `repo_url`. Two-app model: the **prod** config owns the only repo; draft branches advance from it.
+Returns `configuration_id`, `data_app_id`, `repo_url`.
+
+**An empty `configuration_id` creates, every time.** It makes a new prod app *and* a new
+managed repo, and the repo can never be attached to an existing app afterwards, so a stray
+prod app is a stray repo. Look before you create, and when your context already names the app
+(the page you were opened on, an id in the request) just use that id.
+
+This skill's flow below targets the prod app's `main`. To stage changes on a branch behind a
+preview instead, the draft flow (`parent_configuration_id`, `deploy_data_app` in dev mode)
+is in `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 
 ## 2. Mint a push credential (one-time secret)
 
@@ -59,6 +68,7 @@ kbagent --json tool call create_python_js_data_app_git_credential --project <ali
   --input '{"configuration_id":"<cfg>"}'
 ```
 Returns `git_clone_url` = `https://kai:<secret>@git.<stack>/keboola/app-<data_app_id>.git`.
+Always mint against the **prod** config. Drafts own no repo of their own.
 
 - The secret is **shown once**. Mint a fresh one anytime — they're cheap and revocable-by-rotation.
 - **Keep it in a shell variable only.** Never commit it, never `echo` it into a file, never paste it into a log or message. Read it into a var and reference `"$URL"`:
@@ -107,7 +117,7 @@ Forgejo rejects pushes over **~15MB** with **HTTP 413**. A single file over the 
    #   cp -r .next/static .next/standalone/frontend/.next/static
    #   cp -r public       .next/standalone/frontend/public
    ```
-   For the exact setup.sh / nginx / supervisord wiring, cross-reference the **`dataapp-developer:dataapp-deployment`** skill.
+   For the exact setup.sh / nginx / supervisord wiring, cross-reference the **`dataapp-developer:dataapp-development`** skill.
 4. Commit the source-only tree, then re-run the size guard (no tracked file >15MB).
 
 5. **Check git *history*, not just the working tree (CRITICAL).** `git push` sends every

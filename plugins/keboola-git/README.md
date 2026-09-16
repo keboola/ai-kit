@@ -14,6 +14,7 @@ commit their build.
 
 Covers:
 - Provision a managed repo via `modify_python_js_data_app`; find existing ones via `get_data_apps`.
+- An empty `configuration_id` makes a new prod app **and a new repo** every time — resolve the existing app before creating; this skill's flow targets the prod app's `main`.
 - Mint a one-time push credential with `create_python_js_data_app_git_credential` (`git_clone_url` = `https://kai:<secret>@git.<stack>/keboola/app-<id>.git`).
 - Raw `git clone` / `remote add` / `push keboola HEAD:main` (kbagent has no repo-copy helper).
 - The **15MB / HTTP 413 cap** and the **build-at-deploy** recipe (untrack `frontend/.next`, build in `keboola-config/setup.sh`).
@@ -48,5 +49,5 @@ Bidirectional copy of a data app's source between GitHub and Keboola git.
 
 ## Related
 
-- [`dataapp-developer`](../dataapp-developer) — `dataapp-deployment` skill for `keboola-config/` (setup.sh, nginx, supervisord) and `dataapp-dev` for Streamlit.
+- [`dataapp-developer`](../dataapp-developer) — `dataapp-development` skill for `keboola-config/` (setup.sh, nginx, supervisord), Streamlit, and the Python/JS prod-app-and-drafts rules.
 - [`keboola-cli`](../keboola-cli) — broader kbagent project management and review.
