@@ -67,6 +67,7 @@ Output: `docs/PROJECT_REVIEW_REPORT.md` (consolidated) + 10 individual reports i
 
 - **keboola-config**: Knowledge about Keboola project structure and configuration formats
 - **duckdb-transformation**: Expert knowledge for writing, optimizing, and migrating DuckDB transformations --- covers SQL dialect, block orchestration, dynamic backends, Parquet, case sensitivity, Snowflake migration, type casting patterns, and best practices
+- **job-error-triage**: A disciplined triage loop for a single job/deploy/config-write failure --- read the error log first, one root-cause diagnosis, one proposed config diff, one gated write, then verify it applied before reporting success; replaces firing multiple speculative config writes
 
 ## Usage
 
