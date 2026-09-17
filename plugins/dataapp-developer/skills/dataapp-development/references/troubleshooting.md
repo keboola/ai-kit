@@ -94,26 +94,12 @@
 
 ## `Insufficient privileges` / write blocked by the Query Service
 
-**On BigQuery, first rule out the platform bug — app-side writes are blocked.** Reads succeed while
-`INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` fail with `Permission bigquery.tables.updateData denied`, no
-matter how the table is configured. The direct-grant table IAM is granted to the workspace's own
-service account, but Query Service executes as a separate user it mints via its `/credentials`
-endpoint, and that user receives only project-level read. Tracked as
-[DMD-1259](https://linear.app/keboola/issue/DMD-1259) — check whether it is still open before
-spending time on the causes below.
-
-- **Redeploying does not fix it.** Re-provisioning the workspace re-runs the grant for the
-  workspace SA, never for the `/credentials` user. Reproduced with a table added fresh to the
-  config and a workspace created afterwards: read 9 rows, `DELETE` denied.
-- **Recognise it by the read/write split:** same workspace, same token, same table — `SELECT`
-  works, DML is denied. That is this bug, not a misconfiguration. Stop and report it rather than
-  re-checking the config.
-- **Use the Storage API instead** — `files/prepare` → upload → `import-async`. It does not go
-  through the Query Service, so it is unaffected, and it needs only the `KBC_TOKEN` the app
-  already has. Verified end-to-end on BigQuery (~10 s for a few hundred rows). See
-  [storage-access.md](storage-access.md) §Writing via the Storage API.
-
-Snowflake is unaffected; the causes below apply there.
+On BigQuery, `Permission bigquery.tables.updateData denied` with reads working on the same table
+used to mean [DMD-1259](https://linear.app/keboola/issue/DMD-1259) — the direct-grant table IAM
+reached the workspace's own service account but not the separate user Query Service mints via
+`/credentials`. Fixed in connection#8444 (merged 2026-09-16, rolled out); re-verified 2026-09-17
+with `INSERT`/`UPDATE`/`DELETE` all succeeding. If you still see that exact error, the causes
+below apply on both backends.
 
 **Cause:** Destination table not in `storage.output.tables` with `unload_strategy: "direct-grant"` (production), or the local workspace lacks write grants on the table (local dev).
 

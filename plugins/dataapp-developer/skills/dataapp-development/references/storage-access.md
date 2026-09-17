@@ -318,18 +318,7 @@ A few things worth noting on the BQ path that differ from Query Service:
 
 ## Read-write direct access (Storage Access)
 
-Real-time reads on both backends, plus writes **on Snowflake only** — see the BigQuery callout
-below. Goes through the Query Service. No caching — every read must reflect the latest state.
-
-> **BigQuery: app-side writes are blocked by a platform bug.** Reads are fine;
-> `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` fail with `Permission bigquery.tables.updateData denied`
-> however the table is configured, and redeploying does not help. The table grant lands on the
-> workspace's service account while Query Service runs as the user it mints via `/credentials`,
-> which gets read only. Tracked as [DMD-1259](https://linear.app/keboola/issue/DMD-1259) — check
-> whether it is still open before relying on this section for a BigQuery project.
-> **On BigQuery, write through the Storage API instead** — see "Writing via the Storage API"
-> below. Say so up front when a user asks for a BigQuery write-back app, rather than wiring the
-> Query Service and hitting the wall at deploy. The rest of this section applies to Snowflake.
+Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state.
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
@@ -612,12 +601,15 @@ function toObjects(result) {
 
 Over-coercing (calling `Number(raw)` on every cell) is just as bad as under-coercing — a zero-padded string like `"00"` becomes the number `0`, and any downstream `.localeCompare()` call crashes because numbers don't have it. Coerce only the columns you know are numeric.
 
-## Writing via the Storage API (the BigQuery write path)
+## Writing via the Storage API (bulk alternative to DML)
 
-Works on both backends and does **not** touch the Query Service, so it is unaffected by
-[DMD-1259](https://linear.app/keboola/issue/DMD-1259). Use it whenever the app must write on
-BigQuery. Needs only `KBC_URL` and `KBC_TOKEN`, both already injected — no writable-table
-config, and no `runtime.workspace.enabled`.
+Works on both backends and does **not** touch the Query Service. Needs only `KBC_URL` and
+`KBC_TOKEN`, both already injected — no writable-table config, and no
+`runtime.workspace.enabled`.
+
+Prefer Storage Access DML (above) for row-level edits: it is a single statement and returns in
+milliseconds. Reach for this path when the app replaces or appends a whole table at once, or
+when you want to write without granting the app a writable table at all.
 
 Three steps, all on the Storage API:
 
