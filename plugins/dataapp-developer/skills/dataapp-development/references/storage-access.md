@@ -19,7 +19,7 @@ The Python/JS templates load local env vars from `.env` or `.env.local` (both su
 
 **Agent: pre-fill what you can, ask for what's missing, then offer to run.** When the local file is missing or incomplete, **do NOT grep the filesystem, scan shell history, or probe unrelated environment variables hoping to find something that looks like a token.** That's a security smell. Do this proactively instead:
 
-1. **Pre-create `.env.local`** (or `.streamlit/secrets.toml` for Streamlit) with every required key. Resolve the values you can yourself: `mcp__keboola__get_project_info` returns `branch_id`, `workspace_id`, and the project URL (which gives you `KBC_URL` and lets you derive `QUERY_SERVICE_URL` by swapping `connection.` → `query.`). Use those to populate the file. Only the user's Storage API token (`KBC_TOKEN`) is genuinely user-input.
+1. **Pre-create `.env.local`** (or `.streamlit/secrets.toml` for Streamlit) with every required key. Resolve the values you can yourself: `mcp__keboola__get_project_info` returns `workspace_id` and the project URL (which gives you `KBC_URL` and lets you derive `QUERY_SERVICE_URL` by swapping `connection.` → `query.`). Use those to populate the file. Only the user's Storage API token (`KBC_TOKEN`) is genuinely user-input.
 2. **Check whether `KBC_TOKEN` is already set** in the shell environment, in `.env.local`, or in `.streamlit/secrets.toml`. Looking up a specific named variable is fine; scanning every env var is not. If it's already there, skip the next step.
 3. **If `KBC_TOKEN` is missing**, tell the user exactly which value you still need and point them at §`KBC_TOKEN` for where to fetch it in the Keboola UI. Wait for confirmation that they've filled it in.
 4. **Once `.env.local` is complete, offer to start the app** with the right command for the framework so the user can preview it (`uv run streamlit run streamlit_app.py`, `npm run dev`, `node --watch server.js`, `uv run uvicorn ...`). Don't auto-start without asking — the user might want to inspect first.
@@ -72,21 +72,14 @@ Notes:
 
 ### BRANCH_ID
 
-Defaults to `default` (production). Almost always leave it that way.
+`BRANCH_ID` selects **which branch's tables the app reads at runtime**. It says nothing about where the app runs: data apps themselves only live in the **production branch** — the platform does not deploy or run data apps from development branches.
 
-**Important context:** data apps themselves only live in the **production branch** — the platform does not deploy or run data apps from development branches. So `BRANCH_ID` is not about where the app runs (it always runs in production), but about which branch's tables the app reads from at runtime.
+**Normally you don't set it at all, and the effective value is `default`.** `default` is a valid branch identifier — both the Query Service and the Storage API accept it, and it resolves to the project's production branch. Deployed on the platform, leave `BRANCH_ID` out of the app config; Keboola injects it. Locally, leave it out of `.env.local` / `.streamlit/secrets.toml` too — the templates fall back to `default`. That is deliberately the **same advice in both contexts**: nothing to look up, and no value that can drift between your machine and the deployed app. Don't pin the production branch's numeric ID either — `default` already means production, and a hard-coded number is one more thing to get wrong when the app moves to another project.
 
-You only need to set `BRANCH_ID` explicitly if:
+**The one exception: the app has to read a development branch's tables** (branched storage) — e.g. previewing data from an in-progress migration before it lands in production. Then set `BRANCH_ID` to that branch's **numeric** ID, identically whether the app runs locally or deployed. Two ways to obtain it:
 
-- The app needs to read tables that live in a **development branch** (e.g. previewing data from an in-progress migration before it lands in production).
-- In that case, find the numeric branch ID in the project UI under **Development Branches** — the URL of the branch shows it.
-
-For every other case → omit `BRANCH_ID` (or set it to `default`) and the app reads production tables.
-
-**Local dev with direct Query Service calls needs a numeric `BRANCH_ID`.** The string `"default"` is rejected by the Query Service with a parse error. Don't construct an HTTP call to `/v2/storage/dev-branches` — call `mcp__keboola__get_project_info` and read:
-
-- `branch_id` — the numeric ID to paste into `.env.local`.
-- `is_development_branch` — confirms which branch the MCP session is currently scoped to. **Must be `false`** before relying on `branch_id`. If `true`, the MCP is in a dev-branch context — switch to the production branch in your MCP setup and re-run, otherwise you'll paste a dev-branch ID into `.env.local` and the app will read dev-branch tables locally.
+- `mcp__keboola__get_project_info` — returns `branch_id` plus `is_development_branch`, which says which branch the MCP session is scoped to. `is_development_branch: true` means `branch_id` is the development branch's ID, which is the value you want here. `false` means the session is on production, so `branch_id` is the production ID — point your MCP setup at the development branch and re-run, or use the UI instead. Don't construct an HTTP call to `/v2/storage/dev-branches`; use this tool.
+- The project UI under **Development Branches** — the URL of the branch shows its numeric ID.
 
 ## Preferred default for read-only apps: DuckDB-cached RO
 
@@ -129,7 +122,7 @@ Required env vars (Keboola auto-injects on deploy when Storage Access is enabled
 - `KBC_URL`, `KBC_TOKEN` — auth + base host.
 - `QUERY_SERVICE_URL` — Query Service host. If unset, derive from `KBC_URL` by swapping `connection.` → `query.` (`https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`).
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
-- `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
+- `BRANCH_ID` — **optional.** Unset means `default`, i.e. the production branch. Set it, to a numeric branch ID, only when the app has to read a development branch's tables — see §`BRANCH_ID`.
 
 The **Query Service is the preferred path on both backends** — Snowflake and BigQuery alike. The Query Service passes SQL through to the backend unchanged; it does **not** translate dialects, so the one thing that changes between backends is the SQL dialect you emit — identifier quoting and dataset naming. See "BigQuery SQL dialect" below.
 
@@ -163,7 +156,7 @@ base_url = os.environ.get("QUERY_SERVICE_URL") or os.environ["KBC_URL"].replace(
 client = Client(base_url=base_url, token=os.environ["KBC_TOKEN"])
 
 results = client.execute_query(
-    branch_id=os.environ["BRANCH_ID"],   # numeric, not "default"
+    branch_id=os.environ.get("BRANCH_ID", "default"),   # "default" = production branch
     workspace_id=os.environ["WORKSPACE_ID"],
     statements=['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
 )
@@ -189,7 +182,7 @@ const queryServiceClient = createQueryServiceClient({
 const sdk = createQueryServiceSdk({ queryServiceClient });
 
 const [result] = await sdk.executeQuery(
-  process.env.BRANCH_ID,      // numeric
+  process.env.BRANCH_ID || 'default',   // 'default' = production branch
   process.env.WORKSPACE_ID,
   {
     statements: ['SELECT * FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100'],
@@ -258,7 +251,7 @@ Only the **dataset** (bucket) name is mangled — the **table** name keeps its o
 
 For BigQuery projects there's an alternative to the Query Service: post to `{KBC_URL}/v2/storage/branch/<branch>/workspaces/<workspace>/query`. **Prefer the Query Service** (above) for new apps; this endpoint is here as another option — e.g. when you want a synchronous call with native-typed rows, or you're maintaining an app already built on it. The call is synchronous (no submit/poll/paginate) and returns rows as dicts with native types — no string coercion needed. (On Snowflake projects this endpoint returns 404 — see the warning above.)
 
-Required env vars: `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix), `BRANCH_ID` (can be the string `"default"` here — the Storage API accepts it, unlike Query Service).
+Required env vars: `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID` (numeric, strip any `WORKSPACE_` prefix). `BRANCH_ID` is optional here as everywhere else — unset means `default`, which this endpoint accepts and resolves to the production branch.
 
 Python:
 
@@ -375,7 +368,7 @@ from keboola_query_service import Client
 
 class Storage:
     def __init__(self) -> None:
-        self.branch_id = os.environ["BRANCH_ID"]
+        self.branch_id = os.environ.get("BRANCH_ID", "default")
         with open(os.environ["KBC_WORKSPACE_MANIFEST_PATH"]) as f:
             self.workspace_id = json.load(f)["workspaceId"]
         self.client = Client(
@@ -410,7 +403,7 @@ import { readFileSync } from 'node:fs';
 import { createQueryServiceClient } from '@keboola/api-client/queryService';
 import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
 
-const branchId = process.env.BRANCH_ID!;
+const branchId = process.env.BRANCH_ID || 'default';
 const workspaceId = JSON.parse(
   readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
 ).workspaceId as string;

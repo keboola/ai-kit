@@ -70,17 +70,11 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
           df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
           df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
     """
-    branch_id = _get("BRANCH_ID")
+    # BRANCH_ID is optional: "default" is the production branch. Set a numeric
+    # branch ID only to read a development branch's tables (branched storage).
+    branch_id = _get("BRANCH_ID") or "default"
     workspace_id = _resolve_workspace_id()
 
-    if not branch_id:
-        st.error(
-            "Missing BRANCH_ID. The Query Service requires a numeric branch ID — "
-            "the string 'default' is rejected. Get it from "
-            "mcp__keboola__get_project_info (`branch_id` field) and paste into "
-            ".streamlit/secrets.toml."
-        )
-        return pd.DataFrame()
     if not workspace_id:
         st.error(
             "Missing workspace ID. Set KBC_WORKSPACE_MANIFEST_PATH (Storage Access "
