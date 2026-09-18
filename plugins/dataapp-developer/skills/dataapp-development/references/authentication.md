@@ -74,6 +74,14 @@ When using `modify_streamlit_data_app` via MCP:
 
 Acceptable values: `"no-auth"`, `"basic-auth"`, `"default"`.
 
+`"no-auth"` is only for an app the user has explicitly asked to make public, and
+only on the **prod** app. `modify_python_js_data_app` rejects it on a draft
+(create with `parent_configuration_id`, or update of a draft config) — a draft
+inherits the prod app's data access, so disabling its auth exposes
+Storage-reading and Storage-writing endpoints publicly. Never change
+`authentication_type` to get a preview to load: the in-platform preview
+(`deploy_data_app(mode="dev")`) authenticates on top of whatever auth the app has.
+
 Rule of thumb: if you are not intentionally changing auth, set
 `authentication_type="default"` on every update call. This is especially
 important when the original auth was configured through the Keboola UI and

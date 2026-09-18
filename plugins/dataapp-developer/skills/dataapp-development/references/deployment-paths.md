@@ -99,7 +99,7 @@ import streamlit as st
 # ... your app code using query_data(sql)
 """,
     packages=["pandas", "plotly"],
-    authentication_type="basic-auth",  # or "no-auth" / "default" on update
+    authentication_type="basic-auth",  # "default" on update; "no-auth" only on a prod app the user asked to make public
     configuration_id="",  # empty for new app
     change_description="",
 )
