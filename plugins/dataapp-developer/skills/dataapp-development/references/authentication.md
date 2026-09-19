@@ -5,7 +5,8 @@
 ## Options overview
 
 Keboola Data Apps ship with six built-in authentication methods. All of them
-are configured on the app itself (in the Keboola UI or via `modify_streamlit_data_app`)
+are configured on the app itself (in the Keboola UI, or via `modify_streamlit_data_app` /
+`modify_python_js_data_app`)
 and do not require any code changes inside the app.
 
 - **None** — app is publicly accessible by URL. Implement your own auth in
@@ -52,7 +53,7 @@ https://my-app-12345678.hub.north-europe.azure.keboola.com/_proxy/callback
 
 You must register this URL in the IdP's redirect URI configuration BEFORE deploying with that auth method. The `dataAppId` is shown in the app configuration after the first deployment, so the typical flow is:
 
-1. Deploy the app once (with `none` or `basic-auth`) to obtain the `dataAppId`.
+1. Deploy the app once (with `basic-auth`) to obtain the `dataAppId`.
 2. Configure the callback URL in the IdP.
 3. Switch the app's auth method to the OAuth/OIDC provider.
 
@@ -72,15 +73,8 @@ When using `modify_streamlit_data_app` via MCP:
 - **New apps** default to `basic-auth` for security if `authentication_type` is not specified.
 - **Updates to existing apps** — pass `authentication_type="default"` to preserve the existing setup. Important: passing `"basic-auth"` on an UPDATE to an OIDC app will silently DOWNGRADE it to basic-auth. Always use `"default"` on updates unless you explicitly intend to change the auth method.
 
-Acceptable values: `"no-auth"`, `"basic-auth"`, `"default"`.
-
-`"no-auth"` is only for an app the user has explicitly asked to make public, and
-only on the **prod** app. `modify_python_js_data_app` rejects it on a draft
-(create with `parent_configuration_id`, or update of a draft config) — a draft
-inherits the prod app's data access, so disabling its auth exposes
-Storage-reading and Storage-writing endpoints publicly. Never change
-`authentication_type` to get a preview to load: the in-platform preview
-(`deploy_data_app(mode="dev")`) authenticates on top of whatever auth the app has.
+Acceptable values: `"no-auth"`, `"basic-auth"`, `"default"`. `"no-auth"` is only
+for an app the user has explicitly asked to make public.
 
 Rule of thumb: if you are not intentionally changing auth, set
 `authentication_type="default"` on every update call. This is especially
@@ -88,6 +82,22 @@ important when the original auth was configured through the Keboola UI and
 your update call is only adjusting other fields (env vars, secrets, size) —
 omitting or hardcoding `authentication_type` is the most common cause of
 accidental OIDC -> basic-auth regressions.
+
+## Python/JS: `no-auth` is prod-only, never on a draft
+
+`modify_python_js_data_app` takes the same `authentication_type` values, with one
+extra rule: `"no-auth"` is accepted only on the **prod** app, and only when the
+user has explicitly asked to make the app public. It is rejected on a draft
+(create with `parent_configuration_id`, or update of a config with `isDraft`).
+A draft runs the prod app's code in the same project with its own Storage
+workspace and token, so disabling its auth exposes Storage-reading and
+Storage-writing endpoints publicly — for an app that was never meant to be public.
+
+Never change `authentication_type` to get a preview to load. Per the apps-proxy
+`kai-preview` design (`keboola/ui` `apps/kai-agent/docs/data-apps-architecture.md`),
+the in-platform preview of `deploy_data_app(mode="dev")` authenticates on top of
+whatever auth the app has. If the user wants the finished app public, set
+`"no-auth"` on the prod app when promoting, not on the draft.
 
 ## Row-level data filtering pointer
 
