@@ -65,6 +65,7 @@ modify_python_js_data_app(
     configuration_id="",                # empty -> CREATE
     parent_configuration_id=PROD,       # ...and this is what makes it a draft, not a second app
     branch="add-recent-jobs",           # optional; defaults to a generated draft-<hex>
+    authentication_type="basic-auth",   # never "no-auth" on a draft; the MCP rejects it
 )
 ```
 
@@ -119,7 +120,7 @@ The pre-receive hook declines branch deletes, and pushes over ~15MB fail with HT
 deploy_data_app(action="deploy", configuration_id=DRAFT, mode="dev")
 ```
 
-`mode="dev"` deploys the draft as a development deployment so the user can see it without disturbing prod. This argument is not yet confirmed against a live stack (see [TODO.md](../TODO.md)); if the call rejects it, drop `mode` and deploy the draft plainly. Hot reload off the branch is **not automatic**: it needs `keboola-config/supervisord-dev/<program>.conf` in the repo, and commit locking otherwise pins each deploy to a SHA. See [python-js-apps.md](python-js-apps.md) §Keboola-hosted dev mode and §Git commit locking. Without those configs, redeploy after each push.
+`mode="dev"` deploys the draft as a development deployment so the user can see it without disturbing prod. This argument is not yet confirmed against a live stack (see [TODO.md](../TODO.md)); if the call rejects it, drop `mode` and deploy the draft plainly. If the preview does not load, the fix is never `authentication_type="no-auth"` — the in-platform preview authenticates on top of the draft's configured auth, and the MCP rejects `"no-auth"` on drafts anyway (see [authentication.md](authentication.md) §Python/JS). Hot reload off the branch is **not automatic**: it needs `keboola-config/supervisord-dev/<program>.conf` in the repo, and commit locking otherwise pins each deploy to a SHA. See [python-js-apps.md](python-js-apps.md) §Keboola-hosted dev mode and §Git commit locking. Without those configs, redeploy after each push.
 
 ### 6. Ship it
 
