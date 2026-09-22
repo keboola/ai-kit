@@ -78,13 +78,15 @@
 
 **Fix:** Add the secret. UI: Configuration → Secrets → `#KEY=value`. kbagent: `kbagent data-app secrets-set --app-id N --secret '#KEY=value'` then `data-app deploy --wait`. Secret names get `#` stripped, dashes→underscores, uppercased: `#my-key` → env `MY_KEY`.
 
-## `KeyError: 'BRANCH_ID'` (or any Storage Access env var) on app start
+## `KeyError: 'QUERY_SERVICE_URL'` (or any Storage Access env var) on app start
 
 **Cause:** Storage Access isn't enabled on the component config (production), or local `.env` / `.env.local` is missing the variable.
 
 **Fix:**
 - **Production:** UI → Advanced Settings → enable Storage Access and add writable tables with `unload_strategy: "direct-grant"`. Redeploy.
-- **Local dev:** add the four variables to `.env` / `.env.local`. See [storage-access.md](storage-access.md) §Getting the env vars for local development.
+- **Local dev:** add the missing variable to `.env` / `.env.local`. See [storage-access.md](storage-access.md) §Getting the env vars for local development.
+
+`BRANCH_ID` is **not** one of the variables you have to add — it's optional in both contexts and falls back to `default` (the production branch). Set it only to read a development branch's tables.
 
 ## Query Service auth error with a narrow-scoped Storage API token
 
