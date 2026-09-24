@@ -45,6 +45,11 @@ Then call `deploy_data_app` to apply it to the running app.
   older server, and the UI toggle (app configuration → Advanced Settings → Storage Access) is
   then the only route.
 
+**A draft and its prod app each need their own.** They are two separate Storage
+configurations, and a git merge moves source code, not config — so Storage access enabled on a
+draft does not reach the app you promote to. See
+[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6.
+
 Underneath, this sets `runtime.workspace.enabled`, or on projects without the
 `data-apps-storage-workspace` feature falls back to a deprecated
 `parameters.dataApp.secrets.WORKSPACE_ID` entry. You do not need to care which — the argument
