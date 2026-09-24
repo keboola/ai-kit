@@ -45,6 +45,19 @@ Then call `deploy_data_app` to apply it to the running app.
   older server, and the UI toggle (app configuration → Advanced Settings → Storage Access) is
   then the only route.
 
+**Tell the user what this grants.** The workspace is scoped to the **whole project**, not to the
+tables the app happens to query: the app can read every table in the project's Storage. That is
+normally what is wanted, and it is why the RO workspace is the default pattern — but the user
+should hear it from you before you switch it on, not discover it later. Two cases deserve more
+than a passing mention:
+
+- **The app is `no-auth`.** Anyone with the URL can reach whatever the app exposes, backed by
+  project-wide read. Pair `storage_access` with `no-auth` only when the user has said they want a
+  public app and understands that.
+- **The project holds data the app's audience should not see.** Storage access is all-or-nothing
+  here. If the app must be limited to particular tables, that is input mapping or a
+  purpose-scoped workspace, not `storage_access` — see §Input mapping and §WORKSPACE_ID.
+
 **A draft and its prod app each need their own.** They are two separate Storage
 configurations, and a git merge moves source code, not config — so Storage access enabled on a
 draft does not reach the app you promote to. See
