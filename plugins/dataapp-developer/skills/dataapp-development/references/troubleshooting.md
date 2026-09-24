@@ -78,12 +78,19 @@
 
 **Fix:** Add the secret. UI: Configuration → Secrets → `#KEY=value`. kbagent: `kbagent data-app secrets-set --app-id N --secret '#KEY=value'` then `data-app deploy --wait`. Secret names get `#` stripped, dashes→underscores, uppercased: `#my-key` → env `MY_KEY`.
 
-## `KeyError: 'BRANCH_ID'` (or any Storage Access env var) on app start
+## `missing required env vars: WORKSPACE_ID` / `KeyError: 'BRANCH_ID'` (or any Storage Access env var) on app start
 
-**Cause:** Storage Access isn't enabled on the component config (production), or local `.env` / `.env.local` is missing the variable.
+**Cause:** Storage access isn't enabled on the component config (production), or local `.env` / `.env.local` is missing the variable.
 
 **Fix:**
-- **Production:** UI → Advanced Settings → enable Storage Access and add writable tables with `unload_strategy: "direct-grant"`. Redeploy.
+- **Production, python-js app:** enable it through MCP, no UI step —
+  `modify_python_js_data_app(configuration_id=..., storage_access=True)`, then `deploy_data_app`.
+  Confirm via `data_app.storage_access_enabled` in the response. Needs MCP server 1.87.3+; see
+  [storage-access.md](storage-access.md) §Enabling Storage access on a deployed app. Note
+  `update_config` is rejected for `keboola.data-apps` — that rejection means "use the data-app
+  tool", not "use the UI".
+- **Production, writable tables:** UI → Advanced Settings → Storage Access, or set the output
+  mapping with `unload_strategy: "direct-grant"`. Redeploy.
 - **Local dev:** add the four variables to `.env` / `.env.local`. See [storage-access.md](storage-access.md) §Getting the env vars for local development.
 
 ## Query Service auth error with a narrow-scoped Storage API token

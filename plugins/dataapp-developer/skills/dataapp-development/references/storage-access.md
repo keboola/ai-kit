@@ -3,6 +3,7 @@
 **Use this when:** the app reads from or writes to Keboola Storage tables.
 
 ## Contents
+- Enabling Storage access on a deployed app (the `storage_access` argument)
 - Getting the env vars for local development (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`, `BRANCH_ID`)
 - Preferred default for read-only apps: DuckDB-cached RO
 - Direct RO workspace queries (Query Service SDK; BigQuery dialect + alternative Storage API endpoint)
@@ -10,6 +11,44 @@
 - Query Service return shape — cells come back as strings (both backends)
 - Input mapping — discouraged for new apps
 - Data access management — PLACEHOLDER
+
+## Enabling Storage access on a deployed app
+
+A deployed data app can reach Storage only if the platform gives it a workspace, which the app
+sees as the `WORKSPACE_ID` env var. Without one it fails at runtime with
+`missing required env vars: WORKSPACE_ID`.
+
+**For python-js apps, turn it on through MCP — do not send the user to the UI.**
+
+```
+modify_python_js_data_app(
+    configuration_id="<cfg id>",
+    storage_access=True,
+    change_description="Enable read-only Storage access",
+)
+```
+
+Then call `deploy_data_app` to apply it to the running app.
+
+- Works on **create** and **update**. On create it defaults to on; pass `False` for an app that
+  must not read Storage.
+- On update it is the **only** argument that moves Storage access, and **omitting it changes
+  nothing** — a rename can never grant or revoke access. Turning it on for an existing app
+  therefore needs an explicit `storage_access=True`.
+- Read `data_app.storage_access_enabled` from the response to confirm the result rather than
+  assuming it.
+- Do **not** reach for `update_config` with a `runtime.workspace` payload. It is rejected for
+  `keboola.data-apps` by design, and the rejection is not a sign that the UI is the only way.
+- Streamlit apps get their workspace wiring automatically; `modify_streamlit_data_app` has no
+  such argument.
+- Needs MCP server **1.87.3+**. If `storage_access` is absent from the tool schema you are on an
+  older server, and the UI toggle (app configuration → Advanced Settings → Storage Access) is
+  then the only route.
+
+Underneath, this sets `runtime.workspace.enabled`, or on projects without the
+`data-apps-storage-workspace` feature falls back to a deprecated
+`parameters.dataApp.secrets.WORKSPACE_ID` entry. You do not need to care which — the argument
+drives both and the response reports the outcome.
 
 ## Getting the env vars for local development
 
@@ -125,7 +164,8 @@ Two paths to call the workspace:
 
 **On Snowflake, do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That older Storage API workspace-query endpoint returns `workspace.workspaceNotFound` 404s on Snowflake projects — use the Query Service instead. On BigQuery it does work and is a valid alternative (see "Alternative: Storage API workspace-query endpoint" below), but default to the Query Service on both backends.
 
-Required env vars (Keboola auto-injects on deploy when Storage Access is enabled):
+Required env vars (Keboola auto-injects them on deploy once Storage access is enabled — see
+"Enabling Storage access on a deployed app" above if the app is missing `WORKSPACE_ID`):
 - `KBC_URL`, `KBC_TOKEN` — auth + base host.
 - `QUERY_SERVICE_URL` — Query Service host. If unset, derive from `KBC_URL` by swapping `connection.` → `query.` (`https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`).
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
@@ -322,7 +362,9 @@ Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQu
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
-Setup:
+Setup (the first step is the project feature; the rest is about **writable tables** — the app's
+own read-only workspace is the separate `storage_access` argument covered in "Enabling Storage
+access on a deployed app" above):
 - Project Settings → Features → enable "Storage Access".
 - App configuration → Advanced Settings → Storage Access section → add writable tables.
 - Or programmatically: set `storage.output.tables[].destination` to the table ID and `unload_strategy: "direct-grant"`:

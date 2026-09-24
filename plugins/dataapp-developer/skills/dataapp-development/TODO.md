@@ -20,7 +20,6 @@ Gaps that force the skill to recommend kbagent or filesystem paths for things MC
 - **No log-reading tool beyond the 20-line tail.** `get_data_apps(...).deployment_info.logs` returns only the most recent lines. For real debugging the agent has to direct the user to the Keboola UI Terminal Log tab.
 - **No workspace management.** Cannot create / grant / list / delete workspaces via MCP. Local-dev workspace setup falls back to UI or kbagent.
 - **No direct secret management.** Adding / removing / listing `dataApp.secrets` has to go through `modify_streamlit_data_app` (which couples it to source-code edits) or the Configuration API directly.
-- **No Storage Access toggle.** Enabling Storage Access on an app config requires UI navigation; no MCP affordance.
 - **No project-feature discovery.** Agents can't programmatically detect whether the direct-grant feature is enabled on the project — currently has to ask the user or read error responses.
 
 ## kbagent CLI
