@@ -380,6 +380,12 @@ Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQu
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
+Writable tables live in the app's own `storage` block, so like `storage_access` they do **not**
+travel between a draft and its prod app in either direction — see
+[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6. Forgetting them on prod fails
+differently from forgetting Storage access: reads keep working and only the writes fail, because
+the workspace has no grant on the destination table.
+
 Setup (the first step is the project feature; the rest is about **writable tables** — the app's
 own read-only workspace is the separate `storage_access` argument covered in "Enabling Storage
 access on a deployed app" above):
