@@ -45,6 +45,24 @@ Then call `deploy_data_app` to apply it to the running app.
   older server, and the UI toggle (app configuration → Advanced Settings → Storage Access) is
   then the only route.
 
+**Tell the user what this grants.** The workspace is scoped to the **whole project**, not to the
+tables the app happens to query: the app can read every table in the project's Storage. That is
+normally what is wanted, and it is why the RO workspace is the default pattern — but the user
+should hear it from you before you switch it on, not discover it later. Two cases deserve more
+than a passing mention:
+
+- **The app is `no-auth`.** Anyone with the URL can reach whatever the app exposes, backed by
+  project-wide read. Pair `storage_access` with `no-auth` only when the user has said they want a
+  public app and understands that.
+- **The project holds data the app's audience should not see.** Storage access is all-or-nothing
+  here. If the app must be limited to particular tables, that is input mapping or a
+  purpose-scoped workspace, not `storage_access` — see §Input mapping and §WORKSPACE_ID.
+
+**A draft and its prod app each need their own.** They are two separate Storage
+configurations, and a git merge moves source code, not config — so Storage access enabled on a
+draft does not reach the app you promote to. See
+[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6.
+
 Underneath, this sets `runtime.workspace.enabled`, or on projects without the
 `data-apps-storage-workspace` feature falls back to a deprecated
 `parameters.dataApp.secrets.WORKSPACE_ID` entry. You do not need to care which — the argument
@@ -361,6 +379,12 @@ A few things worth noting on the BQ path that differ from Query Service:
 Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state.
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
+
+Writable tables live in the app's own `storage` block, so like `storage_access` they do **not**
+travel between a draft and its prod app in either direction — see
+[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6. Forgetting them on prod fails
+differently from forgetting Storage access: reads keep working and only the writes fail, because
+the workspace has no grant on the destination table.
 
 Setup (the first step is the project feature; the rest is about **writable tables** — the app's
 own read-only workspace is the separate `storage_access` argument covered in "Enabling Storage

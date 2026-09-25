@@ -74,6 +74,12 @@ Returns the draft's `configuration_id` and a `git_clone_url` already carrying a 
 - `branch` must not be `main`. That one is the prod app's.
 - Omit `branch` and you get a unique `draft-<hex>`, which cannot collide with a branch an earlier draft left behind. Pass a readable name when it helps the user read the repo.
 
+A draft inherits **nothing** from its parent: `modify_python_js_data_app` reads the parent app
+only for its repo URL and a push credential, never for its config. So a draft that needs to read
+Storage needs `storage_access` of its own (it is on by default on create), and a draft that needs
+to test **writes** needs its own `storage` output mapping with `unload_strategy: "direct-grant"` —
+the parent's mapping is not copied across. The same applies in reverse when you promote; see §6.
+
 ### 3. Mint a fresh push credential (only if you need one)
 
 Use this when the URL from step 2 has been lost or rotated, or when you are pushing to a prod app you did not just draft from:
@@ -124,11 +130,49 @@ deploy_data_app(action="deploy", configuration_id=DRAFT, mode="dev")
 
 ### 6. Ship it
 
-Merge the branch into `main`, push, then deploy prod:
+Merge the branch into `main`, push, then bring the prod app's **config** up to date and deploy:
 
 ```python
+# Config does not travel with the merge. A draft and its prod app are two separate
+# Storage configurations, so whatever you switched on while iterating is set on the
+# draft only.
+modify_python_js_data_app(
+    configuration_id=PROD,
+    storage_access=True,              # when the app reads Storage
+    storage={                         # when the app writes to Storage
+        "output": {
+            "tables": [
+                {"destination": "out.c-data-app.records", "unload_strategy": "direct-grant"},
+            ]
+        }
+    },
+    change_description="Match draft config: Storage access + writable tables",
+)
 deploy_data_app(action="deploy", configuration_id=PROD)
 ```
+
+**Carry the app's whole config over, not just its code.** Everything you set while iterating
+lives on the draft only. Two fields matter most, and each fails differently:
+
+| Field | Set it on prod when | Symptom if you forget |
+|---|---|---|
+| `storage_access=True` | the app **reads** Storage | app starts, data route 500s, `missing required env vars: WORKSPACE_ID` in the terminal log |
+| `storage` output mapping with `unload_strategy: "direct-grant"` | the app **writes** to Storage | reads keep working, **writes** fail — the workspace has no grant on the destination table |
+
+The write case is the nastier of the two: the app looks healthy and most of it works, so the
+failure reads as a bug in the write path rather than a missing grant. `authentication_type` and
+`auto_suspend_after_seconds` are on the draft only too, if you changed them there.
+
+Passing `storage_access` is idempotent, so send it whenever the app reads Storage rather than
+working out whether it is already on. To check instead, read
+`configuration.runtime.workspace.enabled` and the `storage` block from
+`get_data_apps(configuration_ids=[PROD])`, or `data_app.storage_access_enabled` from the
+`modify_python_js_data_app` response. Note `storage` **replaces** the whole block on update — send
+the complete mapping, not a delta.
+
+Because the draft worked, any of these reads as a code regression when it is a config gap, and the
+debugging goes looking in the wrong place. Do it as part of shipping, not after the user reports a
+broken app.
 
 ## Creating a prod app (only when `get_data_apps` returns none)
 
@@ -149,7 +193,7 @@ Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to step 2 ab
 
 ## Notes on the update path
 
-`modify_python_js_data_app` with `configuration_id` set changes `name`, `description`, `authentication_type`, `auto_suspend_after_seconds`, `storage`, and `branch`. It never carries source code: for Python/JS apps **source only ever reaches the platform through git**, unlike the Streamlit `source_code` argument. `slug` and `parent_configuration_id` are rejected on update.
+`modify_python_js_data_app` with `configuration_id` set changes `name`, `description`, `authentication_type`, `auto_suspend_after_seconds`, `storage`, `storage_access`, and `branch`. It never carries source code: for Python/JS apps **source only ever reaches the platform through git**, unlike the Streamlit `source_code` argument. `slug` and `parent_configuration_id` are rejected on update.
 
 `branch` on update repoints an **external-git** app, which means a draft, or an app on a customer-provided repo. It is rejected for the prod app on a Keboola-managed repo, whose branch the platform owns. Redeploy afterwards to serve the new branch.
 
