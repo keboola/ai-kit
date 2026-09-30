@@ -43,9 +43,12 @@ An empty prod app and a fully built one take the same path from here.
 
 `PROD` is the prod app's `configuration_id`, `DRAFT` the draft's.
 
-### 1. Name the app (optional, usually wanted)
+### 1. Name the app — your first write
 
-The app the Apps page created is unnamed. Rename it on the prod config:
+The app the Apps page created is still "New App" at `new-app-<id>`. Name it on the prod config as soon as the request says what the app is for, before the draft and before any code:
+
+- Until the first deploy the rename moves the slug too, so `new-app-<id>` follows the name. A deployed app, or one with a custom slug, keeps its slug.
+- Skip it only when the app already has a real name.
 
 ```python
 modify_python_js_data_app(
@@ -189,11 +192,15 @@ modify_python_js_data_app(
 
 Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to step 2 above: the app you just made is the prod app, and the work still happens on a draft.
 
-`slug` is optional and derived from `name` when omitted. It is immutable after create, so pass one only when the URL matters to the user.
+`slug` is optional and derived from `name` when omitted, so pass one only when the URL matters to the user. An explicit slug is a DNS label: lowercase letters, digits and inner hyphens, at most 50 characters to fit the UI's URL-prefix limit (the tool accepts 63, the deploy does not).
 
 ## Notes on the update path
 
-`modify_python_js_data_app` with `configuration_id` set changes `name`, `description`, `authentication_type`, `auto_suspend_after_seconds`, `storage`, `storage_access`, and `branch`. It never carries source code: for Python/JS apps **source only ever reaches the platform through git**, unlike the Streamlit `source_code` argument. `slug` and `parent_configuration_id` are rejected on update.
+`modify_python_js_data_app` with `configuration_id` set changes `name`, `description`, `authentication_type`, `auto_suspend_after_seconds`, `storage`, `storage_access`, and `branch`. It never carries source code: for Python/JS apps **source only ever reaches the platform through git**, unlike the Streamlit `source_code` argument. `parent_configuration_id` is rejected on update. `slug` on update:
+
+1. **Omitted, prod app never deployed, slug still matches the old name** — the slug follows the new `name`.
+2. **Omitted, anything else** (deployed, custom slug, or a draft) — the slug stays.
+3. **Passed** — accepted on a prod app, rejected on a draft. Pass it only when the user asked for that URL. After the next deploy the app moves to the new URL and the old one stops working: tell the user both.
 
 `branch` on update repoints an **external-git** app, which means a draft, or an app on a customer-provided repo. It is rejected for the prod app on a Keboola-managed repo, whose branch the platform owns. Redeploy afterwards to serve the new branch.
 
