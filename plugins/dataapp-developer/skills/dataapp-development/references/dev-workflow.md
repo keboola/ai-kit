@@ -109,13 +109,13 @@ After making changes, verify visually. Required when Playwright MCP is available
 
 If Playwright MCP is NOT available (e.g. Claude Desktop without it), call out explicitly that visual verification was skipped, and ask the user to verify the change manually before committing.
 
-### Verify a deployed draft
+### Verify an app running in dev mode
 
-A python/js draft deployed with `deploy_data_app(mode="dev")` runs behind the app's login. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
+An app with a Keboola-managed git repo — Python/JS or Streamlit — can run in dev mode (`deploy_data_app(mode="dev")`), and it still sits behind its login. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
 
 ```text
 1. Mint a link:
-   get_data_app_preview_link(configuration_id=DRAFT)
+   get_data_app_preview_link(configuration_id=APP)
    → url (works for 60 seconds), link_expires_at
 
 2. Open it at once in a real browser. Any browser works: a browser tool, or a headless
@@ -127,12 +127,12 @@ A python/js draft deployed with `deploy_data_app(mode="dev")` runs behind the ap
    Later checks of the same app reuse the browser session; no new link.
 ```
 
-- **No URL yet:** right after a dev deploy the draft may still be starting, and the tool answers "has no URL yet". Wait until `get_data_apps` reports it running, then mint again.
+- **No URL yet:** right after a dev deploy the app may still be starting, and the tool answers "has no URL yet". Wait until `get_data_apps` reports it running, then mint again.
 - **The session ends without notice.** If the app shows its login page ("This app is password protected") or says the preview link is invalid or expired, call `get_data_app_preview_link` again and open the new `url`. Never type a password or any credential into the page, and never ask the user for one.
 - **The link is a key.** Never show the `url` to the user, and never put it into a file, a commit, or any command other than the one that opens the browser. `curl` or an HTTP client cannot use it; only a browser turns it into a session.
-- **Dev mode only.** The tool refuses an app that is not in dev mode. A prod app is checked through a draft, never by switching it to dev mode.
+- **Dev mode only.** The tool refuses an app that is not in dev mode. Never switch an app to dev mode just to look at it; a Python/JS prod app is checked through its draft.
 
-Without `get_data_app_preview_link` or without a browser, say that you could not look at the draft, and ask the user to check the preview.
+Without `get_data_app_preview_link` or without a browser, say that you could not look at the app, and ask the user to check it.
 
 ## Checklist
 
