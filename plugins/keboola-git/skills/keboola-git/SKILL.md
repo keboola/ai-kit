@@ -84,8 +84,9 @@ git clone --single-branch --branch <branch> <source-repo> app && cd app
 git remote add keboola "$URL"
 git push keboola HEAD:main
 ```
-- The pre-receive hook **declines branch deletes** — pushing new commits to `main` or a draft branch advances normally, but you cannot delete a remote branch.
-- Never force-push a shared/managed branch.
+- **`main` cannot be deleted**; a draft branch can.
+- Never force-push a shared/managed branch — the server does not block it.
+- Reusing a clone? Check it before you read or push from it: the existing-clone reference of the `dataapp-developer:dataapp-development` skill.
 
 ## 4. The 15MB / HTTP 413 cap + build-at-deploy (CRITICAL)
 

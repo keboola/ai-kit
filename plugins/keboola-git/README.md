@@ -44,7 +44,7 @@ Bidirectional copy of a data app's source between GitHub and Keboola git.
 ## 🔒 Safety
 
 - `git_clone_url` credentials are one-time secrets: held in a shell variable only, never committed or logged; rotate (re-mint) if exposed.
-- Never force-push; the Forgejo pre-receive hook declines branch deletes.
+- Never force-push. `main` cannot be deleted; a draft branch can.
 - Reverse copies default to a user-owned scratch repo + feature branch; shared-repo pushes require confirmation.
 
 ## Related
