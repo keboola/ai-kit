@@ -24,7 +24,7 @@ The create is effectively irreversible: the managed repo can only be attached wh
 
 - The **prod** config owns the single Keboola-managed git repo (`https://git.<stack>/keboola/app-<data_app_id>.git`) and the `main` branch.
 - A **draft** is a separate configuration with **no repo of its own**. Its `parameters.dataApp.git` block points at the prod app's repo, pinned to its own branch, with a freshly minted token. Drafts are how you iterate without touching what users see.
-- `get_data_apps` on a prod app returns a `drafts: [...]` array.
+- `get_data_apps` on a prod app returns a `drafts: [...]` array. Several people can each have one; a draft's `description` says what it changes (read the drafts' detail for it), so name them by it when you ask which to continue.
 
 Because a draft carries its own git block, the platform classifies it as an **external-git** app. That matters in one place only: `branch` on update (see the last section).
 
@@ -63,8 +63,8 @@ modify_python_js_data_app(
 
 ```python
 modify_python_js_data_app(
-    name="Recent Jobs (draft)",
-    description="...",
+    name="Recent jobs view",
+    description="Adds a view of the last 100 jobs.",
     configuration_id="",                # empty -> CREATE
     parent_configuration_id=PROD,       # ...and this is what makes it a draft, not a second app
     branch="add-recent-jobs",           # optional; defaults to a generated draft-<hex>
@@ -74,6 +74,8 @@ modify_python_js_data_app(
 
 Returns the draft's `configuration_id` and a `git_clone_url` already carrying a token for the **prod app's** repo. That URL is what you push with, so you usually do not need step 3.
 
+- `name` and `description` say what the draft changes against the live app, not what the app is: Keboola shows them with the draft to everyone on the app, and they are how drafts get told apart. A sentence or two in plain words; with nothing live yet, say what the first version does.
+- Keep them current. When the change grows past the description, rewrite it before you hand the draft back for review: `modify_python_js_data_app(configuration_id=DRAFT, name="", description=...)`. An empty `name` keeps the name; a new one never moves a draft's slug.
 - `branch` must not be `main`. That one is the prod app's.
 - Omit `branch` and you get a unique `draft-<hex>`, which cannot collide with a branch an earlier draft left behind. Pass a readable name when it helps the user read the repo.
 
