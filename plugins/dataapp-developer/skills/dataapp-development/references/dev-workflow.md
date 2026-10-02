@@ -109,6 +109,31 @@ After making changes, verify visually. Required when Playwright MCP is available
 
 If Playwright MCP is NOT available (e.g. Claude Desktop without it), call out explicitly that visual verification was skipped, and ask the user to verify the change manually before committing.
 
+### Verify a deployed draft
+
+A python/js draft deployed with `deploy_data_app(mode="dev")` runs behind the app's login. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
+
+```text
+1. Mint a link:
+   get_data_app_preview_link(configuration_id=DRAFT)
+   → url (works for 60 seconds), link_expires_at
+
+2. Open it at once in a real browser. Any browser works: a browser tool, or a headless
+   browser CLI run from your shell (e.g. `chrome-devtools-axi open '<url>'`).
+   mcp__playwright__browser_navigate(url=<url>)
+   The link signs the browser in and redirects to the app.
+
+3. Check it like a local app: screenshot, click through the change, read console errors.
+   Later checks of the same app reuse the browser session; no new link.
+```
+
+- **No URL yet:** right after a dev deploy the draft may still be starting, and the tool answers "has no URL yet". Wait until `get_data_apps` reports it running, then mint again.
+- **The session ends without notice.** If the app shows its login page ("This app is password protected") or says the preview link is invalid or expired, call `get_data_app_preview_link` again and open the new `url`. Never type a password or any credential into the page, and never ask the user for one.
+- **The link is a key.** Never show the `url` to the user, and never put it into a file, a commit, or any command other than the one that opens the browser. `curl` or an HTTP client cannot use it; only a browser turns it into a session.
+- **Dev mode only.** The tool refuses an app that is not in dev mode. A prod app is checked through a draft, never by switching it to dev mode.
+
+Without `get_data_app_preview_link` or without a browser, say that you could not look at the draft, and ask the user to check the preview.
+
 ## Checklist
 
 Use this condensed checklist before considering a change complete:
