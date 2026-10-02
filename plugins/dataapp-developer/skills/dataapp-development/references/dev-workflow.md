@@ -79,35 +79,30 @@ With validated data, write code following these rules:
 
 ## Verify
 
-After making changes, verify visually. Required when Playwright MCP is available.
+After making changes, verify visually with whatever browser you have: a browser tool (e.g. the Playwright MCP this plugin bundles) or a headless browser CLI run from your shell (e.g. `chrome-devtools-axi`). Required when you have one. The steps are the same in both; use your own tool's commands for navigate, wait, screenshot, click and reading the page.
 
 ```text
 1. Confirm app is running:
    Bash: lsof -ti:8501   (Streamlit) or :3000 (Node) or :5000 (Flask)
    If not running: start it locally (see streamlit-apps.md / python-js-apps.md).
 
-2. Navigate:
-   mcp__playwright__browser_navigate(url="http://localhost:8501")
-   mcp__playwright__browser_wait_for(time=3)
+2. Navigate to http://localhost:8501 and wait until the page has loaded.
 
-3. Baseline screenshot:
-   mcp__playwright__browser_take_screenshot(filename="01-baseline.png")
+3. Take a baseline screenshot.
 
 4. Test the change:
    - Click the new filter / button / link.
-   - mcp__playwright__browser_wait_for(time=2)
-   - mcp__playwright__browser_take_screenshot(filename="02-after-click.png")
+   - Wait for the page to update, then take another screenshot.
    - Verify the expected metrics changed.
 
 5. Navigate through affected pages:
    For each page in the dashboard, navigate, wait, screenshot, verify no errors.
 
-6. Check console:
-   mcp__playwright__browser_snapshot()
-   → review accessibility tree and any error indicators.
+6. Read the page and its console:
+   the page snapshot (accessibility tree) and console errors.
 ```
 
-If Playwright MCP is NOT available (e.g. Claude Desktop without it), call out explicitly that visual verification was skipped, and ask the user to verify the change manually before committing.
+If you have no browser (e.g. Claude Desktop without a browser tool), call out explicitly that visual verification was skipped, and ask the user to verify the change manually before committing.
 
 ### Verify an app running in dev mode
 
@@ -118,10 +113,9 @@ An app with a Keboola-managed git repo — Python/JS or Streamlit — can run in
    get_data_app_preview_link(configuration_id=APP)
    → url (works for 60 seconds), link_expires_at
 
-2. Open it at once in a real browser. Any browser works: a browser tool, or a headless
-   browser CLI run from your shell (e.g. `chrome-devtools-axi open '<url>'`).
-   mcp__playwright__browser_navigate(url=<url>)
-   The link signs the browser in and redirects to the app.
+2. Open it at once in your browser, the same one as in §Verify: navigate to the url
+   (e.g. `chrome-devtools-axi open '<url>'` from a shell). The link signs the browser in
+   and redirects to the app.
 
 3. Check it like a local app: screenshot, click through the change, read console errors.
    Later checks of the same app reuse the browser session; no new link.
