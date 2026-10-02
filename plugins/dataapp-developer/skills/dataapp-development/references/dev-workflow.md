@@ -79,7 +79,7 @@ With validated data, write code following these rules:
 
 ## Verify
 
-After making changes, verify visually with whatever browser you have: a browser tool (e.g. the Playwright MCP this plugin bundles) or a headless browser CLI run from your shell (e.g. `chrome-devtools-axi`). Required when you have one. The steps are the same in both; use your own tool's commands for navigate, wait, screenshot, click and reading the page.
+After making changes, verify visually with whatever browser you have: a browser tool, or a headless browser CLI run from your shell. Required when you have one. The steps are the same in both; use your own tool's commands for navigate, wait, screenshot, click and reading the page.
 
 ```text
 1. Confirm app is running:
@@ -113,9 +113,8 @@ An app with a Keboola-managed git repo — Python/JS or Streamlit — can run in
    get_data_app_preview_link(configuration_id=APP)
    → url (works for 60 seconds), link_expires_at
 
-2. Open it at once in your browser, the same one as in §Verify: navigate to the url
-   (e.g. `chrome-devtools-axi open '<url>'` from a shell). The link signs the browser in
-   and redirects to the app.
+2. Open it at once in your browser, the same one as in §Verify: navigate to the url.
+   The link signs the browser in and redirects to the app.
 
 3. Check it like a local app: screenshot, click through the change, read console errors.
    Later checks of the same app reuse the browser session; no new link.
