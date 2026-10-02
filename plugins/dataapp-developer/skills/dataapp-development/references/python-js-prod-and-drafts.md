@@ -39,6 +39,30 @@ Because a draft carries its own git block, the platform classifies it as an **ex
 
 An empty prod app and a fully built one take the same path from here.
 
+## Continue its draft, or start one?
+
+A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps` on the prod app lists its `drafts`. Take the first case that applies:
+
+1. **The request names a draft** — continue that one.
+2. **There are none** — create one (step 2 below).
+3. **There is exactly one** — continue it, unless the user asks for a separate change beside it.
+4. **There are several** — read them in one `get_data_apps` call, then ask the user which to continue, or whether to start a new one, naming each by its `description`.
+
+To continue `DRAFT`:
+
+1. `get_data_apps(configuration_ids=[DRAFT])`, unless case 4 already read it — its branch is at `configuration.parameters.dataApp.git.branch`; the `drafts` entries lack it.
+2. `create_python_js_data_app_git_credential(configuration_id=PROD)` for a clone URL (step 3 below).
+3. Check the branch out and merge `main` into it, so the draft builds on what is live. Resolve a conflict before going on:
+
+   ```bash
+   git clone "$URL" app && cd app
+   git checkout <branch>
+   git merge --no-edit origin/main
+   git push origin <branch>
+   ```
+
+4. Edit, commit, and `git push origin <branch>`, then deploy as in step 5 below. Not the commands in step 4: they start a new branch off `main` and would drop the draft's commits. Reusing a clone you already have? Check it first: [existing-clone.md](existing-clone.md).
+
 ## Building into an existing prod app
 
 `PROD` is the prod app's `configuration_id`, `DRAFT` the draft's.
@@ -49,6 +73,7 @@ The app the Apps page created is still "New App" at `new-app-<id>`. Name it on t
 
 - Until the first deploy the rename moves the slug too, so `new-app-<id>` follows the name. A deployed app, or one with a custom slug, keeps its slug.
 - Skip it only when the app already has a real name.
+- Keep the app's description if it has one; otherwise write one.
 
 ```python
 modify_python_js_data_app(
@@ -59,7 +84,7 @@ modify_python_js_data_app(
 )
 ```
 
-### 2. Create the draft
+### 2. Create the draft (when there is none to continue)
 
 ```python
 modify_python_js_data_app(
@@ -123,7 +148,7 @@ git push origin add-recent-jobs
 
 Branch off `origin/main` explicitly. A bare `git checkout <branch>` can land you on a stale branch an earlier draft left behind. An empty commit means nothing changes for the user, so confirm `git status` saw your files before pushing.
 
-The pre-receive hook declines branch deletes, and pushes over ~15MB fail with HTTP 413. Both, plus the build-at-deploy recipe and the log signals that prove a deploy worked, are in the `keboola-git` skill.
+Pushes over ~15MB fail with HTTP 413. That, the build-at-deploy recipe, and the log signals that prove a deploy worked are in the `keboola-git` skill.
 
 ### 5. Deploy the draft as a preview
 
@@ -135,7 +160,7 @@ deploy_data_app(action="deploy", configuration_id=DRAFT, mode="dev")
 
 ### 6. Ship it
 
-Merge the branch into `main`, push, then bring the prod app's **config** up to date and deploy:
+Ship only when the user asks to publish: the draft is how they review the change. Merge the branch into `main` and push (`git checkout main && git merge <branch> && git push origin main`), then bring the prod app's **config** up to date and deploy:
 
 ```python
 # Config does not travel with the merge. A draft and its prod app are two separate
@@ -178,6 +203,14 @@ the complete mapping, not a delta.
 Because the draft worked, any of these reads as a code regression when it is a config gap, and the
 debugging goes looking in the wrong place. Do it as part of shipping, not after the user reports a
 broken app.
+
+### 7. Confirm prod, then clean up
+
+Otherwise the draft stays on the app as one more to choose from. In order:
+
+1. **Confirm prod is healthy** — `get_data_apps(configuration_ids=[PROD])` reports it running. If it does not, read the terminal log in that detail, fix, and redeploy. Until prod is green the draft is your fallback.
+2. **Delete the draft branch** — `git push origin --delete <branch>`. The repo refuses deleting only `main`, its default branch.
+3. **Delete the draft** — `delete_python_js_data_app_draft(configuration_id=DRAFT)` removes its configuration and its running app, not its branch. It refuses prod and Streamlit apps.
 
 ## Creating a prod app (only when `get_data_apps` returns none)
 

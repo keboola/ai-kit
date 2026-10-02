@@ -67,9 +67,9 @@ A specialized toolkit for building production-ready Keboola Python components fo
 A toolkit for building and deploying data apps to Keboola — Streamlit development with validate/build/verify workflow, plus deployment guides for Node.js, Python, and any web framework.
 
 **Features:**
-- 🎯 **Skills**: `dataapp-development` covering both Streamlit and Python/JS apps with 15 topical references, plus `semantic-layer-usage` for confirming a semantic model's physical columns before querying
+- 🎯 **Skills**: `dataapp-development` covering both Streamlit and Python/JS apps with 16 topical references, plus `semantic-layer-usage` for confirming a semantic model's physical columns before querying
 - 🚀 **App Types**: Streamlit (Code or Git), single Node.js + static (dashboarding default), combined Python + Node
-- 🏗️ **Prod app + drafts**: Python/JS apps build into the existing prod app via a draft, so an app created from the Keboola Apps page is never duplicated
+- 🏗️ **Prod app + drafts**: Python/JS apps build into the existing prod app via a draft, so an app created from the Keboola Apps page is never duplicated; an existing draft is continued, and publishing removes the draft and its branch
 - 💾 **Storage**: RO workspace (default), RW direct access via Query Service, input mapping (legacy)
 - 🔒 **Authentication**: None / Basic / OIDC / GitHub / GitLab / JumpCloud
 - ⚡ **Performance**: Opinionated DuckDB caching pattern (Python + Node templates included)
