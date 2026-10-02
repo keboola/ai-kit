@@ -270,6 +270,8 @@ When the platform sets `KBC_APP_MODE=dev` on the container, the image hot-reload
 - `keboola-config/setup-dev.sh` — optional. Dev-time dependency install. Falls back to `setup.sh` if absent.
 - `keboola-config/dev-deps` — optional. List of dependency file paths the in-pod watcher hashes for change detection. Lines starting with `#` and blank lines are ignored.
 
+To see what the app shows while it runs in dev mode, open it in your own browser through a preview link: [dev-workflow.md](dev-workflow.md) §Verify an app running in dev mode.
+
 Env vars:
 
 - `KBC_APP_MODE` — `prod` (default) or `dev`. Set by the platform.

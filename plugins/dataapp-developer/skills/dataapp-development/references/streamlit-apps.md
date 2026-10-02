@@ -30,6 +30,8 @@ Keboola supports two ways to ship Streamlit code into a data app slot. The choic
 
 Git mode is the right choice whenever the app has more than one file, needs a real `pyproject.toml`, or wants a committed `.streamlit/config.toml` and `.streamlit/secrets.toml.example`.
 
+A Streamlit app with a Keboola-managed git repo can also run in dev mode. To see what it shows there, open it in your own browser through a preview link: [dev-workflow.md](dev-workflow.md) §Verify an app running in dev mode.
+
 Regardless of mode, **never paste secrets into a public repo**. API tokens, database passwords, and OAuth client secrets belong in `dataApp.secrets` on the configuration -- they get injected as environment variables at runtime. The repo only sees a `.streamlit/secrets.toml.example` with placeholder values.
 
 ## Base image and packages
@@ -210,7 +212,7 @@ KBC_TOKEN = "your-storage-api-token"
 WORKSPACE_ID = "1234567"
 ```
 
-For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right Playwright + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).
+For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right browser + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).
 
 ## Capturing errors for platform logs
 
