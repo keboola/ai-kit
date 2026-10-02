@@ -20,7 +20,7 @@ Answer these questions in order. Each answer routes to the right reference.
 | Build a new app from scratch | `references/choosing-app-type.md` → type-specific reference → `references/deployment-paths.md`. **Python/JS: read `references/python-js-prod-and-drafts.md` first** — a prod app usually exists already |
 | Anything that will call `modify_python_js_data_app` | `references/python-js-prod-and-drafts.md`, before the call |
 | Modify an existing app (add feature, fix bug) | `references/dev-workflow.md` for the change loop. Python/JS: continue the app's draft — `references/python-js-prod-and-drafts.md` |
-| See what a deployed draft actually shows | `references/dev-workflow.md` §Verify a deployed draft — a preview link opened in your own browser |
+| See what an app running in dev mode actually shows | `references/dev-workflow.md` §Verify an app running in dev mode — a preview link opened in your own browser |
 | Read, describe, or push from a clone you did not just make | `references/existing-clone.md` |
 | Deploy or redeploy | `references/deployment-paths.md` |
 | Debug a deployment or runtime issue | `references/troubleshooting.md` |
