@@ -110,7 +110,7 @@ deploy_data_app(action="deploy", configuration_id="<id-from-above>")
 
 ## Path B — Claude Code / local agent with filesystem + MCP
 
-The most flexible path. Edit code locally with Read/Edit/Write tools. Use a browser (a browser tool such as Playwright MCP, or a headless browser CLI) for visual verification. Use Keboola MCP for storage validation.
+The most flexible path. Edit code locally with Read/Edit/Write tools. Use a browser (a browser tool, or a headless browser CLI) for visual verification. Use Keboola MCP for storage validation.
 
 For **Streamlit** apps:
 
