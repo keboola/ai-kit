@@ -1,31 +1,24 @@
 import { QueryClient } from '@tanstack/react-query';
 
-/** The API is not up yet (`tsx watch` restarting, container starting): the answer is not JSON. */
+/** The API is not up: a network error, or 502-504 while it starts or restarts (`tsx watch`). */
 export class RestartingError extends Error {}
 
 /**
  * Fetches an `/api/*` route and parses its JSON.
  *
- * - Throws `RestartingError` for a network error or a non-JSON answer (the Vite proxy's 500
- *   `text/plain`, nginx's 502 page) — the query client retries it.
+ * - Throws `RestartingError` while the API is not up — the query client retries it.
  * - Throws the API's `{ error }` message otherwise — final, so a failing query is not re-run.
  */
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(url, init);
-  } catch (err) {
+  const response = await fetch(url, init).catch((err: unknown) => {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
-    throw new RestartingError(err instanceof Error ? err.message : String(err));
-  }
-  if (!(response.headers.get('content-type') ?? '').includes('application/json')) {
+    throw new RestartingError(String(err));
+  });
+  if ([502, 503, 504].includes(response.status)) {
     throw new RestartingError(`${url} -> ${response.status}`);
   }
-  const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    const message = (body as { error?: string } | null)?.error;
-    throw new Error(message ?? `${url} -> ${response.status}`);
-  }
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+  if (!response.ok) throw new Error(body?.error ?? `${url} -> ${response.status}`);
   return body as T;
 }
 

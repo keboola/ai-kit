@@ -2,13 +2,14 @@
   "name": "keboola-data-app",
   "version": "0.1.0",
   "private": true,
-  "description": "Keboola Python/JS data-app scaffold (React + Vite + Tailwind + Express)",
+  "type": "module",
+  "description": "Keboola Python/JS data app template (React + Vite + Tailwind + Express)",
   "scripts": {
-    "build": "vite build && tsc -p tsconfig.server.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "node dist/server/index.js",
-    "dev:vite": "vite --host 127.0.0.1 --port 3000 --strictPort",
-    "dev:api": "tsx watch server/index.ts"
+    "dev": "vite",
+    "dev:api": "tsx watch server/index.ts",
+    "build": "vite build",
+    "typecheck": "tsc",
+    "start": "tsx server/index.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.1",
@@ -16,8 +17,7 @@
     "lucide-react": "^1.53.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "recharts": "^3.10.1",
-    "zustand": "^5.0.15"
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

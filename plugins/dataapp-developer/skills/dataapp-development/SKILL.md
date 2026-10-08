@@ -72,7 +72,7 @@ The Keboola MCP server exposes a `docs_query` tool that searches the official Ke
 
 1. **Never commit `.streamlit/secrets.toml`** or any file with real credentials. Add to `.gitignore` before committing.
 2. **RO workspace before input mapping.** New apps default to the RO workspace pattern. Input mapping is discouraged — see `references/storage-access.md`.
-3. **Apps must handle `POST /`** on the root path. Keboola POSTs to `/` on startup. Streamlit handles this natively; Flask needs `methods=["GET", "POST"]`; Express needs `app.all('/')`.
+3. **Apps must handle `POST /`** on the root path. Keboola POSTs to `/` on startup; the React + Vite template answers it in nginx. Streamlit handles this natively; Flask needs `methods=["GET", "POST"]`; Express needs `app.all('/')`.
 4. **No `pip install` in Python apps.** The base image blocks PEP 668. Use `uv sync` driven by `pyproject.toml`. All Python supervisord commands must use `uv run`.
 5. **Never declare `[program:nginx]`** in `keboola-config/supervisord/`. Nginx is managed by the base image.
 6. **Validate data first, code second.** When using Keboola MCP, call `get_table` and `query_data` to confirm schema before writing SQL. If the project has a semantic layer, check it first via `search_semantic_context` / `get_semantic_context` and ground the query in those definitions rather than inventing the calculation. See `references/dev-workflow.md`.

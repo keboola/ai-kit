@@ -4,35 +4,27 @@ import path from 'node:path';
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const mode = process.env.NODE_ENV === 'development' ? 'development' : 'production';
-const clientDir = path.join(__dirname, '..', 'client');
+const clientDir = path.join(import.meta.dirname, '..', 'dist', 'client');
 
 app.use(express.json());
 
-// API routes — replace with your real handlers.
+// API routes — replace with your real handlers. Express 5 passes a rejected async handler to the error handler below.
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, mode });
 });
 
-// Prod: serve the built Vite client.
-// Dev: Vite serves the client on :3000 and proxies /api here on :3100, so this
-// branch is unused but harmless to keep.
-// Vite hashes the asset file names, so they can be cached for good.
-app.use('/assets', express.static(path.join(clientDir, 'assets'), { immutable: true, maxAge: '1y' }));
-app.use(express.static(clientDir));
-
-// Keboola startup health check.
-app.all('/', (_req, res, next) => {
-  if (_req.method === 'POST') {
-    res.status(200).send('ok');
-    return;
-  }
-  // GET in prod falls through to index.html for SPA routing.
-  res.sendFile(path.join(clientDir, 'index.html'), (err) => {
-    if (err) next(err);
-  });
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `no route ${req.method} ${req.originalUrl}` });
 });
 
-// JSON errors, so the client shows the message instead of retrying an HTML 500 page.
+// Prod only: the built client. Vite hashes asset names, so they are cached for good.
+app.use('/assets', express.static(path.join(clientDir, 'assets'), { immutable: true, maxAge: '1y' }));
+app.use(express.static(clientDir));
+app.get('/{*path}', (_req, res) => {
+  res.sendFile(path.join(clientDir, 'index.html'));
+});
+
+// Errors answer as JSON, so the client shows the message instead of retrying.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: err instanceof Error ? err.message : String(err) });

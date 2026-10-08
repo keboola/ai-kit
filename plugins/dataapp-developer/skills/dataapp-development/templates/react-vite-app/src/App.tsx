@@ -13,11 +13,11 @@ export function App() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center p-8">
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-xs">
-        <h1 className="text-3xl font-semibold text-slate-900">Keboola data app</h1>
+        <h1 className="text-3xl font-semibold text-kbc-text">Keboola data app</h1>
         <p className="mt-2 text-slate-600">
           React + Vite + Tailwind + Express template. Replace this component with your dashboard.
         </p>
-        <div className="mt-6 rounded-lg bg-slate-50 p-4 text-sm">
+        <div className="mt-6 rounded-lg bg-kbc-bg-alt p-4 text-sm">
           <span className="font-medium text-slate-700">API health:</span>{' '}
           {health.error ? (
             <span className="text-rose-600">{health.error.message}</span>

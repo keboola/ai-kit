@@ -119,7 +119,7 @@ const summary = useQuery({
 Server (`server/queries.ts`):
 
 ```ts
-import { runSnowflakeQuery } from './kbcQuery';
+import { runQuery } from './kbcQuery';
 
 function getUserTypeFilterClause(userType: string) {
   if (userType === 'external') return `"user_type" = 'External User'`;
@@ -132,7 +132,7 @@ export async function getSummary({ userType }: { userType: string; period: strin
   const userFilter = getUserTypeFilterClause(userType);
   if (userFilter) parts.push(userFilter);
   // Add other filters similarly
-  return runSnowflakeQuery(`SELECT COUNT(*) AS n FROM ${tableName} WHERE ${parts.join(' AND ')}`);
+  return runQuery(`SELECT COUNT(*) AS n FROM ${tableName} WHERE ${parts.join(' AND ')}`);
 }
 ```
 
@@ -176,7 +176,7 @@ query = f'''
 ```text
 server/
   index.ts                # Express entry, mounts /api/* routes
-  kbcQuery.ts             # runSnowflakeQuery / runBigQueryQuery against the workspace
+  kbcQuery.ts             # runQuery(sql) — every row, Snowflake or BigQuery
   queries.ts              # SQL builders, filter helpers
 src/
   App.tsx                 # layout, navigation, global filters
@@ -191,13 +191,10 @@ src/
 `server/index.ts` mounts API routes against the query builders:
 
 ```ts
-app.get('/api/summary', async (req, res, next) => {
-  try {
-    const { user_type = 'external', period = 'l90d' } = req.query as Record<string, string>;
-    res.json({ data: await getSummary({ userType: user_type, period }) });
-  } catch (err) {
-    next(err);
-  }
+// Express 5 hands a rejected async handler to the error handler — no try/catch needed.
+app.get('/api/summary', async (req, res) => {
+  const { user_type = 'external', period = 'l90d' } = req.query as Record<string, string>;
+  res.json({ data: await getSummary({ userType: user_type, period }) });
 });
 ```
 
@@ -279,7 +276,8 @@ def format_count(value: int) -> str:
 TS (`src/lib/format.ts`):
 ```ts
 export const formatCurrency = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-export const formatPercent = (v: number, digits = 1) => `${(v * 100).toFixed(digits)}%`;
+export const formatPercent = (v: number, digits = 1) =>
+  v.toLocaleString('en-US', { style: 'percent', maximumFractionDigits: digits });
 export const formatCount = (v: number) => v.toLocaleString('en-US');
 ```
 
