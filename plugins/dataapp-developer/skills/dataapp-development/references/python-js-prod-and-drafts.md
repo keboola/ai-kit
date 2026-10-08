@@ -130,11 +130,16 @@ Either way the URL carries a one-time secret: hold it in a shell variable, never
 
 ```bash
 git clone "$URL" app && cd app
+git checkout -b main
+git commit --allow-empty -m "init main"
+git push origin main                                       # main first: the first branch pushed becomes the default
 git checkout -b add-recent-jobs
 cp -R <dataapp-development>/templates/react-vite-app/. .   # the default stack, then your code on top
 git add -A && git commit -m "Initial app"
 git push origin add-recent-jobs
 ```
+
+The empty `main` carries no app code, so it breaks no rule about pushing to `main`. Skip it and the draft branch becomes the repo's default: the repo then refuses to delete it after publishing (§7), and your token cannot change the default.
 
 **Prod app that has been built before:**
 
@@ -209,7 +214,7 @@ broken app.
 Otherwise the draft stays on the app as one more to choose from. In order:
 
 1. **Confirm prod is healthy** — `get_data_apps(configuration_ids=[PROD])` reports it running. If it does not, read the terminal log in that detail, fix, and redeploy. Until prod is green the draft is your fallback.
-2. **Delete the draft branch** — `git push origin --delete <branch>`. The repo refuses deleting only `main`, its default branch.
+2. **Delete the draft branch** — `git push origin --delete <branch>`. The repo refuses deleting only its default branch, which is `main` when step 4 pushed it first.
 3. **Delete the draft** — `delete_python_js_data_app_draft(configuration_id=DRAFT)` removes its configuration and its running app, not its branch. It refuses prod and Streamlit apps.
 
 ## Creating a prod app (only when `get_data_apps` returns none)
