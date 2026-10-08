@@ -106,7 +106,7 @@ If you have no browser (e.g. Claude Desktop without a browser tool), call out ex
 
 ### Verify an app running in dev mode
 
-An app with a Keboola-managed git repo — Python/JS or Streamlit — can run in dev mode (`deploy_data_app(mode="dev")`), and it still sits behind its login. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
+A Python/JS draft deployed with `deploy_data_app(mode="dev")` still sits behind its login. Only a Python/JS draft reaches dev mode: a Streamlit app has no managed repo, and its image does not run dev mode. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
 
 ```text
 1. Mint a link:

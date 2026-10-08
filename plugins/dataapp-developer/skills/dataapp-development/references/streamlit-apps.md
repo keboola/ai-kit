@@ -30,8 +30,6 @@ Keboola supports two ways to ship Streamlit code into a data app slot. The choic
 
 Git mode is the right choice whenever the app has more than one file, needs a real `pyproject.toml`, or wants a committed `.streamlit/config.toml` and `.streamlit/secrets.toml.example`.
 
-A Streamlit app with a Keboola-managed git repo can also run in dev mode. To see what it shows there, open it in your own browser through a preview link: [dev-workflow.md](dev-workflow.md) §Verify an app running in dev mode.
-
 Regardless of mode, **never paste secrets into a public repo**. API tokens, database passwords, and OAuth client secrets belong in `dataApp.secrets` on the configuration -- they get injected as environment variables at runtime. The repo only sees a `.streamlit/secrets.toml.example` with placeholder values.
 
 ## Base image and packages
