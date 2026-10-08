@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import type { ReactNode } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import ReactDOM from 'react-dom/client';
 
 import './index.css';
 
 import { App } from './App';
+import { queryClient } from './lib/api';
 
 // Global error handlers live in index.html (inline <script>) so they catch
 // module-level errors that fire before ES module bodies execute.
@@ -16,7 +18,7 @@ declare global {
   // eslint-disable-next-line no-var
   var __kaiNotifyError: ((msg: string) => void) | undefined;
   // Set to true by the ErrorBoundary below when a render crash surfaces the
-  // fallback UI. The readiness detectors (vite.config.ts / index.html) check
+  // fallback UI. The readiness detectors (vite.config.mts / index.html) check
   // this before posting `kai-preview-healthy`, so a crashed app that only
   // mounted its "Something went wrong" fallback is never reported healthy.
   // eslint-disable-next-line no-var
@@ -61,7 +63,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 );

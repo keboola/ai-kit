@@ -193,7 +193,7 @@ The overlay's `keboola-config/` is the working reference — copy it, don't rety
 - `supervisord/services/backend.conf` (+ the `supervisord-dev/` twin with `--reload`) — one `[program:]` per process, beside the template's `app.conf`.
 - `setup.sh` / `setup-dev.sh` — `uv sync` and `npm install` in parallel, so cold start is `max(python_deps, node_deps)` rather than the sum; prod then runs `npm run build`.
 
-Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy to route `/api/*` to the backend — Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.ts`. That way the frontend code calls `/api/...` everywhere and it works the same locally as in Keboola.
+Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy to route `/api/*` to the backend — Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.mts`. That way the frontend code calls `/api/...` everywhere and it works the same locally as in Keboola.
 
 User-identity passthrough across the local-vs-Keboola boundary (e.g. injecting an email header for testing) is app-specific convention, not a platform feature — see the placeholder in [storage-access.md](storage-access.md).
 

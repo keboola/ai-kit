@@ -39,5 +39,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 });
 
 app.listen(port, '127.0.0.1', () => {
-  console.log(`server listening on 127.0.0.1:${port} (${mode})`);
+  console.log(`server listening on 127.0.0.1:${port} (${mode}, node ${process.version})`);
 });

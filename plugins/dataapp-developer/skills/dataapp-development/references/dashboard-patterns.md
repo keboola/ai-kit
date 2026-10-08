@@ -108,9 +108,12 @@ export function useFilters() {
   return { filters, setFilter };
 }
 
-// in a component — refetches whenever a filter changes
+// in a component — cached per filter set, so going back to one costs no warehouse query
 const { filters } = useFilters();
-const summary = useFetch<{ data: Summary }>(`/api/summary?${new URLSearchParams(filters)}`);
+const summary = useQuery({
+  queryKey: ['summary', filters],
+  queryFn: ({ signal }) => fetchJson<{ data: Summary }>(`/api/summary?${new URLSearchParams(filters)}`, { signal }),
+});
 ```
 
 Server (`server/queries.ts`):
@@ -177,7 +180,7 @@ server/
   queries.ts              # SQL builders, filter helpers
 src/
   App.tsx                 # layout, navigation, global filters
-  hooks/useFetch.ts       # loading/error + retry while the dev API restarts
+  lib/api.ts              # fetchJson + QueryClient (TanStack Query)
   hooks/useFilters.ts     # URL-param filters
   pages/                  # one component per page
     Overview.tsx

@@ -22,10 +22,10 @@ What the first commit gives you:
 ├── package-lock.json                       # committed — see "Dependencies" below
 ├── tsconfig.json                           # client / Vite (ESNext)
 ├── tsconfig.server.json                    # server / Express (CommonJS, dist/server)
-├── vite.config.ts                          # :3000, HMR wss, proxies /api → :3100
+├── vite.config.mts                          # :3000, HMR wss, proxies /api → :3100
 ├── src/                                    # React app (Vite-built to dist/client/)
 │   ├── App.tsx
-│   ├── hooks/useFetch.ts                   # fetch with retry while the dev API restarts
+│   ├── lib/api.ts                          # fetchJson + QueryClient (retries only while the dev API restarts)
 │   ├── index.css                           # Tailwind v4 + Keboola palette (@theme)
 │   └── main.tsx                            # ErrorBoundary
 ├── server/
@@ -82,7 +82,7 @@ docker run --rm -v "$PWD:/w" -w /w node:20.19.2-bookworm-slim \
 
 ## Builder preview signals
 
-`index.html` and `vite.config.ts` carry a small script that tells Keboola's app preview whether the page rendered (`kai-preview-healthy`) or crashed (`kai-preview-error`); `src/main.tsx` sets `__kaiPreviewCrashed` from its ErrorBoundary.
+`index.html` and `vite.config.mts` carry a small script that tells Keboola's app preview whether the page rendered (`kai-preview-healthy`) or crashed (`kai-preview-error`); `src/main.tsx` sets `__kaiPreviewCrashed` from its ErrorBoundary.
 
 - Keep it, whichever agent builds the app — it is how the preview in Keboola tells a working app from a blank page.
 - Outside an iframe it posts to its own window and does nothing.

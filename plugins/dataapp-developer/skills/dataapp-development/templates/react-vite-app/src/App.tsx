@@ -1,17 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+import { fetchJson } from './lib/api';
 
 type Health = { ok: boolean; mode: string };
 
 export function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((r) => r.json() as Promise<Health>)
-      .then(setHealth)
-      .catch((err) => setError(String(err)));
-  }, []);
+  const health = useQuery({
+    queryKey: ['health'],
+    queryFn: ({ signal }) => fetchJson<Health>('/api/health', { signal }),
+  });
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center p-8">
@@ -22,10 +19,10 @@ export function App() {
         </p>
         <div className="mt-6 rounded-lg bg-slate-50 p-4 text-sm">
           <span className="font-medium text-slate-700">API health:</span>{' '}
-          {error ? (
-            <span className="text-rose-600">{error}</span>
-          ) : health ? (
-            <span className="text-emerald-700">ok ({health.mode})</span>
+          {health.error ? (
+            <span className="text-rose-600">{health.error.message}</span>
+          ) : health.data ? (
+            <span className="text-emerald-700">ok ({health.data.mode})</span>
           ) : (
             <span className="text-slate-500">loading…</span>
           )}
