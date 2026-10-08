@@ -188,6 +188,12 @@ Pairs with [duckdb-caching.md](duckdb-caching.md) by default — for read-only d
 
 The template's README holds the layout, the dev/prod table and the dependency rules.
 
+**An existing app on another stack** (static HTML with CDN scripts, Flask, Next.js) stays on it:
+
+- Edit it in its own idiom; don't rewrite it onto the template as a side effect of an unrelated change.
+- Add no new CDN `<script>`/`<link>` — bundle or vendor the library instead.
+- Offer the move to the template when the user's change would touch most of the frontend anyway; do it only on a yes.
+
 ## Multi-server pattern (Python backend + JS frontend) — use when you need it
 
 Reach for this only when you actually need a Python backend — an existing Python codebase, an ML model in Python, FastAPI/Flask services that are hard to port. For pure dashboarding the default shape (above) is enough. `templates/python-node-app/` is an overlay: copy `react-vite-app/` first, then the overlay on top. Two processes mean two log streams, two ports, two dependency installs, and a more involved local-dev story.
