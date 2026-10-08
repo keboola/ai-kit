@@ -6,12 +6,12 @@
 - Default to the Keboola palette
 - Default "Powered by Keboola" footer
 - Streamlit theming
-- Single Node + static frontend (CDN Tailwind)
+- React + Vite template (Python/JS default)
 - Brand customization
 
 ## Default to the Keboola palette — every app, every stack
 
-Unless the user explicitly asks for a different brand or design system, **use the Keboola palette across all three stacks** (Streamlit, single-Node + static, combined Python+Node). The point is consistency — apps coming out of this skill should look like they belong together.
+Unless the user explicitly asks for a different brand or design system, **use the Keboola palette across every stack** (Streamlit, the React + Vite template, the template with a Python backend). The point is consistency — apps coming out of this skill should look like they belong together.
 
 The palette:
 
@@ -23,7 +23,7 @@ The palette:
 | Text | `#222529` |
 | Font | sans-serif (system default) |
 
-No custom typeface, no design-system overlay, no shadcn theme. Plain Tailwind defaults (system font stack) with the palette above for color tokens. Same values across all three stacks.
+No custom typeface, no design-system overlay, no shadcn theme. Plain Tailwind defaults (system font stack) with the palette above for color tokens. Same values across every stack.
 
 ## Default "Powered by Keboola" footer
 
@@ -31,16 +31,16 @@ Every app produced from this skill's templates ships with a small, low-contrast 
 
 The asset is the Keboola wordmark SVG (`keboola-logo.svg`), bundled into each template's static directory. Don't redraw or recolor it; it's the official mark.
 
-**Single-Node + static (CDN Tailwind):**
+**React + Vite template** (`src/App.tsx`, logo in `public/`):
 
-```html
-<footer class="max-w-5xl mx-auto px-8 py-6 flex items-center justify-center gap-2 text-xs text-slate-400 opacity-80 hover:opacity-100 transition-opacity">
+```tsx
+<footer className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400 opacity-80 transition-opacity hover:opacity-100">
   <span>Powered by</span>
-  <img src="/keboola-logo.svg" alt="Keboola" class="h-4 w-auto" />
+  <img src="/keboola-logo.svg" alt="Keboola" className="h-4 w-auto" />
 </footer>
 ```
 
-Adjust the `max-w-*` to match the page's main content width.
+Move it into a shared layout component once the app has more than one page.
 
 **Streamlit:** read the SVG once at import time and embed it as a base64 data URI inside `st.markdown(..., unsafe_allow_html=True)` — that avoids needing Streamlit's static-serving config flag and works identically in local dev and production.
 
@@ -117,51 +117,34 @@ Streamlit-specific UI extras:
 
 - **Footer:** the default "Powered by Keboola" footer (see above) ships in the template. For an additional copyright / version line, render a second `st.markdown` block above it using the same muted slate color.
 
-## Single Node + static frontend (CDN Tailwind)
+## React + Vite template (Python/JS default)
 
-Tailwind via CDN, Chart.js via CDN. Set the Keboola palette in the inline Tailwind config so every component/utility can reach it:
+`templates/react-vite-app/` sets the palette as Tailwind v4 theme tokens in `src/index.css` — bundled at build, no CDN:
 
-```html
-<head>
-  <meta charset="utf-8" />
-  <title>Keboola App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            kbc: {
-              primary: '#1F8FFF',
-              bg: '#FFFFFF',
-              bgAlt: '#E6F2FF',
-              text: '#222529',
-            },
-          },
-        },
-      },
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-</head>
-<body class="bg-kbc-bg text-kbc-text font-sans">
-  <!-- ... -->
-</body>
+```css
+@import 'tailwindcss';
+
+@theme {
+  --color-kbc-primary: #1f8fff;
+  --color-kbc-bg: #ffffff;
+  --color-kbc-bg-alt: #e6f2ff;
+  --color-kbc-text: #222529;
+}
 ```
 
-Use `bg-kbc-primary`, `text-kbc-primary`, `bg-kbc-bgAlt` for surfaces. Don't sprinkle raw hex literals across the page — drive everything from the four tokens above.
+Use `bg-kbc-primary`, `text-kbc-primary`, `bg-kbc-bg-alt`, `text-kbc-text` for surfaces and text. Don't sprinkle raw hex literals across components — drive everything from the four tokens.
 
-For Chart.js, set the brand color on each dataset:
+Charts use Recharts (pre-installed); set the brand color once and pass it to every series:
 
-```javascript
-new Chart(ctx, {
-  type: 'bar',
-  data: { datasets: [{ data: [...], backgroundColor: '#1F8FFF' }] },
-});
+```tsx
+const BRAND = '#1f8fff';
+
+<BarChart data={rows}>
+  <Bar dataKey="revenue" fill={BRAND} />
+</BarChart>
 ```
 
-For a heavier React+Vite+shadcn stack with HSL CSS-variable tokens, dark mode, and ECharts integration, see [styling-react-bundled.md](styling-react-bundled.md). Reach for it only when the UI complexity actually justifies a bundler.
+For shadcn/ui, dark mode and HSL CSS-variable tokens on top of the template, see [styling-react-bundled.md](styling-react-bundled.md).
 
 ## Brand customization — only when explicitly requested
 
@@ -169,13 +152,12 @@ Apply customer-specific colors / fonts / logos **only** when the user asks for t
 
 Override paths:
 
-- **CDN Tailwind (single-Node + static):** change the values in the inline `tailwind.config` `<script>` block in `<head>`.
-- **Bundled Tailwind (Python+Node):** change the values in `tailwind.config.ts` — see [styling-react-bundled.md](styling-react-bundled.md).
+- **React + Vite template:** change the four `--color-kbc-*` values in the `@theme` block of `src/index.css`.
 - **Streamlit:** change `[theme]` values in `.streamlit/config.toml` (or the JSON config string for Code-deployed apps), or use the Keboola Theming UI's "Custom" option.
 
 **Also remove or replace the default "Powered by Keboola" footer.** It is template scaffolding, not a styling token — changing palette values leaves it untouched. When applying a customer brand:
 
-- **HTML templates:** delete the `<footer>...keboola-logo.svg...</footer>` block in `index.html`, or swap the `<img src>` for the customer's logo and update the surrounding text. The bundled `keboola-logo.svg` asset can be deleted too once nothing references it.
+- **React + Vite template:** delete the `<footer>…keboola-logo.svg…</footer>` block in `src/App.tsx` (or the layout it moved to), or swap the `<img src>` for the customer's logo and update the surrounding text. The bundled `keboola-logo.svg` asset can be deleted too once nothing references it.
 - **Streamlit:** delete (or replace) the `st.markdown` footer block and the `_LOGO_PATH` / `_LOGO_DATA_URI` lines at the top of `streamlit_app.py`. Remove `static/keboola-logo.svg` if unused.
 
 Don't ship a customer app with both brands stacked — that's worse than no attribution at all.

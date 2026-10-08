@@ -68,7 +68,7 @@ The validate step also catches:
 With validated data, write code following these rules:
 
 - **SQL-first** — push aggregations to the database (see [dashboard-patterns.md](dashboard-patterns.md)).
-- **Centralized data access** — all queries go through `utils/data_loader.py` (Streamlit) or `api/queries.js` (Node). Never inline a raw query in a page module.
+- **Centralized data access** — all queries go through `utils/data_loader.py` (Streamlit) or `server/queries.ts` (React + Express). Never inline a raw query in a page module.
 - **Initialize session state with defaults** before creating widgets:
   ```python
   if 'filter_name' not in st.session_state:

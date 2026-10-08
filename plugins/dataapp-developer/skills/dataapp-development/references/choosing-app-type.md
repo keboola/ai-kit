@@ -16,42 +16,40 @@ There are three viable shapes for a Keboola App. Pick the lowest one in this lis
 
 **Read next:** [streamlit-apps.md](streamlit-apps.md).
 
-### 2. Single Node.js + static frontend (Python/JS type)
+### 2. React + Vite + Express (Python/JS type)
 
-**The preferred default for dashboarding apps.** Pick when:
-- The app primarily renders data — charts, tables, KPIs.
-- You don't need a heavy Python backend.
-- You want one process, no bundler, fast cold start.
+**The default for every Python/JS app.** Pick when:
+- The app renders data — charts, tables, KPIs — or needs any custom layout.
+- You don't need a Python backend.
 
-Stack: Express (or similar) on a single port, serving both `/api/*` JSON endpoints and a static frontend (`public/index.html` + `public/app.js`) with Tailwind and Chart.js loaded via CDN. Pairs naturally with DuckDB caching.
+Stack: one Node container — React + Vite + Tailwind client, Express serving it and the `/api/*` JSON endpoints. Everything is bundled at build time; nothing loads from a CDN. Kai builds the same stack, so an app moves between agents without a rewrite. Pairs naturally with DuckDB caching.
 
-**Read next:** [python-js-apps.md](python-js-apps.md). Template at `templates/nodejs-app/`.
+**Read next:** [python-js-apps.md](python-js-apps.md). Template at `templates/react-vite-app/`.
 
-### 3. Combined Python + Node (Python/JS type)
+### 3. React + Vite + Express with a Python backend (Python/JS type)
 
-**Pick when you need a Python backend.** This is heavier — two processes, two language toolchains. Use it when:
+**Pick when you need a Python backend.** Heavier — two processes, two language toolchains. Use it when:
 - The team has an existing Python codebase you're wrapping a UI around.
 - An ML model needs to live in Python.
 - You need FastAPI/Flask services alongside the frontend.
-- The frontend justifies a bundler (Next.js, Vite + React + shadcn/ui).
 
-**Read next:** [python-js-apps.md](python-js-apps.md) (multi-server section). Template at `templates/python-node-app/`.
+**Read next:** [python-js-apps.md](python-js-apps.md) (multi-server section). Overlay at `templates/python-node-app/`, applied on top of `templates/react-vite-app/`.
 
 ## Decision criteria
 
-| Criterion | Streamlit | Single Node + static | Python + Node |
+| Criterion | Streamlit | React + Vite + Express | + Python backend |
 |---|---|---|---|
 | Team language | Python only | JS comfortable | Both |
-| UI complexity | Low (sidebar + main) | Medium (custom layout) | High (custom framework) |
-| Frontend bundler | No | No | Yes |
+| UI complexity | Low (sidebar + main) | Any (custom layout) | Any (custom layout) |
+| Frontend bundler | No | Yes (Vite) | Yes (Vite) |
 | Backend language | Python | Node | Python + Node |
 | Deploy mode | Code or Git | Git only | Git only |
 | MCP support today | Yes (`modify_streamlit_data_app`) | Yes (`modify_python_js_data_app` + git) | Yes (`modify_python_js_data_app` + git) |
-| Cold-start time | Fast | Fastest | Slowest |
+| Cold-start time | Fast | Fast (build runs once per prod deploy) | Slowest |
 
 ## Migration notes
 
-- **Streamlit → Python/JS** is a common path once a Streamlit app outgrows its sidebar-and-main shape. Migrating from Streamlit to single Node + static can give a team layout control and reduce cold-start time.
+- **Streamlit → Python/JS** is a common path once a Streamlit app outgrows its sidebar-and-main shape. Migrating from Streamlit to React + Vite + Express gives a team layout control.
 - **Streamlit is on a deprecation path.** New apps that exceed the simple-UI threshold should default to Python/JS. Existing Streamlit apps don't need to be migrated until you hit a Streamlit limitation.
 - The Python/JS app type does not currently support paste-in-UI "Code" deployment; only Git deployment. Streamlit retains "Code" mode.
 - A Python/JS app is a **prod** config that owns the git repo plus **drafts** that branch off it. Before any `modify_python_js_data_app` call, read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): an empty `configuration_id` creates a second app, and the app you want usually exists already.

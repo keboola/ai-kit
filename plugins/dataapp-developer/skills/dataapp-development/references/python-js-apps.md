@@ -8,7 +8,7 @@
 - Supervisord (`uv run`, no `[program:nginx]`)
 - POST handling on /
 - Python dependencies (`uv sync`, no `pip install`)
-- Preferred shape for dashboarding: single Node + static frontend
+- Default shape: React + Vite + Express in one Node container
 - Multi-server pattern (Python backend + JS frontend)
 - Local development
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`)
@@ -169,31 +169,31 @@ build-backend = "setuptools.build_meta"
 
 If migrating from `requirements.txt`, move all deps into the `dependencies` array. Delete `requirements.txt` after the move so it doesn't bit-rot alongside `pyproject.toml`.
 
-## Preferred shape for dashboarding: single Node + static frontend
+## Default shape: React + Vite + Express in one Node container
 
-This is the dashboarding default. Express (or similar) on a single internal port (e.g. `:3000`) serving BOTH:
+Every new Python/JS app starts from `templates/react-vite-app/` — whichever agent builds it, so the next one (Kai included) finds the layout it expects. One Node container:
 
-- `/api/*` JSON endpoints that call `runQuery` against the Keboola workspace.
-- The static frontend at `/` (`public/index.html` + `public/app.js` + CSS).
+- **Prod:** `setup.sh` runs `npm install` + `npm run build`; Express on `:3000` serves the built client from `dist/client/` and the `/api/*` routes.
+- **Dev (`mode='dev'`):** `setup-dev.sh` runs `npm install` only; Vite on `:3000` serves the client with HMR and proxies `/api/*` to Express under `tsx watch` on `:3100`.
+- **Nothing from a CDN.** React, Tailwind and Recharts are bundled; add libraries to `package.json`, never as a `<script src>`.
+- **Already wired:** the Keboola palette (`src/index.css`), the "Powered by Keboola" footer, the workspace query helpers (`server/kbcQuery.ts`) and the preview's ready/crash signal.
 
-The frontend loads Tailwind and Chart.js via CDN. No bundler, no build step, no `npm run build` to remember. One supervisord program, one nginx location block, one `setup.sh` line (`npm install`). The whole thing fits in a single repo with a flat structure.
+Why it wins:
 
-Why this shape wins for dashboards:
+- One process tree, one nginx location, no CORS — the client and `/api/*` share an origin in both modes.
+- DuckDB caching lives in the Express process, so cache hits never cross a process boundary.
+- `package-lock.json` is committed, so a cold `npm install` takes seconds.
 
-- One process means one place to read logs and one port to map.
-- Static frontend served from the same Node process means no CORS, no proxy plumbing, no separate deploy of frontend assets.
-- DuckDB caching lives inside the same Node process, so cache hits never cross a process boundary.
+Pairs with [duckdb-caching.md](duckdb-caching.md) by default — for read-only dashboards, cache once into an in-memory DuckDB so the dashboard never re-hits Snowflake on a page render.
 
-Pairs with [duckdb-caching.md](duckdb-caching.md) by default — for read-only dashboards, cache once into an in-memory DuckDB so the dashboard never re-hits Snowflake on a page render. The cache and the API server live in the same process.
-
-Runnable starter: `templates/nodejs-app/`.
+The template's README holds the layout, the dev/prod table and the dependency rules.
 
 ## Multi-server pattern (Python backend + JS frontend) — use when you need it
 
-Reach for this only when you actually need a Python backend — an existing Python codebase, an ML model in Python, FastAPI/Flask services that are hard to port. For pure dashboarding the simpler single-Node shape (above) is preferred. Two processes mean two log streams, two ports, two dependency installs, and a more involved local-dev story.
+Reach for this only when you actually need a Python backend — an existing Python codebase, an ML model in Python, FastAPI/Flask services that are hard to port. For pure dashboarding the default shape (above) is enough. `templates/python-node-app/` is an overlay: copy `react-vite-app/` first, then the overlay on top. Two processes mean two log streams, two ports, two dependency installs, and a more involved local-dev story.
 
 Backend convention: Python on `:8050`.
-Frontend convention: Node on `:3000`. For bundled toolchains (Next.js, Vite), the frontend is pre-built and **committed to git** so `setup.sh` only installs deps — it does NOT run a build step. Building during `setup.sh` is slow and makes startup unreliable.
+Frontend convention: Node on `:3000`. Bundled frontends build in `setup.sh` (`npm run build`), never committed — a committed build bloats the repo past the managed-git push cap (see the `keboola-git` skill's build-at-deploy recipe).
 
 Nginx — two location blocks, more specific path first so it matches before the catch-all:
 
@@ -216,16 +216,18 @@ server {
 }
 ```
 
-Supervisord — one `[program:]` per process, in separate `.conf` files (`backend.conf`, `frontend.conf`) so each can be enabled, restarted, and reasoned about independently.
+Supervisord — one `[program:]` per process, in separate `.conf` files (the template's `app.conf`, the overlay's `backend.conf`) so each can be enabled, restarted, and reasoned about independently.
 
 `setup.sh` parallel install — both stacks install at the same time so cold start is roughly `max(python_deps, node_deps)` rather than the sum:
 
 ```bash
 #!/bin/bash
 set -Eeuo pipefail
-cd /app/backend && uv sync &
-cd /app/frontend && npm install &
+cd /app
+(cd backend && uv sync) &
+npm install --prefer-offline --no-audit --no-fund &
 wait
+npm run build   # prod only — setup-dev.sh stops after the install
 ```
 
 Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy to route `/api/*` to the backend — Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.ts`. That way the frontend code calls `/api/...` everywhere and it works the same locally as in Keboola.

@@ -18,7 +18,7 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 - Storage access — RO workspace (default), RW direct via Query Service, input mapping (legacy)
 - Authentication — None / Basic / OIDC / GitHub / GitLab / JumpCloud
 - DuckDB caching for read-only apps (Python and Node patterns)
-- Styling — lightweight CDN-Tailwind default + heavier framework option, Streamlit theming
+- Styling — Keboola palette as Tailwind tokens in the bundled template, shadcn/ECharts option, Streamlit theming
 - Dashboard patterns — SQL-first, sidebar filters, charts, formatting, sortable tables
 - Kai integration — optional natural-language assistant via `kai-client`
 - Dev workflow — validate → build → verify loop with Keboola MCP and Playwright MCP
@@ -28,8 +28,8 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 
 - `templates/streamlit/` — Streamlit + Plotly + `data_loader`
 - `templates/python-app/` — Flask Python/JS app with `keboola-config/`
-- `templates/nodejs-app/` — single-Node dashboarding default (Express + CDN Tailwind + Chart.js)
-- `templates/python-node-app/` — combined FastAPI + Express (modeled on profitline)
+- `templates/react-vite-app/` — the Python/JS default (React + Vite + Tailwind + Express, nothing from a CDN; the stack Kai builds too)
+- `templates/python-node-app/` — FastAPI backend overlay on top of `react-vite-app/`
 - `templates/duckdb-cache/` — Node + Python harness for in-memory query caching
 
 **Use cases:**
@@ -93,7 +93,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.7.0
+1.8.0
 
 ## Maintainer
 

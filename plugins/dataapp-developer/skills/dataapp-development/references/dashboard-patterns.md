@@ -4,7 +4,7 @@
 
 ## Contents
 - SQL-first aggregation
-- Sidebar global filters (Streamlit `st.session_state` / Node URL search params)
+- Sidebar global filters (Streamlit `st.session_state` / React URL search params)
 - Project structure
 - Charts
 - Empty / loading / error states
@@ -87,51 +87,49 @@ def get_user_type_filter_clause() -> str:
     return ''  # All Users
 ```
 
-**Node.js + static frontend** — store filter selections in the URL search params: they survive reloads, work with browser back/forward, and are shareable. The frontend reads them and passes them as query params to `/api/*`; the backend reuses one filter-clause helper across every route.
+**React + Express** — store filter selections in the URL search params: they survive reloads, work with browser back/forward, and are shareable. The client reads them and passes them as query params to `/api/*`; the server reuses one filter-clause helper across every route.
 
-Frontend (`public/app.js`):
+Client (`src/hooks/useFilters.ts`):
 
-```javascript
-// Read filters from URL — single source of truth across reloads/shares
-function readFilters() {
-  const params = new URLSearchParams(window.location.search);
-  return {
+```tsx
+// URL search params are the single source of truth across reloads and shares
+export function useFilters() {
+  const [params, setParams] = useState(() => new URLSearchParams(window.location.search));
+  const filters = {
     userType: params.get('user_type') ?? 'external',
     period: params.get('period') ?? 'l90d',
   };
+  function setFilter(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    next.set(key, value);
+    history.replaceState(null, '', `?${next}`);
+    setParams(next);
+  }
+  return { filters, setFilter };
 }
 
-function setFilter(key, value) {
-  const params = new URLSearchParams(window.location.search);
-  params.set(key, value);
-  history.replaceState(null, '', `?${params.toString()}`);
-  refreshDashboard();
-}
-
-async function fetchSummary() {
-  const filters = readFilters();
-  const qs = new URLSearchParams(filters).toString();
-  const res = await fetch(`/api/summary?${qs}`);
-  return res.json();
-}
+// in a component — refetches whenever a filter changes
+const { filters } = useFilters();
+const summary = useFetch<Summary>(`/api/summary?${new URLSearchParams(filters)}`);
 ```
 
-Backend (`api/queries.js`):
+Server (`server/queries.ts`):
 
-```javascript
-function getUserTypeFilterClause(userType) {
+```ts
+import { runSnowflakeQuery } from './kbcQuery';
+
+function getUserTypeFilterClause(userType: string) {
   if (userType === 'external') return `"user_type" = 'External User'`;
   if (userType === 'internal') return `"user_type" != 'External User'`;
-  return '';  // all
+  return ''; // all
 }
 
-export async function getSummary({ userType, period }) {
+export async function getSummary({ userType }: { userType: string; period: string }) {
   const parts = [`"status" = 'success'`];
   const userFilter = getUserTypeFilterClause(userType);
   if (userFilter) parts.push(userFilter);
   // Add other filters similarly
-  const whereClause = parts.join(' AND ');
-  return runQuery(`SELECT COUNT(*) AS n FROM ${tableName} WHERE ${whereClause}`);
+  return runSnowflakeQuery(`SELECT COUNT(*) AS n FROM ${tableName} WHERE ${parts.join(' AND ')}`);
 }
 ```
 
@@ -170,64 +168,59 @@ query = f'''
 '''
 ```
 
-### Node.js + static frontend
+### React + Express (`templates/react-vite-app/`)
 
 ```text
-server.js                 # Express entry, mounts routes
-api/
-  keboola-client.js       # runQuery against workspace
-  queries.js              # SQL builders, filter helpers
-  routes.js               # (optional) route handlers if server.js grows
-public/
-  index.html
-  app.js                  # frontend bootstrap, filter wiring, charts
-  views/                  # (optional) per-page JS modules
-    overview.js
-    cost-analysis.js
+server/
+  index.ts                # Express entry, mounts /api/* routes
+  kbcQuery.ts             # runSnowflakeQuery / runBigQueryQuery against the workspace
+  queries.ts              # SQL builders, filter helpers
+src/
+  App.tsx                 # layout, navigation, global filters
+  hooks/useFetch.ts       # fetch with retry
+  hooks/useFilters.ts     # URL-param filters
+  pages/                  # one component per page
+    Overview.tsx
+    CostAnalysis.tsx
+  lib/format.ts           # number / currency / percent formatters
 ```
 
-`server.js` mounts API routes against the query builders:
+`server/index.ts` mounts API routes against the query builders:
 
-```javascript
-import express from 'express';
-import { getSummary } from './api/queries.js';
-
-const app = express();
-app.use(express.static('public'));
-
-app.get('/api/summary', async (req, res) => {
-  const { user_type, period } = req.query;
-  const data = await getSummary({ userType: user_type, period });
-  res.json({ data });
+```ts
+app.get('/api/summary', async (req, res, next) => {
+  try {
+    const { user_type = 'external', period = 'l90d' } = req.query as Record<string, string>;
+    res.json({ data: await getSummary({ userType: user_type, period }) });
+  } catch (err) {
+    next(err);
+  }
 });
-
-app.listen(process.env.PORT || 3000);
 ```
 
-`app.js` swaps between views by reacting to the URL hash and re-rendering:
+`App.tsx` switches pages on the URL hash — no router needed for a handful of pages:
 
-```javascript
-const views = {
-  '#/overview': renderOverview,
-  '#/cost-analysis': renderCostAnalysis,
+```tsx
+const pages: Record<string, () => JSX.Element> = {
+  '#/overview': Overview,
+  '#/cost-analysis': CostAnalysis,
 };
 
-function route() {
-  const render = views[window.location.hash] ?? renderOverview;
-  render(document.getElementById('app'));
-}
-
-window.addEventListener('hashchange', route);
-window.addEventListener('DOMContentLoaded', route);
+const [hash, setHash] = useState(window.location.hash);
+useEffect(() => {
+  const onHash = () => setHash(window.location.hash);
+  window.addEventListener('hashchange', onHash);
+  return () => window.removeEventListener('hashchange', onHash);
+}, []);
+const Page = pages[hash] ?? Overview;
 ```
 
-In both layouts, queries live in one place (`utils/data_loader.py` or `api/queries.js`), and pages are render-only — they call a function, get rows back, and draw.
+In both layouts, queries live in one place (`utils/data_loader.py` or `server/queries.ts`), and pages are render-only — they call a function, get rows back, and draw.
 
 ## Charts
 
 - **Streamlit:** Plotly Express (`px.line`, `px.bar`, `px.pie`) for quick iteration. Plotly Graph Objects (`go.Figure`, `go.Scatter`) for finer control.
-- **React / Next.js:** ECharts via `echarts-for-react` (preferred — extremely customisable, performant on large datasets). Register a custom theme once at app init.
-- **Vanilla JS:** Chart.js (via CDN). Simple API, good defaults.
+- **React (the template):** Recharts, pre-installed — declarative, good defaults. Reach for ECharts via `echarts-for-react` when you need finer axis/tooltip control or very large series; add it to `package.json`, never from a CDN.
 
 Common rules across all:
 - Set a single brand color in one place. Don't sprinkle hex codes across components.
@@ -280,12 +273,11 @@ def format_count(value: int) -> str:
     return f"{value:,}"
 ```
 
-JS:
-```javascript
-// lib/constants.js
-export const formatCurrency = (v) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-export const formatPercent = (v, digits = 1) => `${(v * 100).toFixed(digits)}%`;
-export const formatCount = (v) => v.toLocaleString('en-US');
+TS (`src/lib/format.ts`):
+```ts
+export const formatCurrency = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+export const formatPercent = (v: number, digits = 1) => `${(v * 100).toFixed(digits)}%`;
+export const formatCount = (v: number) => v.toLocaleString('en-US');
 ```
 
 When you change formatting (e.g. show currency in EUR), edit the helper once. Otherwise you'll miss a component six months later.
@@ -315,64 +307,55 @@ st.dataframe(
 )
 ```
 
-### Node.js + static frontend
+### React
 
-Keep rows as raw JSON (numbers stay numbers), sort in JS, and format only inside the cell template. A plain `<table>` with click-to-sort headers is enough for most dashboards — no library required.
+Keep rows as raw JSON (numbers stay numbers), sort in a `useMemo`, and format only inside the cell. A plain `<table>` with click-to-sort headers is enough for most dashboards — no library required.
 
-`public/app.js`:
+```tsx
+type Row = { name: string; revenue: number | null; growth_rate: number | null };
+type Col = 'revenue' | 'growth_rate';
 
-```javascript
-// State
-let rows = [];
-let sortBy = 'revenue';
-let sortDir = 'desc';
+export function CustomerTable({ rows }: { rows: Row[] }) {
+  const [sortBy, setSortBy] = useState<Col>('revenue');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-async function loadRows() {
-  const res = await fetch('/api/customers');
-  const { data } = await res.json();
-  rows = data;  // numeric values stay as numbers — never pre-format
-  render();
+  const sorted = useMemo(
+    () =>
+      [...rows].sort((a, b) => {
+        const va = a[sortBy], vb = b[sortBy];
+        if (va == null) return 1; // NULLs to the bottom
+        if (vb == null) return -1;
+        return sortDir === 'asc' ? va - vb : vb - va;
+      }),
+    [rows, sortBy, sortDir],
+  );
+
+  function setSort(col: Col) {
+    if (col === sortBy) setSortDir(sortDir === 'desc' ? 'asc' : 'desc');
+    else { setSortBy(col); setSortDir('desc'); }
+  }
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th onClick={() => setSort('revenue')}>Revenue</th>
+          <th onClick={() => setSort('growth_rate')}>Growth</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((r) => (
+          <tr key={r.name}>
+            <td>{r.name}</td>
+            <td className="text-right">{r.revenue == null ? '—' : formatCurrency(r.revenue)}</td>
+            <td className="text-right">{r.growth_rate == null ? '—' : formatPercent(r.growth_rate)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
-
-function setSort(col) {
-  if (col === sortBy) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
-  else { sortBy = col; sortDir = 'desc'; }
-  render();
-}
-
-function compare(a, b) {
-  const va = a[sortBy], vb = b[sortBy];
-  if (va == null) return 1;   // NULLs to the bottom on ascending
-  if (vb == null) return -1;
-  return sortDir === 'asc' ? va - vb : vb - va;
-}
-
-function fmtCurrency(v) {
-  return v == null ? '—' : v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-}
-
-function render() {
-  const sorted = [...rows].sort(compare);
-  document.getElementById('table-body').innerHTML = sorted.map((r) => `
-    <tr>
-      <td>${r.name}</td>
-      <td class="text-right">${fmtCurrency(r.revenue)}</td>
-      <td class="text-right">${fmtPercent(r.growth_rate)}</td>
-    </tr>
-  `).join('');
-}
-```
-
-In the markup, headers call `setSort`:
-
-```html
-<thead>
-  <tr>
-    <th>Customer</th>
-    <th onclick="setSort('revenue')">Revenue</th>
-    <th onclick="setSort('growth_rate')">Growth</th>
-  </tr>
-</thead>
 ```
 
 Same principle for any JS table library (TanStack Table, AG Grid, etc.): store as `number`, format only at render time. Set the column's sort function so the library compares numbers, not their formatted strings.
@@ -380,4 +363,4 @@ Same principle for any JS table library (TanStack Table, AG Grid, etc.): store a
 Quick checklist before shipping a sortable table:
 - Click each numeric column header — does it sort numerically (1, 2, 10, 100), not alphabetically (1, 10, 100, 2)?
 - Are NULL/NaN values handled (sent to the bottom on ascending sort, top on descending)?
-- Is the formatter consistent with the rest of the dashboard (same helper from `utils/common.py` or `lib/constants.js`)?
+- Is the formatter consistent with the rest of the dashboard (same helper from `utils/common.py` or `src/lib/format.ts`)?

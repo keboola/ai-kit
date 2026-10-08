@@ -30,7 +30,7 @@ Answer these questions in order. Each answer routes to the right reference.
 If unsure → `references/choosing-app-type.md`. Short version:
 
 - **Streamlit** — fastest when the team is Python-only and the UI is mostly sidebar + main pane. Read `references/streamlit-apps.md`.
-- **Single Node.js + static frontend** — the dashboarding default. One process, no bundler, Chart.js/Tailwind via CDN. Read `references/python-js-apps.md`.
+- **React + Vite + Express in one Node container** — the Python/JS default. Start from `templates/react-vite-app/`; everything the browser loads is bundled. Read `references/python-js-apps.md`.
 - **Combined Python + Node** — only when you genuinely need a Python backend (ML model, existing Python codebase). Read `references/python-js-apps.md` (multi-server section).
 
 ### 3. Which client path?
@@ -49,7 +49,7 @@ If unsure → `references/choosing-app-type.md`. Short version:
 | Securing the app (login, SSO, OAuth) | `references/authentication.md` |
 | Cutting DWH costs and speeding up read-only dashboards (default for RO apps) | `references/duckdb-caching.md` |
 | Styling — default Keboola palette and footer | `references/styling-guide.md` |
-| Styling — bundled React+Vite+shadcn stack | `references/styling-react-bundled.md` |
+| Styling — shadcn/ui, dark mode, ECharts on top of the template | `references/styling-react-bundled.md` |
 | Building a dashboarding-style app | `references/dashboard-patterns.md` |
 | Adding a natural-language assistant to the app | `references/kai-integration.md` |
 | Source repos / canonical docs / UI navigation | `references/glossary.md` |
@@ -60,8 +60,8 @@ If unsure → `references/choosing-app-type.md`. Short version:
 |---|---|
 | `templates/streamlit/` | New Streamlit app, code or git deployment. |
 | `templates/python-app/` | New Python-only Python/JS app (Flask or similar). |
-| `templates/nodejs-app/` | New dashboarding app (Node.js + static frontend — the preferred default). |
-| `templates/python-node-app/` | New combined Python backend + JS frontend app. |
+| `templates/react-vite-app/` | New Python/JS app — the default (React + Vite + Tailwind + Express). |
+| `templates/python-node-app/` | Adding a Python backend next to the default template's Node server. |
 | `templates/duckdb-cache/` | Adding the DuckDB caching pattern to an existing Python or Node app. |
 
 ## Need authoritative Keboola docs?
@@ -83,3 +83,4 @@ The Keboola MCP server exposes a `docs_query` tool that searches the official Ke
 11. **Say what Storage access grants, before you turn it on.** The workspace is scoped to the whole project, not to the tables the app uses — the app can read every table in the project's Storage. Tell the user that in your own words when you enable `storage_access`, and say it again if the app is `no-auth`, where anyone with the URL reaches data through it. Enabling it is fine and usually what they want; enabling it silently is not. See `references/storage-access.md`.
 12. **Config does not travel between a draft and its prod app, in either direction.** They are separate Storage configurations; a git merge moves source code and nothing else. Nothing is inherited when a draft is created either — `modify_python_js_data_app` reads the parent only for its repo and credentials. So whatever you set while iterating (`storage_access`, `storage` writable tables, `authentication_type`, `auto_suspend_after_seconds`) is set on the draft alone, and has to be set again on the prod app before you deploy it. The two that bite: without `storage_access` prod fails at request time with `missing required env vars: WORKSPACE_ID`; without the `storage` output mapping its *writes* fail while reads keep working. Both look like code regressions and are not. See `references/python-js-prod-and-drafts.md` §6.
 13. **Log metadata, never data.** App logs can leak end-user PII. Log row counts, column names, redacted SQL, which branch of the code answered — never cell values, row contents, response bodies, or raw request values. ``console.debug(`${rows.length} rows, columns: ${Object.keys(rows[0] ?? {})}`)`` ✓ — `console.debug(rows)` or a logged customer email ✗.
+14. **Nothing loads from a CDN at runtime.** Every script, stylesheet and font the browser loads is bundled at build time or served by the app itself — never `<script src="https://cdn…">`. A CDN outage, a compromised package or a page's content policy would break the app from outside it. Python/JS apps start from `templates/react-vite-app/`, which already bundles React, Tailwind and Recharts.

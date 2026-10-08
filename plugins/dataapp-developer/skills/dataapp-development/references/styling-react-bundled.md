@@ -1,6 +1,6 @@
 # Styling — React + Vite (bundled toolchain)
 
-**Use this when:** the user has explicitly chosen a bundled React stack (Vite + shadcn/ui + ECharts). For the default Keboola palette and the lighter CDN-Tailwind / Streamlit paths, see [styling-guide.md](styling-guide.md) first.
+**Use this when:** an app built on `templates/react-vite-app/` outgrows plain Tailwind — it needs shadcn/ui primitives, dark mode or ECharts. For the default Keboola palette, the template's tokens and Streamlit, see [styling-guide.md](styling-guide.md) first.
 
 ## Contents
 - When to reach for this
@@ -15,16 +15,13 @@
 
 ## When to reach for this
 
-The lightweight default (CDN Tailwind + vanilla JS — see [styling-guide.md](styling-guide.md)) is enough for most dashboarding apps. Reach for a bundled React stack when:
+The template's plain Tailwind + Recharts (see [styling-guide.md](styling-guide.md)) is enough for most dashboarding apps. Add the pieces below when:
 
-- **UI complexity outgrows vanilla JS.** Multi-page navigation with shared layout, intricate forms with conditional fields, drag-and-drop, multi-step wizards, modal/drawer stacks. State management with `useReducer` / TanStack Query becomes cleaner than ad-hoc DOM updates.
 - **You need a component library.** shadcn/ui (Radix primitives + Tailwind) gives you accessible Dialog / Select / Popover / Combobox / Toast / Tooltip primitives that are tedious to hand-roll correctly.
-- **You're rendering thousands of interactive elements.** A React reconciler + virtualisation (e.g. TanStack Virtual) outperforms manual DOM patching past a certain table size.
-- **The team is already a React shop** and bundler tooling is in their muscle memory.
+- **Charts need finer control than Recharts gives** — ECharts for heavy axis/tooltip customisation or very large series.
+- **The app needs dark mode** — the CSS-variable token system below.
 
-**Stay with the lightweight stack when** the app is "a few charts and a table" — a bundler adds cold-start time, build complexity, and a larger surface to maintain for limited UI gain.
-
-**Important:** React does not require Python on the backend. A single Express server serving both Vite-built static assets and `/api/*` endpoints covers most React data apps. The combined Python+Node template applies only when you genuinely need a Python backend (existing Python codebase, ML model in Python, FastAPI services).
+**Stay with the template as it is when** the app is "a few charts and a table" — every added library is more surface to maintain.
 
 ## Recommended stack
 
@@ -35,7 +32,7 @@ The lightweight default (CDN Tailwind + vanilla JS — see [styling-guide.md](st
 | UI framework | React 18 |
 | Styling | Tailwind CSS (with `darkMode: "class"`) |
 | Component primitives | shadcn/ui (Radix UI + `class-variance-authority` + `clsx` + `tailwind-merge`) |
-| Charts | ECharts via `echarts-for-react` (better axis/tooltip customisation than Chart.js; native dark-mode theming) |
+| Charts | ECharts via `echarts-for-react` (finer axis/tooltip control than Recharts; native dark-mode theming) |
 | Server state | TanStack Query |
 | Routing | React Router |
 | Icons | Lucide React |

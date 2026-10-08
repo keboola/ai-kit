@@ -131,7 +131,7 @@ Either way the URL carries a one-time secret: hold it in a shell variable, never
 ```bash
 git clone "$URL" app && cd app
 git checkout -b add-recent-jobs
-# write the app source into ./ here (templates/nodejs-app/, keboola-config/, ...)
+cp -R <dataapp-development>/templates/react-vite-app/. .   # the default stack, then your code on top
 git add -A && git commit -m "Initial app"
 git push origin add-recent-jobs
 ```

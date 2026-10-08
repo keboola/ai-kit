@@ -2,11 +2,10 @@
 set -Eeuo pipefail
 cd /app
 
-# Prod: Python and Node deps install in parallel, then Vite builds the client.
+# Dev: Python and Node deps install in parallel; Vite serves the client unbuilt.
 export NPM_CONFIG_UPDATE_NOTIFIER=false
 (cd backend && uv sync) &
 npm install --prefer-offline --no-audit --no-fund &
 wait
-npm run build
 
-echo "PROD setup done"
+echo "DEV setup done"

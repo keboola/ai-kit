@@ -372,7 +372,7 @@ A few things worth noting on the BQ path that differ from Query Service:
 - **Rows arrive as objects keyed by column name**, not arrays + separate columns metadata. Iterate directly.
 - **Cell values are native types** (numbers, booleans, ISO strings for timestamps) — the string-cell coercion you do on the Query Service path is unnecessary here.
 - **No submit/poll/paginate.** The endpoint returns the full result in one synchronous response. For very large result sets, add a `LIMIT` on the SQL side; the response doesn't paginate.
-- **The skill's templates (`templates/streamlit/`, `templates/nodejs-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/api-client` `queryService` client — you only adjust the SQL (backtick quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
+- **The skill's templates (`templates/streamlit/`, `templates/react-vite-app/`) are wired for the Query Service with Snowflake quoting.** The Query Service works on BigQuery too, so on a BigQuery project you keep the `keboola-query-service` / `@keboola/api-client` `queryService` client — you only adjust the SQL (backtick quoting and mangled dataset names, see "BigQuery SQL dialect" above). Switch to this Storage API endpoint only if you specifically want it.
 
 ## Read-write direct access (Storage Access)
 
