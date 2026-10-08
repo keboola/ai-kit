@@ -171,7 +171,7 @@ If migrating from `requirements.txt`, move all deps into the `dependencies` arra
 
 ## Default shape: React + Vite + Express in one Node container
 
-Every new Python/JS app starts from `templates/react-vite-app/` — whichever agent builds it, so the next one (Kai included) finds the layout it expects. Its README holds the layout, the dev/prod split and the dependency rules; SKILL.md hard rule 14 covers CDNs and apps already on another stack.
+Every new Python/JS app starts from `templates/react-vite-app/` — whichever agent builds it, so the next one (Kai included) finds the layout it expects. Its README holds the layout, the dev/prod split and the dependency rules; SKILL.md hard rule 14 covers CDNs and apps already on another stack. It needs the Node 24 image: [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §The image: Node 24.
 
 Why it wins:
 

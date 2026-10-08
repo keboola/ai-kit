@@ -26,7 +26,7 @@ export default defineConfig({
     watch: { usePolling: true, interval: 200 },
     proxy: {
       '/api': {
-        // Express under `tsx watch` (supervisord-dev/services/api.conf); the Python overlay sets 8050.
+        // Express under `node --watch` (supervisord-dev/services/api.conf); the Python overlay sets 8050.
         target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:3100',
         // While the API restarts, answer 503 JSON — the client retries it (src/lib/api.ts).
         configure: (proxy) => {

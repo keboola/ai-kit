@@ -6,7 +6,7 @@ A FastAPI backend added next to the default `react-vite-app/` template, in one K
 
 1. Copy `templates/react-vite-app/` into the repo root.
 2. Copy this directory over it. It adds `backend/` and replaces `keboola-config/nginx/sites/default.conf`, `setup.sh` and `setup-dev.sh`.
-3. Delete `keboola-config/supervisord-dev/services/api.conf`, `server/kbcQuery.ts` and the `/api` routes in `server/index.ts` — Python owns `/api/*`.
+3. Delete `keboola-config/supervisord-dev/services/api.conf`, `server/kbcQuery.ts` with its `@keboola/api-client` dependency, and the `/api` routes in `server/index.ts` — Python owns `/api/*`.
 
 ## What runs where
 

@@ -1,69 +1,39 @@
-import { setTimeout as sleep } from 'node:timers/promises';
+import { isApiError } from '@keboola/api-client';
+import { createQueryServiceClient } from '@keboola/api-client/queryService';
+import { createQueryServiceSdk, type ExecuteQueryOptions } from '@keboola/api-client/sdk/queryService';
 
 /**
- * Runs SQL in the app's Storage workspace through the Query Service and returns every row.
+ * Runs SQL in the app's Storage workspace through the Query Service SDK and returns every row.
  *
  * - Works on Snowflake and BigQuery; only the SQL dialect differs (`references/storage-access.md`).
  * - Env vars are read per call, so a missing one fails that request, not the server start.
  * - Logs row counts and a redacted SQL preview, never values.
+ * - An HTTP failure is rethrown as a plain `Error`: the SDK's `ApiError` carries the request, token included.
  */
-export async function runQuery(
-  sql: string,
-  { timeoutMs = 60_000, pageSize = 10_000, signal }: QueryOptions = {},
-): Promise<Record<string, unknown>[]> {
+export async function runQuery(sql: string, options?: ExecuteQueryOptions): Promise<Record<string, unknown>[]> {
   const env = readEnv();
-  const base = env.QUERY_SERVICE_URL ?? env.KBC_URL.replace('://connection.', '://query.');
-  const headers = { 'Content-Type': 'application/json', 'X-StorageAPI-Token': env.KBC_TOKEN };
-  const deadline = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(signal ? [signal] : [])]);
-  const call = async <T>(url: string, init?: RequestInit): Promise<T> => {
-    const res = await fetch(`${base}/api/v1/${url}`, { headers, signal: deadline, ...init });
-    if (!res.ok) throw new Error(`query service ${res.status}: ${await res.text()}`);
-    return (await res.json()) as T;
-  };
-
-  const { queryJobId } = await call<{ queryJobId: string }>(
-    `branches/${env.BRANCH_ID}/workspaces/${env.WORKSPACE_ID}/queries`,
-    { method: 'POST', body: JSON.stringify({ statements: [sql], transactional: false }) },
-  );
-
-  // Terminal statuses: "completed", "failed", "canceled". Poll fast, then back off to 1 s.
-  let job: QueryJob;
-  for (let wait = 100; ; wait = Math.min(wait * 2, 1000)) {
-    job = await call<QueryJob>(`queries/${queryJobId}`);
-    if (job.status === 'completed') break;
-    if (job.status === 'failed' || job.status === 'canceled') {
-      throw new Error(`query ${job.status}: ${job.statements[0]?.error ?? JSON.stringify(job)}`);
-    }
-    await sleep(wait, undefined, { signal: deadline });
-  }
-
-  // Page by what came back, not by `pageSize`: the service may cap a page lower.
-  // A statement without a result set (INSERT, UPDATE) has no `data` and returns [].
-  const rows: Record<string, unknown>[] = [];
-  let columns: string[] = [];
-  let total = Infinity;
-  for (let offset = 0; offset < total; ) {
-    const page = await call<QueryPage>(
-      `queries/${queryJobId}/${job.statements[0].id}/results?offset=${offset}&pageSize=${pageSize}`,
-    );
-    if (offset === 0) {
-      columns = (page.columns ?? []).map((c) => c.name);
-      total = page.numberOfRows ?? Infinity;
-    }
-    const data = page.data ?? [];
-    if (!data.length) break;
-    for (const row of data) rows.push(Object.fromEntries(columns.map((name, i) => [name, row[i]])));
-    offset += data.length;
-    if (total === Infinity && data.length < pageSize) break;
-  }
+  const sdk = createQueryServiceSdk({
+    queryServiceClient: createQueryServiceClient({
+      baseUrl: env.QUERY_SERVICE_URL ?? env.KBC_URL.replace('://connection.', '://query.'),
+      auth: { type: 'sapi-token', token: env.KBC_TOKEN },
+      middlewares: [],
+    }),
+  });
+  const [result] = await sdk
+    .executeQuery(env.BRANCH_ID, env.WORKSPACE_ID, { statements: [sql], transactional: false }, {
+      maxWaitTime: 60_000,
+      ...options,
+    })
+    .catch((err: unknown) => {
+      if (!isApiError(err)) throw err;
+      const data = err.data as { exception?: string; message?: string } | undefined;
+      throw new Error(`query service ${err.response.status}: ${data?.exception ?? data?.message ?? err.message}`);
+    });
+  const columns = result.columns?.map((c) => c.name) ?? [];
+  const rows = (result.data ?? []).map((row) => Object.fromEntries(columns.map((name, i) => [name, row[i]])));
   console.debug(`[kbcQuery] ${rows.length} rows <- ${previewSql(sql)}`);
   return rows;
 }
-
-export type QueryOptions = { timeoutMs?: number; pageSize?: number; signal?: AbortSignal };
-
-type QueryJob = { status: string; statements: { id: string; error?: string }[] };
-type QueryPage = { columns?: { name: string }[]; data?: unknown[][]; numberOfRows?: number };
 
 function readEnv() {
   const env = {

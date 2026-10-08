@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { fetchJson } from './lib/api';
+import { fetchJson } from './lib/api.ts';
 
 type Health = { ok: boolean; mode: string };
 
