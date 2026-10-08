@@ -16,6 +16,8 @@ app.get('/api/health', (_req, res) => {
 // Prod: serve the built Vite client.
 // Dev: Vite serves the client on :3000 and proxies /api here on :3100, so this
 // branch is unused but harmless to keep.
+// Vite hashes the asset file names, so they can be cached for good.
+app.use('/assets', express.static(path.join(clientDir, 'assets'), { immutable: true, maxAge: '1y' }));
 app.use(express.static(clientDir));
 
 // Keboola startup health check.
@@ -28,6 +30,12 @@ app.all('/', (_req, res, next) => {
   res.sendFile(path.join(clientDir, 'index.html'), (err) => {
     if (err) next(err);
   });
+});
+
+// JSON errors, so the client shows the message instead of retrying an HTML 500 page.
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
 });
 
 app.listen(port, '127.0.0.1', () => {

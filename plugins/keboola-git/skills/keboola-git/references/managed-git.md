@@ -163,7 +163,7 @@ object storage, etc.). You cannot split it.
 | Static assets 404 after deploy / blank page | `cp` destination didn't match where `next build` put `server.js` | Destination mirrors the Next.js workspace root — `find .next/standalone -name server.js` and copy `static`/`public` alongside it |
 | Committed `frontend/.next` ~55MB | Build artifacts checked into the repo | `git rm -r --cached`, gitignore, build in `setup.sh` |
 | 15.3MB `sharp` binary | macOS-built native dep, wrong arch for Linux | Don't track it; `npm ci` in container reinstalls the correct Linux binary |
-| `git push keboola :main` fails | The repo refuses deleting its default branch | Expected: `main` stays. A draft branch deletes normally (`git push keboola --delete <branch>`) |
+| `git push keboola :main` fails | The repo refuses deleting its default branch | Expected: the default branch stays — `main` when it was pushed first to the empty repo. Any other branch deletes normally (`git push keboola --delete <branch>`) |
 | Force-push to a shared branch | Not blocked by the server — it overwrites others' commits | Never force-push managed/shared branches |
 | Credential leaked into a commit or log | `git_clone_url` echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
 | `logs` / `password` command errors on auth | Manage token not in env | Add `--allow-env-manage-token` and ensure the manage token is exported |

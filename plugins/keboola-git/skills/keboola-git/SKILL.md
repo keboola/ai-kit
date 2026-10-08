@@ -84,7 +84,7 @@ git clone --single-branch --branch <branch> <source-repo> app && cd app
 git remote add keboola "$URL"
 git push keboola HEAD:main
 ```
-- **`main` cannot be deleted**; a draft branch can.
+- **The repo's default branch cannot be deleted**; any other branch can. The first branch pushed to an empty repo becomes the default, so push `main` first.
 - Never force-push a shared/managed branch — the server does not block it.
 - Reusing a clone? Check it before you read or push from it: the existing-clone reference of the `dataapp-developer:dataapp-development` skill.
 

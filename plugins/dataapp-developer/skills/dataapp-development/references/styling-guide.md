@@ -31,16 +31,7 @@ Every app produced from this skill's templates ships with a small, low-contrast 
 
 The asset is the Keboola wordmark SVG (`keboola-logo.svg`), bundled into each template's static directory. Don't redraw or recolor it; it's the official mark.
 
-**React + Vite template** (`src/App.tsx`, logo in `public/`):
-
-```tsx
-<footer className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400 opacity-80 transition-opacity hover:opacity-100">
-  <span>Powered by</span>
-  <img src="/keboola-logo.svg" alt="Keboola" className="h-4 w-auto" />
-</footer>
-```
-
-Move it into a shared layout component once the app has more than one page.
+**React + Vite template:** the `<footer>` at the end of `src/App.tsx`, logo in `public/keboola-logo.svg`. Move it into a shared layout component once the app has more than one page.
 
 **Streamlit:** read the SVG once at import time and embed it as a base64 data URI inside `st.markdown(..., unsafe_allow_html=True)` — that avoids needing Streamlit's static-serving config flag and works identically in local dev and production.
 
@@ -119,20 +110,7 @@ Streamlit-specific UI extras:
 
 ## React + Vite template (Python/JS default)
 
-`templates/react-vite-app/` sets the palette as Tailwind v4 theme tokens in `src/index.css` — bundled at build, no CDN:
-
-```css
-@import 'tailwindcss';
-
-@theme {
-  --color-kbc-primary: #1f8fff;
-  --color-kbc-bg: #ffffff;
-  --color-kbc-bg-alt: #e6f2ff;
-  --color-kbc-text: #222529;
-}
-```
-
-Use `bg-kbc-primary`, `text-kbc-primary`, `bg-kbc-bg-alt`, `text-kbc-text` for surfaces and text. Don't sprinkle raw hex literals across components — drive everything from the four tokens.
+`templates/react-vite-app/src/index.css` sets the palette above as Tailwind v4 `@theme` tokens — bundled at build, no CDN. Use `bg-kbc-primary`, `text-kbc-primary`, `bg-kbc-bg-alt`, `text-kbc-text` for surfaces and text. Don't sprinkle raw hex literals across components — drive everything from the four tokens.
 
 Charts use Recharts (pre-installed); set the brand color once and pass it to every series:
 

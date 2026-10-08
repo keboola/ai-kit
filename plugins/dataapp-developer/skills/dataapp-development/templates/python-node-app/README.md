@@ -6,7 +6,6 @@ A FastAPI backend added next to the default `react-vite-app/` template, in one K
 
 1. Copy `templates/react-vite-app/` into the repo root.
 2. Copy this directory over it. It adds `backend/` and replaces `keboola-config/nginx/sites/default.conf`, `setup.sh` and `setup-dev.sh`.
-3. In `vite.config.ts`, point the `/api` proxy at `http://127.0.0.1:8050` — local dev then reaches the Python backend the way nginx does in Keboola.
 
 ## What runs where
 
@@ -23,7 +22,7 @@ A FastAPI backend added next to the default `react-vite-app/` template, in one K
 
 ```bash
 cd backend && uv sync && uv run uvicorn main:app --reload --port 8050   # terminal 1
-npm install && npm run dev:vite                                          # terminal 2
+npm install && API_PROXY_TARGET=http://127.0.0.1:8050 npm run dev:vite  # terminal 2
 ```
 
 Open http://127.0.0.1:3000. Values for `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`: `references/storage-access.md` §Getting the env vars for local development.

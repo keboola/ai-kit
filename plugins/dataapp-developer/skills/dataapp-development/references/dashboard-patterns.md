@@ -110,7 +110,7 @@ export function useFilters() {
 
 // in a component — refetches whenever a filter changes
 const { filters } = useFilters();
-const summary = useFetch<Summary>(`/api/summary?${new URLSearchParams(filters)}`);
+const summary = useFetch<{ data: Summary }>(`/api/summary?${new URLSearchParams(filters)}`);
 ```
 
 Server (`server/queries.ts`):
@@ -177,7 +177,7 @@ server/
   queries.ts              # SQL builders, filter helpers
 src/
   App.tsx                 # layout, navigation, global filters
-  hooks/useFetch.ts       # fetch with retry
+  hooks/useFetch.ts       # loading/error + retry while the dev API restarts
   hooks/useFilters.ts     # URL-param filters
   pages/                  # one component per page
     Overview.tsx
@@ -312,50 +312,22 @@ st.dataframe(
 Keep rows as raw JSON (numbers stay numbers), sort in a `useMemo`, and format only inside the cell. A plain `<table>` with click-to-sort headers is enough for most dashboards — no library required.
 
 ```tsx
-type Row = { name: string; revenue: number | null; growth_rate: number | null };
-type Col = 'revenue' | 'growth_rate';
+const [sortBy, setSortBy] = useState<'revenue' | 'growth_rate'>('revenue');
+const [asc, setAsc] = useState(false);
 
-export function CustomerTable({ rows }: { rows: Row[] }) {
-  const [sortBy, setSortBy] = useState<Col>('revenue');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+const sorted = useMemo(
+  () =>
+    [...rows].sort((a, b) => {
+      const va = a[sortBy], vb = b[sortBy];
+      if (va == null) return 1; // NULLs to the bottom
+      if (vb == null) return -1;
+      return asc ? va - vb : vb - va;
+    }),
+  [rows, sortBy, asc],
+);
 
-  const sorted = useMemo(
-    () =>
-      [...rows].sort((a, b) => {
-        const va = a[sortBy], vb = b[sortBy];
-        if (va == null) return 1; // NULLs to the bottom
-        if (vb == null) return -1;
-        return sortDir === 'asc' ? va - vb : vb - va;
-      }),
-    [rows, sortBy, sortDir],
-  );
-
-  function setSort(col: Col) {
-    if (col === sortBy) setSortDir(sortDir === 'desc' ? 'asc' : 'desc');
-    else { setSortBy(col); setSortDir('desc'); }
-  }
-
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th>Customer</th>
-          <th onClick={() => setSort('revenue')}>Revenue</th>
-          <th onClick={() => setSort('growth_rate')}>Growth</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map((r) => (
-          <tr key={r.name}>
-            <td>{r.name}</td>
-            <td className="text-right">{r.revenue == null ? '—' : formatCurrency(r.revenue)}</td>
-            <td className="text-right">{r.growth_rate == null ? '—' : formatPercent(r.growth_rate)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
+// header:  <th onClick={() => (sortBy === 'revenue' ? setAsc(!asc) : setSortBy('revenue'))}>Revenue</th>
+// cell:    <td className="text-right">{r.revenue == null ? '—' : formatCurrency(r.revenue)}</td>
 ```
 
 Same principle for any JS table library (TanStack Table, AG Grid, etc.): store as `number`, format only at render time. Set the column's sort function so the library compares numbers, not their formatted strings.

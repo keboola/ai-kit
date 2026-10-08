@@ -10,10 +10,10 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 
 **What it covers:**
 
-- Choosing an app type (Streamlit vs single Node + static vs combined Python+Node)
+- Choosing an app type (Streamlit vs React + Vite + Express vs the same with a Python backend)
 - Python/JS prod app and drafts — resolving which app to build into, and why an empty `configuration_id` creates a second app and a second repo
 - Streamlit apps — Code/Git deployment, theming, secrets, AgGrid Enterprise
-- Python/JS apps — `/app` contract, nginx + supervisord, single-Node dashboarding default, multi-server Python+Node when needed
+- Python/JS apps — `/app` contract, nginx + supervisord, React + Vite + Express default, Python backend overlay when needed
 - Three deployment paths — MCP-only (Claude Desktop), Claude Code + MCP, kbagent CLI (Python/JS is git-backed on all three)
 - Storage access — RO workspace (default), RW direct via Query Service, input mapping (legacy)
 - Authentication — None / Basic / OIDC / GitHub / GitLab / JumpCloud

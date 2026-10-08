@@ -22,7 +22,7 @@ There are three viable shapes for a Keboola App. Pick the lowest one in this lis
 - The app renders data — charts, tables, KPIs — or needs any custom layout.
 - You don't need a Python backend.
 
-Stack: one Node container — React + Vite + Tailwind client, Express serving it and the `/api/*` JSON endpoints. Everything is bundled at build time; nothing loads from a CDN. Kai builds the same stack, so an app moves between agents without a rewrite. Pairs naturally with DuckDB caching.
+Stack: one Node container — React + Vite + Tailwind client, Express serving it and the `/api/*` JSON endpoints. Everything is bundled at build time; nothing loads from a CDN. Pairs naturally with DuckDB caching.
 
 **Read next:** [python-js-apps.md](python-js-apps.md). Template at `templates/react-vite-app/`.
 

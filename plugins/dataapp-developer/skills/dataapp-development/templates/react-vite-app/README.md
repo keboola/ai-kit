@@ -2,7 +2,7 @@
 
 The default stack for a Keboola Python/JS app — **React + Vite + Tailwind + Express** in one Node container. Everything the browser loads is bundled at build time; nothing comes from a CDN at runtime.
 
-Copy the whole directory into the app's repo root as its first commit, then replace `src/App.tsx` and add routes to `server/index.ts`. Kai builds on the same stack, so an app keeps one layout whichever agent works on it next.
+Copy the whole directory into the app's repo root as its first commit, then replace `src/App.tsx` and add routes to `server/index.ts`.
 
 What the first commit gives you:
 
@@ -69,41 +69,16 @@ After the first `deploy_data_app(mode='dev')`:
 
 ## Dependencies
 
-`package-lock.json` is committed. Two things depend on it:
-
-- **Boot time.** With the lockfile npm skips registry resolution entirely —
-  ~11.8 s cold without it, ~2.3 s with it, ~0.25 s on a warm re-install.
-- **Re-install churn.** The platform's dev-mode git-watcher hashes the contents
-  of `package.json` + `package-lock.json` after every `git reset --hard`. A
-  tracked lockfile is restored verbatim on each tick, so the hash is a pure
-  function of the pushed commit; an untracked one npm rewrote in place drifts
-  and triggers a "deps changed" re-install that installs nothing.
-
-Add or change a dependency by editing `package.json` — `setup.sh` /
-`setup-dev.sh` run `npm install`, never `npm ci`, so a lockfile that lags
-`package.json` installs correctly instead of aborting the boot. The lockfile is
-rewritten in the container on that install; commit the regenerated file when
-convenient so the next cold boot gets the fast path back.
-
-While it lags, expect one extra re-install: the install rewrites the lockfile
-before the watcher takes its first hash, so the next push — even a code-only one
-— looks like a dependency change. It settles after that; it is not a loop.
-
-Regenerate it with the **same npm the data-app image ships** (Node 20.19.2 /
-npm 10.8.2). A lockfile written by a newer npm is rewritten byte-for-byte on
-first install in the container, which re-introduces exactly the churn above:
+- `package-lock.json` is committed: a cold `npm install` skips registry resolution, and the dev-mode watcher, which hashes `package.json` + `package-lock.json`, does not see phantom dependency changes.
+- Add a dependency by editing `package.json`. The setup scripts run `npm install`, never `npm ci`, so a lockfile that lags still boots; commit the regenerated lockfile when convenient.
+- Regenerate the lockfile with the npm the data-app image ships (Node 20.19.2 / npm 10.8.2) — a newer npm's output is rewritten on first install:
 
 ```bash
 docker run --rm -v "$PWD:/w" -w /w node:20.19.2-bookworm-slim \
   npm install --package-lock-only --no-audit --no-fund
 ```
 
-### Package manager
-
-npm, even though the container image also ships bun. A bun scaffold would need
-a `bun.lock`, and the platform's dev-mode watcher still looks for the legacy
-`bun.lockb` — so it would also have to ship a `keboola-config/dev-deps` list or
-dependency pushes would stop triggering a re-install. npm is the supported path.
+- npm, not bun: the dev-mode watcher looks for the legacy `bun.lockb`, so bun would need a `keboola-config/dev-deps` list.
 
 ## Builder preview signals
 
@@ -129,12 +104,3 @@ Replace `src/App.tsx` with your dashboard, add API routes to
 `server/index.ts`, add deps to `package.json`. The dev/prod split,
 `keboola-config/` layout, and ports are platform-imposed — don't move
 them around.
-
-For plain-Express apps (no React), you can delete `src/`, `index.html`, and
-`vite.config.ts` — Tailwind is wired through Vite's `@tailwindcss/vite`
-plugin, so it drops out with them (no separate Tailwind/PostCSS config to
-remove). Then replace the
-`supervisord-dev/services/vite.conf` + `api.conf` pair with a single
-`app.conf` running `npx tsx watch server/index.ts` on port 3000. The
-scaffold ships with React because that's the recommended path for any
-user-facing dashboard.

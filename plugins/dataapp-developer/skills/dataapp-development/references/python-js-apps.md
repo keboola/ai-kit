@@ -171,28 +171,14 @@ If migrating from `requirements.txt`, move all deps into the `dependencies` arra
 
 ## Default shape: React + Vite + Express in one Node container
 
-Every new Python/JS app starts from `templates/react-vite-app/` — whichever agent builds it, so the next one (Kai included) finds the layout it expects. One Node container:
-
-- **Prod:** `setup.sh` runs `npm install` + `npm run build`; Express on `:3000` serves the built client from `dist/client/` and the `/api/*` routes.
-- **Dev (`mode='dev'`):** `setup-dev.sh` runs `npm install` only; Vite on `:3000` serves the client with HMR and proxies `/api/*` to Express under `tsx watch` on `:3100`.
-- **Nothing from a CDN.** React, Tailwind and Recharts are bundled; add libraries to `package.json`, never as a `<script src>`.
-- **Already wired:** the Keboola palette (`src/index.css`), the "Powered by Keboola" footer, the workspace query helpers (`server/kbcQuery.ts`) and the preview's ready/crash signal.
+Every new Python/JS app starts from `templates/react-vite-app/` — whichever agent builds it, so the next one (Kai included) finds the layout it expects. Its README holds the layout, the dev/prod split and the dependency rules; SKILL.md hard rule 14 covers CDNs and apps already on another stack.
 
 Why it wins:
 
 - One process tree, one nginx location, no CORS — the client and `/api/*` share an origin in both modes.
 - DuckDB caching lives in the Express process, so cache hits never cross a process boundary.
-- `package-lock.json` is committed, so a cold `npm install` takes seconds.
 
 Pairs with [duckdb-caching.md](duckdb-caching.md) by default — for read-only dashboards, cache once into an in-memory DuckDB so the dashboard never re-hits Snowflake on a page render.
-
-The template's README holds the layout, the dev/prod table and the dependency rules.
-
-**An existing app on another stack** (static HTML with CDN scripts, Flask, Next.js) stays on it:
-
-- Edit it in its own idiom; don't rewrite it onto the template as a side effect of an unrelated change.
-- Add no new CDN `<script>`/`<link>` — bundle or vendor the library instead.
-- Offer the move to the template when the user's change would touch most of the frontend anyway; do it only on a yes.
 
 ## Multi-server pattern (Python backend + JS frontend) — use when you need it
 
@@ -201,40 +187,11 @@ Reach for this only when you actually need a Python backend — an existing Pyth
 Backend convention: Python on `:8050`.
 Frontend convention: Node on `:3000`. Bundled frontends build in `setup.sh` (`npm run build`), never committed — a committed build bloats the repo past the managed-git push cap (see the `keboola-git` skill's build-at-deploy recipe).
 
-Nginx — two location blocks, more specific path first so it matches before the catch-all:
+The overlay's `keboola-config/` is the working reference — copy it, don't retype it:
 
-```nginx
-server {
-    listen 8888;
-    server_name _;
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:8050;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-Supervisord — one `[program:]` per process, in separate `.conf` files (the template's `app.conf`, the overlay's `backend.conf`) so each can be enabled, restarted, and reasoned about independently.
-
-`setup.sh` parallel install — both stacks install at the same time so cold start is roughly `max(python_deps, node_deps)` rather than the sum:
-
-```bash
-#!/bin/bash
-set -Eeuo pipefail
-cd /app
-(cd backend && uv sync) &
-npm install --prefer-offline --no-audit --no-fund &
-wait
-npm run build   # prod only — setup-dev.sh stops after the install
-```
+- `nginx/sites/default.conf` — `/api/` to Python on `:8050` before the catch-all to Node on `:3000`, WebSocket pass-through for HMR.
+- `supervisord/services/backend.conf` (+ the `supervisord-dev/` twin with `--reload`) — one `[program:]` per process, beside the template's `app.conf`.
+- `setup.sh` / `setup-dev.sh` — `uv sync` and `npm install` in parallel, so cold start is `max(python_deps, node_deps)` rather than the sum; prod then runs `npm run build`.
 
 Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy to route `/api/*` to the backend — Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.ts`. That way the frontend code calls `/api/...` everywhere and it works the same locally as in Keboola.
 

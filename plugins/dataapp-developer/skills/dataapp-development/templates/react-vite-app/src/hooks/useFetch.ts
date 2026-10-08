@@ -50,11 +50,17 @@ export function useFetch<T>(url: string, init?: RequestInit): UseFetchResult<T> 
         try {
           const response = await fetch(url, { ...init, signal: controller.signal });
           const contentType = response.headers.get('content-type') ?? '';
-          if (!response.ok || contentType.includes('text/html')) {
-            lastError = new Error(
-              `fetch ${url} -> ${response.status} ${response.statusText || contentType}`,
-            );
+          // Retry only while the dev API restarts: the proxy answers 502-504 or an HTML page.
+          // A JSON error from the API is final — a failing query would just run again.
+          const restarting =
+            [502, 503, 504].includes(response.status) || contentType.includes('text/html');
+          if (restarting) {
+            lastError = new Error(`fetch ${url} -> ${response.status} ${response.statusText}`);
             continue;
+          }
+          if (!response.ok) {
+            const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+            throw new Error(detail?.error ?? `fetch ${url} -> ${response.status}`);
           }
           const body = (await response.json()) as T;
           if (cancelled) return;
@@ -65,6 +71,7 @@ export function useFetch<T>(url: string, init?: RequestInit): UseFetchResult<T> 
         } catch (err) {
           if ((err as { name?: string })?.name === 'AbortError') return;
           lastError = err instanceof Error ? err : new Error(String(err));
+          if (!(err instanceof TypeError)) break; // only network errors (TypeError) are retried
         }
       }
       if (cancelled) return;

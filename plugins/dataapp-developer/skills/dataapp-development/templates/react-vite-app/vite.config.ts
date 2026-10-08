@@ -75,10 +75,24 @@ export default defineConfig(({ command }) => ({
     proxy: {
       // Express runs on 127.0.0.1:3100 in dev (see supervisord-dev/services/api.conf).
       '/api': {
-        target: 'http://127.0.0.1:3100',
+        target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:3100',
         changeOrigin: false,
       },
     },
   },
-  build: { outDir: 'dist/client', emptyOutDir: true },
+  build: {
+    outDir: 'dist/client',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // React and the chart stack change less often than the app, so they cache across deploys.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/](recharts|d3-[^\\/]+|victory-vendor)[\\/]/.test(id)) return 'charts';
+          if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
+          return undefined;
+        },
+      },
+    },
+  },
 }));
