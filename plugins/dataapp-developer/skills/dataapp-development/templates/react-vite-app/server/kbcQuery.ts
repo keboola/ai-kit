@@ -22,6 +22,7 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
   const [result] = await sdk
     .executeQuery(env.BRANCH_ID, env.WORKSPACE_ID, { statements: [sql], transactional: false }, {
       maxWaitTime: 60_000,
+      pageSize: 10_000,
       ...options,
     })
     .catch((err: unknown) => {

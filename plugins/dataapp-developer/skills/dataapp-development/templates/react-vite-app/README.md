@@ -43,7 +43,7 @@ In dev, push and watch: client edits hot-reload, server edits restart Express in
 
 ## Node 24
 
-- The app needs the Node 24 image; the platform default is still Node 20. Pin it with `image_version` (`references/python-js-prod-and-drafts.md` §The image: Node 24).
+- Needs the Node 24 image: `references/python-js-prod-and-drafts.md` §The image: Node 24.
 - Node runs `server/*.ts` directly, without a build step: types are stripped, nothing else is compiled.
   - Relative imports name the file: `./kbcQuery.ts`, not `./kbcQuery` or `./kbcQuery.js`.
   - No `enum`, `namespace` or constructor parameter properties; type-only imports use `import type`.

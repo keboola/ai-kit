@@ -185,7 +185,7 @@ Ship only when the user asks to publish: the draft is how they review the change
 # draft only.
 modify_python_js_data_app(
     configuration_id=PROD,
-    image_version=NODE_24,            # the draft's tag, see "The image: Node 24"
+    image_version=NODE_24,            # see "The image: Node 24"
     storage_access=True,              # when the app reads Storage
     storage={                         # when the app writes to Storage
         "output": {
