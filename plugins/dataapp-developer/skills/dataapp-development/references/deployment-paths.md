@@ -110,7 +110,7 @@ deploy_data_app(action="deploy", configuration_id="<id-from-above>")
 
 ## Path B — Claude Code / local agent with filesystem + MCP
 
-The most flexible path. Edit code locally with Read/Edit/Write tools. Use Playwright MCP for visual verification. Use Keboola MCP for storage validation.
+The most flexible path. Edit code locally with Read/Edit/Write tools. Use a browser (a browser tool, or a headless browser CLI) for visual verification. Use Keboola MCP for storage validation.
 
 For **Streamlit** apps:
 
@@ -127,7 +127,7 @@ Best fit for:
 - Iterating on existing apps with complex changes.
 - Multi-file refactors.
 - Apps with custom `keboola-config/` setup.
-- Anything where visual verification matters (Playwright MCP).
+- Anything where visual verification matters (a browser).
 
 **Typical loop:**
 
@@ -135,7 +135,7 @@ Best fit for:
 2. Edit code locally with Read/Edit/Write.
 3. Push to git (Python/JS) or paste via `modify_streamlit_data_app` (Streamlit Code mode).
 4. `deploy_data_app(action="deploy", ...)` via MCP, or `kbagent data-app deploy --wait` if Path C.
-5. Open the running app in Playwright MCP, take a screenshot, iterate.
+5. Open the running app in your browser, take a screenshot, iterate.
 
 ## Path C — CLI agent (kbagent)
 

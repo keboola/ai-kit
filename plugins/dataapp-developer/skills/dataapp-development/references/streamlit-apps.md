@@ -210,7 +210,7 @@ KBC_TOKEN = "your-storage-api-token"
 WORKSPACE_ID = "1234567"
 ```
 
-For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right Playwright + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).
+For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right browser + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).
 
 ## Capturing errors for platform logs
 

@@ -83,6 +83,6 @@ that drives it.
 ## Guardrails
 
 - Never write to a shared/production GitHub repo without explicit confirmation; default to a user-owned scratch repo + feature branch.
-- Never force-push. The managed repo refuses deleting `main`.
+- Never force-push. The managed repo refuses deleting its default branch — `main`, because this command pushes it first.
 - Treat any `git_clone_url` / credential as a one-time secret: shell var only, rotate if exposed.
 - Backend *data* errors after a successful deploy (missing Storage tables) are expected in empty projects and are not copy/deploy failures.

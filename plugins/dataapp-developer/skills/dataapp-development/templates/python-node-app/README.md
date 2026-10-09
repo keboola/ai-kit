@@ -1,33 +1,31 @@
-# Python + Node App Template
+# Python Backend Overlay
 
-Combined Python (FastAPI) backend + Node.js (Express) frontend in one Keboola container. Use this when you genuinely need a Python backend alongside a JS frontend; for pure dashboarding, the simpler `nodejs-app/` template is preferred.
+A FastAPI backend added next to the default `react-vite-app/` template, in one Keboola container. Use it only when the app genuinely needs Python — an existing Python codebase, an ML model, FastAPI services. For dashboarding, `react-vite-app/` alone is enough.
 
-Pattern: FastAPI :8050 + Express :3000 in one Keboola container.
+## Apply it
+
+1. Copy `templates/react-vite-app/` into the repo root.
+2. Copy this directory over it. It adds `backend/` and replaces `keboola-config/nginx/sites/default.conf`, `setup.sh` and `setup-dev.sh`.
+3. Delete `keboola-config/supervisord-dev/services/api.conf`, `server/kbcQuery.ts` and the `/api` routes in `server/index.ts` — Python owns `/api/*`.
+
+## What runs where
+
+| | Dev (`mode='dev'`) | Prod |
+|---|---|---|
+| nginx `/api/*` | FastAPI :8050 (`--reload`) | FastAPI :8050 |
+| nginx `/` | Vite :3000 (HMR) | Express :3000 serving `dist/client/` |
+| Setup | `uv sync` ∥ `npm install` | `uv sync` ∥ `npm install`, then `npm run build` |
+
+- Express only serves the built client in prod; query the workspace from Python (`references/storage-access.md`).
+- nginx answers the platform's `POST /` health check.
 
 ## Local development
 
-Two terminals:
-
 ```bash
-# Terminal 1 — backend
-cd backend
-uv sync
-uv run uvicorn main:app --reload --port 8050
+cd backend && uv sync && uv run uvicorn main:app --reload --port 8050   # terminal 1
+npm install && API_PROXY_TARGET=http://127.0.0.1:8050 npm run dev     # terminal 2
 ```
 
-```bash
-# Terminal 2 — frontend
-cd frontend
-npm install
-node --watch server.js
-```
+Open http://127.0.0.1:3000. Values for `KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`: `references/storage-access.md` §Getting the env vars for local development.
 
-Open http://localhost:3000. The frontend's Express server proxies `/api/*` to the backend so you don't need a local nginx.
-
-Where to find each value (`KBC_URL`, `KBC_TOKEN`, `WORKSPACE_ID`): see `references/storage-access.md` §Getting the env vars for local development.
-
-## Deployment
-
-Push this directory to a Git repo. The `keboola-config/setup.sh` runs `uv sync` and `npm install` in parallel. Add Keboola secrets for `KBC_URL`, `KBC_TOKEN`, etc.
-
-See `references/python-js-apps.md` (multi-server section) and `references/deployment-paths.md` in the dataapp-development skill.
+See `references/python-js-apps.md` (multi-server section).

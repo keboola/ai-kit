@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+/* Keboola palette — `bg-kbc-primary`, `text-kbc-text`, `bg-kbc-bg-alt`, ... */
+@theme {
+  --color-kbc-primary: #1f8fff;
+  --color-kbc-bg: #ffffff;
+  --color-kbc-bg-alt: #e6f2ff;
+  --color-kbc-text: #222529;
+}

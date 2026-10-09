@@ -130,11 +130,16 @@ Either way the URL carries a one-time secret: hold it in a shell variable, never
 
 ```bash
 git clone "$URL" app && cd app
+git checkout -b main
+git commit --allow-empty -m "init main"
+git push origin main                                       # main first: the first branch pushed becomes the default
 git checkout -b add-recent-jobs
-# write the app source into ./ here (templates/nodejs-app/, keboola-config/, ...)
+cp -R <dataapp-development>/templates/react-vite-app/. .   # the default stack, then your code on top
 git add -A && git commit -m "Initial app"
 git push origin add-recent-jobs
 ```
+
+The empty `main` carries no app code, so it breaks no rule about pushing to `main`. Skip it and the draft branch becomes the repo's default: the repo then refuses to delete it after publishing (§7), and your token cannot change the default.
 
 **Prod app that has been built before:**
 
@@ -156,7 +161,9 @@ Pushes over ~15MB fail with HTTP 413. That, the build-at-deploy recipe, and the 
 deploy_data_app(action="deploy", configuration_id=DRAFT, mode="dev")
 ```
 
-`mode="dev"` deploys the draft as a development deployment so the user can see it without disturbing prod. This argument is not yet confirmed against a live stack (see [TODO.md](../TODO.md)); if the call rejects it, drop `mode` and deploy the draft plainly. If the preview does not load, the fix is never `authentication_type="no-auth"` — the in-platform preview authenticates on top of the draft's configured auth, and the MCP rejects `"no-auth"` on drafts anyway (see [authentication.md](authentication.md) §Python/JS). Hot reload off the branch is **not automatic**: it needs `keboola-config/supervisord-dev/<program>.conf` in the repo, and commit locking otherwise pins each deploy to a SHA. See [python-js-apps.md](python-js-apps.md) §Keboola-hosted dev mode and §Git commit locking. Without those configs, redeploy after each push.
+`mode="dev"` deploys the draft as a development deployment so the user can see it without disturbing prod. The dev container follows the draft branch: a push hot-reloads it, a `package.json` change re-installs, so redeploy only to switch branch or revive a stopped container. That needs the `supervisord-dev/` configs, which `templates/react-vite-app/` ships ([python-js-apps.md](python-js-apps.md) §Keboola-hosted dev mode). If the preview does not load, the fix is never `authentication_type="no-auth"` — the in-platform preview authenticates on top of the draft's auth, and the MCP rejects `"no-auth"` on drafts anyway ([authentication.md](authentication.md) §Python/JS).
+
+To see what the running draft shows, open it in your own browser through a preview link: [dev-workflow.md](dev-workflow.md) §Verify an app running in dev mode.
 
 ### 6. Ship it
 
@@ -209,7 +216,7 @@ broken app.
 Otherwise the draft stays on the app as one more to choose from. In order:
 
 1. **Confirm prod is healthy** — `get_data_apps(configuration_ids=[PROD])` reports it running. If it does not, read the terminal log in that detail, fix, and redeploy. Until prod is green the draft is your fallback.
-2. **Delete the draft branch** — `git push origin --delete <branch>`. The repo refuses deleting only `main`, its default branch.
+2. **Delete the draft branch** — `git push origin --delete <branch>`. The repo refuses deleting only its default branch, which is `main` when step 4 pushed it first.
 3. **Delete the draft** — `delete_python_js_data_app_draft(configuration_id=DRAFT)` removes its configuration and its running app, not its branch. It refuses prod and Streamlit apps.
 
 ## Creating a prod app (only when `get_data_apps` returns none)
