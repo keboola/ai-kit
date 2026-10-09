@@ -14,7 +14,7 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
   const env = readEnv();
   const sdk = createQueryServiceSdk({
     queryServiceClient: createQueryServiceClient({
-      baseUrl: env.QUERY_SERVICE_URL ?? env.KBC_URL.replace('://connection.', '://query.'),
+      baseUrl: env.QUERY_SERVICE_URL ?? (await queryServiceUrlFromIndex(env.KBC_URL)),
       auth: { type: 'sapi-token', token: env.KBC_TOKEN },
       middlewares: [],
     }),
@@ -34,6 +34,30 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
   const rows = (result.data ?? []).map((row) => Object.fromEntries(columns.map((name, i) => [name, row[i]])));
   console.debug(`[kbcQuery] ${rows.length} rows <- ${previewSql(sql)}`);
   return rows;
+}
+
+let indexedQueryServiceUrl: Promise<string> | undefined;
+
+/**
+ * The stack's Query Service URL from the Storage API index, fetched once per process.
+ *
+ * - Keboola injects `QUERY_SERVICE_URL` with Storage access; this covers local runs and apps without it.
+ * - A failed lookup is not cached, so the next request tries again.
+ */
+function queryServiceUrlFromIndex(kbcUrl: string): Promise<string> {
+  indexedQueryServiceUrl ??= fetch(new URL('/v2/storage/?exclude=components', kbcUrl))
+    .then(async (res) => {
+      if (!res.ok) throw new Error(`Storage API index ${res.status}`);
+      const { services } = (await res.json()) as { services: { id: string; url: string }[] };
+      const url = services.find((service) => service.id === 'query')?.url;
+      if (!url) throw new Error('the stack lists no query service');
+      return url;
+    })
+    .catch((err: unknown) => {
+      indexedQueryServiceUrl = undefined;
+      throw new Error(`kbcQuery: cannot find the Query Service URL: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  return indexedQueryServiceUrl;
 }
 
 function readEnv() {
