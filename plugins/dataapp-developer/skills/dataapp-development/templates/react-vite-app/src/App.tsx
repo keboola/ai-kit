@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { fetchJson } from './lib/api';
 
-type Health = { ok: boolean; mode: string };
+type Health = { ok: boolean; mode?: string };
 
 export function App() {
   const health = useQuery({
@@ -22,7 +22,7 @@ export function App() {
           {health.error ? (
             <span className="text-rose-600">{health.error.message}</span>
           ) : health.data ? (
-            <span className="text-emerald-700">ok ({health.data.mode})</span>
+            <span className="text-emerald-700">ok{health.data.mode ? ` (${health.data.mode})` : ''}</span>
           ) : (
             <span className="text-slate-500">loading…</span>
           )}

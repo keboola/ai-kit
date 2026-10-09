@@ -37,15 +37,24 @@ export async function runQuery(
     await sleep(wait, undefined, { signal: deadline });
   }
 
+  // Page by what came back, not by `pageSize`: the service may cap a page lower.
+  // A statement without a result set (INSERT, UPDATE) has no `data` and returns [].
   const rows: Record<string, unknown>[] = [];
-  for (let offset = 0; ; offset += pageSize) {
+  let columns: string[] = [];
+  let total: number | undefined;
+  for (let offset = 0; total === undefined || offset < total; ) {
     const page = await call<QueryPage>(
       `queries/${queryJobId}/${job.statements[0].id}/results?offset=${offset}&pageSize=${pageSize}`,
     );
-    for (const row of page.data) {
-      rows.push(Object.fromEntries(page.columns.map((c, i) => [c.name, row[i]])));
+    if (offset === 0) {
+      columns = (page.columns ?? []).map((c) => c.name);
+      total = page.numberOfRows;
     }
-    if (page.data.length < pageSize) break;
+    const data = page.data ?? [];
+    if (!data.length) break;
+    for (const row of data) rows.push(Object.fromEntries(columns.map((name, i) => [name, row[i]])));
+    offset += data.length;
+    if (total === undefined && data.length < pageSize) break;
   }
   console.debug(`[kbcQuery] ${rows.length} rows <- ${previewSql(sql)}`);
   return rows;
@@ -54,7 +63,7 @@ export async function runQuery(
 export type QueryOptions = { timeoutMs?: number; pageSize?: number; signal?: AbortSignal };
 
 type QueryJob = { status: string; statements: { id: string; error?: string }[] };
-type QueryPage = { columns: { name: string }[]; data: unknown[][] };
+type QueryPage = { columns?: { name: string }[]; data?: unknown[][]; numberOfRows?: number };
 
 function readEnv() {
   const env = {
