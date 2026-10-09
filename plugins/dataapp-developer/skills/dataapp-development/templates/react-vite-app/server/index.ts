@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
-const mode = process.env.NODE_ENV === 'development' ? 'development' : 'production';
+const mode = process.env.KBC_APP_MODE === 'dev' ? 'development' : 'production';
 const clientDir = path.join(import.meta.dirname, '..', 'dist', 'client');
 
 app.use(express.json());
