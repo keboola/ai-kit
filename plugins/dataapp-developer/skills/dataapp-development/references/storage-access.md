@@ -465,47 +465,7 @@ class Storage:
 storage = Storage()  # module-level singleton
 ```
 
-**Node.js / TypeScript** (`storage.ts`):
-
-```typescript
-import { readFileSync } from 'node:fs';
-import { createQueryServiceClient } from '@keboola/api-client/queryService';
-import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
-
-const branchId = process.env.BRANCH_ID!;
-const workspaceId = JSON.parse(
-  readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
-).workspaceId as string;
-
-const queryServiceClient = createQueryServiceClient({
-  baseUrl: process.env.QUERY_SERVICE_URL!,
-  auth: { type: 'sapi-token', token: process.env.KBC_TOKEN! },
-  middlewares: [],
-});
-const sdk = createQueryServiceSdk({ queryServiceClient });
-
-export async function select<T = Record<string, unknown>>(sql: string): Promise<T[]> {
-  const [result] = await sdk.executeQuery(branchId, workspaceId, {
-    statements: [sql],
-    transactional: true,
-  });
-  const cols = result.columns.map((c) => c.name);
-  return result.data.map((row: unknown[]) =>
-    Object.fromEntries(cols.map((name, i) => [name, row[i]])) as T,
-  );
-}
-
-export async function execute(sql: string): Promise<void> {
-  await sdk.executeQuery(branchId, workspaceId, { statements: [sql], transactional: true });
-}
-```
-
-Load `.env` once in your app entrypoint (`server.ts` / `server.js`) **before** importing `storage.ts` — keeping dotenv out of the wrapper makes it portable across ESM and CJS:
-
-```typescript
-import 'dotenv/config';
-import { select, execute } from './storage.js';
-```
+**Node.js / TypeScript:** use `templates/react-vite-app/server/kbcQuery.ts` — `runQuery(sql)` reads its env per call (a missing var fails the request, not the server start), finds the Query Service URL without guessing it, and never lets the SDK's `ApiError` (which carries the token) reach a log.
 
 Usage from the rest of the app:
 
@@ -517,13 +477,11 @@ storage.execute('INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id"
 
 ```typescript
 // TypeScript
-const rows = await select<{ id: string; name: string }>(
-  'SELECT "id", "name" FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100',
-);
-await execute(`INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES ('abc-123','Click')`);
+const rows = await runQuery('SELECT "id", "name" FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100');
+await runQuery(`INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES ('abc-123','Click')`);
 ```
 
-These examples use Snowflake quoting. On a **BigQuery** project the same `select()` / `execute()` calls work unchanged — only the SQL differs, e.g. `` SELECT `id`, `name` FROM `in_c_main`.`customers` LIMIT 100 ``. See "BigQuery SQL dialect" above.
+These examples use Snowflake quoting. On a **BigQuery** project the same `select()` / `execute()` / `runQuery()` calls work unchanged — only the SQL differs, e.g. `` SELECT `id`, `name` FROM `in_c_main`.`customers` LIMIT 100 ``. See "BigQuery SQL dialect" above.
 
 ### SQL injection — validate every interpolated value
 

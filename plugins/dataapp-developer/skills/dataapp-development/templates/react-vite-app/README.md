@@ -58,7 +58,7 @@ In dev, push and watch: client edits hot-reload, server edits restart Express in
 ## Dependencies
 
 - Add one by editing `package.json` — the setup scripts run `npm install`, never `npm ci`, so a lagging lockfile still boots. Commit the regenerated lockfile.
-- Generate the lockfile with the image's npm (11.12.1), or the container rewrites it on first install and every push looks like a dependency change: `npx -y npm@11.12.1 install --package-lock-only`.
+- Generate the lockfile with the image's npm (11.12.1 in the `…_node-24` images; `npm -v` in the container tells), or the container rewrites it on first install and every push looks like a dependency change: `npx -y npm@11.12.1 install --package-lock-only`.
 - npm, not bun: the dev-mode watcher looks for the legacy `bun.lockb`.
 
 ## Local development
