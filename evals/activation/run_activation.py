@@ -38,7 +38,12 @@ from common import (  # noqa: E402
     discover_skills,
 )
 
-CLASSIFIER_MODEL = os.environ.get("AIKIT_EVAL_CLASSIFIER_MODEL", "claude-haiku-4-5-20251001")
+# Claude Haiku 5.5 rejects temperature/top_p/top_k (400), runs adaptive thinking
+# by default (a reply can start with thinking blocks, and thinking counts toward
+# max_tokens) and can decline a request with stop_reason "refusal". classify()
+# below accounts for all three. AIKIT_EVAL_CLASSIFIER_MODEL=claude-haiku-4-5
+# still works for a side-by-side run.
+CLASSIFIER_MODEL = os.environ.get("AIKIT_EVAL_CLASSIFIER_MODEL", "claude-haiku-5-5")
 CONCURRENCY = 8
 
 ROUTER_PROMPT = """You are the skill router of a coding agent. The agent has these skills \
@@ -86,17 +91,47 @@ def parse_answer(text: str) -> tuple[list[str], str | None]:
     return [], text
 
 
+def _request_params() -> dict:
+    """Model-specific request knobs.
+
+    Haiku 4.5 keeps the original deterministic setup (temperature 0, no
+    thinking). Newer models reject temperature and think by default, so they get
+    effort "low" (routing is a cheap, high-volume call) and a max_tokens that
+    leaves room for thinking before the one-line JSON answer.
+    """
+    if CLASSIFIER_MODEL.startswith("claude-haiku-4-5"):
+        return {"max_tokens": 200, "temperature": 0.0}
+    return {"max_tokens": 2048, "output_config": {"effort": "low"}}
+
+
+def answer_text(response) -> tuple[str | None, str | None]:
+    """The reply's text, joined from its text blocks (never by position).
+
+    Returns (text, error). A refusal or a reply cut off before any text is an
+    error, so grading records it as a parse failure instead of crashing.
+    """
+    if response.stop_reason == "refusal":
+        category = getattr(getattr(response, "stop_details", None), "category", None)
+        return None, f"refusal ({category})"
+    text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
+    if not text and response.stop_reason == "max_tokens":
+        return None, "max_tokens reached before any text"
+    return text, None
+
+
 async def classify(client, skill_list: str, query: str) -> tuple[list[str], str | None]:
     response = await client.messages.create(
         model=CLASSIFIER_MODEL,
-        max_tokens=200,
-        temperature=0.0,
         messages=[{
             "role": "user",
             "content": ROUTER_PROMPT.format(skill_list=skill_list, query=query),
         }],
+        **_request_params(),
     )
-    return parse_answer(response.content[0].text)
+    text, error = answer_text(response)
+    if error is not None:
+        return [], error
+    return parse_answer(text)
 
 
 async def run_case_set(

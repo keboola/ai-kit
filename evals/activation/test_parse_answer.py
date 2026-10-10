@@ -47,3 +47,37 @@ class TestParseAnswer:
         skills, err = parse_answer("see [the docs] for details")
         assert skills == []
         assert err is not None
+
+
+class TestAnswerText:
+    """Haiku 5.5 replies can start with thinking blocks, be cut off by thinking,
+    or be refusals; answer_text must read text blocks by type and report the
+    rest as errors instead of crashing."""
+
+    @staticmethod
+    def _resp(blocks, stop_reason="end_turn", category=None):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            content=[SimpleNamespace(**b) for b in blocks],
+            stop_reason=stop_reason,
+            stop_details=SimpleNamespace(category=category) if category else None,
+        )
+
+    def test_skips_leading_thinking_block(self):
+        from run_activation import answer_text
+
+        resp = self._resp([{"type": "thinking", "thinking": ""}, {"type": "text", "text": '["get-started"]'}])
+        assert answer_text(resp) == ('["get-started"]', None)
+
+    def test_refusal_is_an_error(self):
+        from run_activation import answer_text
+
+        text, err = answer_text(self._resp([], stop_reason="refusal", category="cyber"))
+        assert text is None and err == "refusal (cyber)"
+
+    def test_max_tokens_without_text_is_an_error(self):
+        from run_activation import answer_text
+
+        resp = self._resp([{"type": "thinking", "thinking": ""}], stop_reason="max_tokens")
+        assert answer_text(resp) == (None, "max_tokens reached before any text")
