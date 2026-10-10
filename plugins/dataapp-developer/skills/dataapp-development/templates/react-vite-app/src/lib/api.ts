@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 
-/** The API is not up: a network error, or 502-504 while it starts or restarts (`tsx watch`). */
+/** The API is not up: a network error, or 502-504 while it starts or restarts (`node --watch`). */
 export class RestartingError extends Error {}
 
 /**
@@ -25,7 +25,7 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // 0.5 s, 1 s, 2 s, 4 s, 4 s, 4 s — covers a `tsx watch` restart and a cold container.
+      // 0.5 s, 1 s, 2 s, 4 s, 4 s, 4 s — covers a `node --watch` restart and a cold container.
       retry: (failures, error) => error instanceof RestartingError && failures < 6,
       retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 4000),
       // Every refetch is a warehouse query: keep results for 5 minutes, ignore window focus.

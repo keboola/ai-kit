@@ -8,6 +8,8 @@ workspace-query endpoint; it 404s on most Snowflake projects).
 """
 import json
 import os
+import urllib.request
+from urllib.parse import urljoin
 
 import pandas as pd
 import streamlit as st
@@ -25,11 +27,14 @@ def _get(name: str, default: str | None = None) -> str | None:
         return default
 
 
-def _derive_query_service_url(kbc_url: str | None) -> str | None:
-    """Derive QUERY_SERVICE_URL from KBC_URL by swapping `connection.` → `query.`."""
+def _query_service_url_from_index(kbc_url: str | None) -> str | None:
+    """The stack's Query Service URL from the Storage API index (local runs; Keboola injects QUERY_SERVICE_URL)."""
     if not kbc_url:
         return None
-    return kbc_url.rstrip("/").replace("://connection.", "://query.", 1)
+    index_url = urljoin(kbc_url, "/v2/storage/?exclude=components")
+    with urllib.request.urlopen(index_url, timeout=10) as response:
+        services = json.load(response)["services"]
+    return next((service["url"] for service in services if service["id"] == "query"), None)
 
 
 def _resolve_workspace_id() -> str | None:
@@ -50,10 +55,10 @@ def _client() -> Client:
     """
     kbc_url = _get("KBC_URL")
     kbc_token = _get("KBC_TOKEN")
-    query_service_url = _get("QUERY_SERVICE_URL") or _derive_query_service_url(kbc_url)
+    query_service_url = _get("QUERY_SERVICE_URL") or _query_service_url_from_index(kbc_url)
     if not (query_service_url and kbc_token):
         raise RuntimeError(
-            "Missing QUERY_SERVICE_URL (or KBC_URL to derive it) and KBC_TOKEN. "
+            "Missing QUERY_SERVICE_URL (or KBC_URL to look it up) and KBC_TOKEN. "
             "Ask the user to populate .streamlit/secrets.toml or .env."
         )
     return Client(base_url=query_service_url, token=kbc_token)

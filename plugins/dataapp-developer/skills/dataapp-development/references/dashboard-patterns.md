@@ -119,7 +119,7 @@ const summary = useQuery({
 Server (`server/queries.ts`):
 
 ```ts
-import { runQuery } from './kbcQuery';
+import { runQuery } from './kbcQuery.ts';
 
 function getUserTypeFilterClause(userType: string) {
   if (userType === 'external') return `"user_type" = 'External User'`;

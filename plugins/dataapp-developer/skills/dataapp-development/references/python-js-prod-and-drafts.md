@@ -28,6 +28,15 @@ The create is effectively irreversible: the managed repo can only be attached wh
 
 Because a draft carries its own git block, the platform classifies it as an **external-git** app. That matters in one place only: `branch` on update (see the last section).
 
+## The image: Node 24
+
+An app runs on the image its config pins with `image_version`; unpinned, it gets the platform default, which is still Node 20. `templates/react-vite-app/` needs Node 24 (`"engines": { "node": ">=24" }`). So, until the default is Node 24:
+
+- **Pin every config that runs the template** — the prod app and each draft, on create or as an update — to the newest `…_node-24` tag. `get_data_apps(configuration_ids=[...])` lists the tags in `available_images`; a tag the platform does not offer is rejected with that list, so a new app without a detail to read can take it from there.
+- **An app not on the template keeps its image:** leave `image_version` unset on update. `deployment_info.image` says what an app runs.
+
+Pins are per image release, with no floating tag: drop this section once the default is Node 24, so new apps follow the default again.
+
 ## Which app do I work on?
 
 **Most sessions start with the prod app already existing.** The Keboola Apps page creates it, with the managed repo, and hands it to you. An app that is empty, still named "New App", never deployed, with `drafts: []`, is the **normal starting state**. Never replace one: the replacement cannot be given a managed repo.
@@ -94,6 +103,7 @@ modify_python_js_data_app(
     parent_configuration_id=PROD,       # ...and this is what makes it a draft, not a second app
     branch="add-recent-jobs",           # optional; defaults to a generated draft-<hex>
     authentication_type="basic-auth",   # never "no-auth" on a draft; the MCP rejects it
+    image_version=NODE_24,              # see "The image: Node 24"
 )
 ```
 
@@ -175,6 +185,7 @@ Ship only when the user asks to publish: the draft is how they review the change
 # draft only.
 modify_python_js_data_app(
     configuration_id=PROD,
+    image_version=NODE_24,            # see "The image: Node 24"
     storage_access=True,              # when the app reads Storage
     storage={                         # when the app writes to Storage
         "output": {
@@ -197,7 +208,7 @@ lives on the draft only. Two fields matter most, and each fails differently:
 | `storage` output mapping with `unload_strategy: "direct-grant"` | the app **writes** to Storage | reads keep working, **writes** fail — the workspace has no grant on the destination table |
 
 The write case is the nastier of the two: the app looks healthy and most of it works, so the
-failure reads as a bug in the write path rather than a missing grant. `authentication_type` and
+failure reads as a bug in the write path rather than a missing grant. `image_version`, `authentication_type` and
 `auto_suspend_after_seconds` are on the draft only too, if you changed them there.
 
 Passing `storage_access` is idempotent, so send it whenever the app reads Storage rather than
@@ -229,6 +240,7 @@ modify_python_js_data_app(
     # ...and no parent_configuration_id, so this is a PROD app with its own new repo.
     # Only correct when get_data_apps showed the project has no Python/JS app.
     # Say so in your reply before you send this.
+    image_version=NODE_24,              # see "The image: Node 24"
 )
 ```
 

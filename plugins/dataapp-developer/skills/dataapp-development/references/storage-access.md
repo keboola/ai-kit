@@ -76,7 +76,7 @@ The Python/JS templates load local env vars from `.env` or `.env.local` (both su
 
 **Agent: pre-fill what you can, ask for what's missing, then offer to run.** When the local file is missing or incomplete, **do NOT grep the filesystem, scan shell history, or probe unrelated environment variables hoping to find something that looks like a token.** That's a security smell. Do this proactively instead:
 
-1. **Pre-create `.env.local`** (or `.streamlit/secrets.toml` for Streamlit) with every required key. Resolve the values you can yourself: `mcp__keboola__get_project_info` returns `branch_id`, `workspace_id`, and the project URL (which gives you `KBC_URL` and lets you derive `QUERY_SERVICE_URL` by swapping `connection.` → `query.`). Use those to populate the file. Only the user's Storage API token (`KBC_TOKEN`) is genuinely user-input.
+1. **Pre-create `.env.local`** (or `.streamlit/secrets.toml` for Streamlit) with every required key. Resolve the values you can yourself: `mcp__keboola__get_project_info` returns `branch_id`, `workspace_id`, and the project URL (which gives you `KBC_URL`; `QUERY_SERVICE_URL` is listed in the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`)). Use those to populate the file. Only the user's Storage API token (`KBC_TOKEN`) is genuinely user-input.
 2. **Check whether `KBC_TOKEN` is already set** in the shell environment, in `.env.local`, or in `.streamlit/secrets.toml`. Looking up a specific named variable is fine; scanning every env var is not. If it's already there, skip the next step.
 3. **If `KBC_TOKEN` is missing**, tell the user exactly which value you still need and point them at §`KBC_TOKEN` for where to fetch it in the Keboola UI. Wait for confirmation that they've filled it in.
 4. **Once `.env.local` is complete, offer to start the app** with the right command for the framework so the user can preview it (`uv run streamlit run streamlit_app.py`, `npm run dev`, `node --watch server.js`, `uv run uvicorn ...`). Don't auto-start without asking — the user might want to inspect first.
@@ -185,7 +185,7 @@ Two paths to call the workspace:
 Required env vars (Keboola auto-injects them on deploy once Storage access is enabled — see
 "Enabling Storage access on a deployed app" above if the app is missing `WORKSPACE_ID`):
 - `KBC_URL`, `KBC_TOKEN` — auth + base host.
-- `QUERY_SERVICE_URL` — Query Service host. If unset, derive from `KBC_URL` by swapping `connection.` → `query.` (`https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`).
+- `QUERY_SERVICE_URL` — Query Service host. If unset, read it from the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`); the React + Vite template's `runQuery` does that for you.
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
 
@@ -215,10 +215,8 @@ Python (`keboola-query-service`):
 import os
 from keboola_query_service import Client
 
-base_url = os.environ.get("QUERY_SERVICE_URL") or os.environ["KBC_URL"].replace(
-    "://connection.", "://query.", 1
-)
-client = Client(base_url=base_url, token=os.environ["KBC_TOKEN"])
+# Injected with Storage access; locally see QUERY_SERVICE_URL under "Getting the env vars" above.
+client = Client(base_url=os.environ["QUERY_SERVICE_URL"], token=os.environ["KBC_TOKEN"])
 
 results = client.execute_query(
     branch_id=os.environ["BRANCH_ID"],   # numeric, not "default"
@@ -236,11 +234,9 @@ JS/TS (`@keboola/api-client`'s `queryService` client + `queryService` SDK):
 import { createQueryServiceClient } from '@keboola/api-client/queryService';
 import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
 
-const baseUrl =
-  process.env.QUERY_SERVICE_URL ||
-  process.env.KBC_URL.replace('://connection.', '://query.');
+// Injected with Storage access; locally see QUERY_SERVICE_URL under "Getting the env vars" above.
 const queryServiceClient = createQueryServiceClient({
-  baseUrl,
+  baseUrl: process.env.QUERY_SERVICE_URL,
   auth: { type: 'sapi-token', token: process.env.KBC_TOKEN },
   middlewares: [],
 });
@@ -412,7 +408,7 @@ Env vars set when Storage Access is enabled:
 - `KBC_WORKSPACE_MANIFEST_PATH` — path to a JSON manifest with `workspaceId` and other metadata. **Preferred source for the workspace ID.**
 - `WORKSPACE_ID`, `BRANCH_ID`, `QUERY_SERVICE_URL`, `KBC_TOKEN`.
 
-`QUERY_SERVICE_URL` is the project's Query Service host — `https://query.<stack>.keboola.com`, derived from `KBC_URL` by replacing the `connection.` subdomain prefix with `query.` (e.g. `https://connection.keboola.com` → `https://query.keboola.com`, `https://connection.us-east4.gcp.keboola.com` → `https://query.us-east4.gcp.keboola.com`). In production Keboola injects this directly. In local dev you can either set it explicitly in `.env.local` or compute it from `KBC_URL` in code.
+`QUERY_SERVICE_URL` is the project's Query Service host. Keboola injects it when the app has Storage access. Elsewhere (local dev, older apps) read it from the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`) instead of guessing it from the `KBC_URL` hostname.
 
 Library:
 - Python: `keboola-query-service`
@@ -469,47 +465,7 @@ class Storage:
 storage = Storage()  # module-level singleton
 ```
 
-**Node.js / TypeScript** (`storage.ts`):
-
-```typescript
-import { readFileSync } from 'node:fs';
-import { createQueryServiceClient } from '@keboola/api-client/queryService';
-import { createQueryServiceSdk } from '@keboola/api-client/sdk/queryService';
-
-const branchId = process.env.BRANCH_ID!;
-const workspaceId = JSON.parse(
-  readFileSync(process.env.KBC_WORKSPACE_MANIFEST_PATH!, 'utf8'),
-).workspaceId as string;
-
-const queryServiceClient = createQueryServiceClient({
-  baseUrl: process.env.QUERY_SERVICE_URL!,
-  auth: { type: 'sapi-token', token: process.env.KBC_TOKEN! },
-  middlewares: [],
-});
-const sdk = createQueryServiceSdk({ queryServiceClient });
-
-export async function select<T = Record<string, unknown>>(sql: string): Promise<T[]> {
-  const [result] = await sdk.executeQuery(branchId, workspaceId, {
-    statements: [sql],
-    transactional: true,
-  });
-  const cols = result.columns.map((c) => c.name);
-  return result.data.map((row: unknown[]) =>
-    Object.fromEntries(cols.map((name, i) => [name, row[i]])) as T,
-  );
-}
-
-export async function execute(sql: string): Promise<void> {
-  await sdk.executeQuery(branchId, workspaceId, { statements: [sql], transactional: true });
-}
-```
-
-Load `.env` once in your app entrypoint (`server.ts` / `server.js`) **before** importing `storage.ts` — keeping dotenv out of the wrapper makes it portable across ESM and CJS:
-
-```typescript
-import 'dotenv/config';
-import { select, execute } from './storage.js';
-```
+**Node.js / TypeScript:** use `templates/react-vite-app/server/kbcQuery.ts` — `runQuery(sql)` reads its env per call (a missing var fails the request, not the server start), finds the Query Service URL without guessing it, and never lets the SDK's `ApiError` (which carries the token) reach a log.
 
 Usage from the rest of the app:
 
@@ -521,13 +477,11 @@ storage.execute('INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id"
 
 ```typescript
 // TypeScript
-const rows = await select<{ id: string; name: string }>(
-  'SELECT "id", "name" FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100',
-);
-await execute(`INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES ('abc-123','Click')`);
+const rows = await runQuery('SELECT "id", "name" FROM "KBC_REGION_PROJID"."in.c-main"."customers" LIMIT 100');
+await runQuery(`INSERT INTO "KBC_REGION_PROJID"."out.c-data-app"."events" ("id","name") VALUES ('abc-123','Click')`);
 ```
 
-These examples use Snowflake quoting. On a **BigQuery** project the same `select()` / `execute()` calls work unchanged — only the SQL differs, e.g. `` SELECT `id`, `name` FROM `in_c_main`.`customers` LIMIT 100 ``. See "BigQuery SQL dialect" above.
+These examples use Snowflake quoting. On a **BigQuery** project the same `select()` / `execute()` / `runQuery()` calls work unchanged — only the SQL differs, e.g. `` SELECT `id`, `name` FROM `in_c_main`.`customers` LIMIT 100 ``. See "BigQuery SQL dialect" above.
 
 ### SQL injection — validate every interpolated value
 
