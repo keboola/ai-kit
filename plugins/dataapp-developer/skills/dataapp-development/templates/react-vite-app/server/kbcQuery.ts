@@ -7,6 +7,7 @@ import { createQueryServiceSdk, type ExecuteQueryOptions } from '@keboola/api-cl
  *
  * - Works on Snowflake and BigQuery; only the SQL dialect differs (`references/storage-access.md`).
  * - Env vars are read per call, so a missing one fails that request, not the server start.
+ * - Every row, or `[]` for a statement without a result set (INSERT, UPDATE); fewer rows than the service counted is an error.
  * - Logs row counts and a redacted SQL preview, never values.
  * - An HTTP failure is rethrown as a plain `Error`: the SDK's `ApiError` carries the request, token included.
  */
@@ -32,6 +33,9 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
     });
   const columns = result.columns?.map((c) => c.name) ?? [];
   const rows = (result.data ?? []).map((row) => Object.fromEntries(columns.map((name, i) => [name, row[i]])));
+  if (options?.maxRows === undefined && result.numberOfRows !== undefined && rows.length < result.numberOfRows) {
+    throw new Error(`kbcQuery: got ${rows.length} of ${result.numberOfRows} rows`);
+  }
   console.debug(`[kbcQuery] ${rows.length} rows <- ${previewSql(sql)}`);
   return rows;
 }
