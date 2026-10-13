@@ -93,7 +93,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.7.0
+1.7.1
 
 ## Maintainer
 

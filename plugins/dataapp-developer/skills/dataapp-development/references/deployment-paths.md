@@ -95,7 +95,8 @@ modify_streamlit_data_app(
     description="...",
     source_code="""
 import streamlit as st
-{QUERY_DATA_FUNCTION}  # required placeholder — MCP injects the query function
+# MCP replaces the next line with the query_data(sql) helper
+{QUERY_DATA_FUNCTION}
 # ... your app code using query_data(sql)
 """,
     packages=["pandas", "plotly"],
@@ -107,6 +108,13 @@ import streamlit as st
 # Then:
 deploy_data_app(action="deploy", configuration_id="<id-from-above>")
 ```
+
+**The `{QUERY_DATA_FUNCTION}` placeholder is an MCP feature, not a platform feature.**
+
+- Only `modify_streamlit_data_app` replaces it, when it saves the configuration.
+- On an update you can send either the existing code with the injected `query_data` block, or the placeholder. The tool handles both.
+- A configuration written any other way keeps the literal placeholder. That includes the Storage API, kbagent, or a script. In that case don't use the placeholder: define `query_data` in the app code yourself (see "Direct RO workspace queries" in [storage-access.md](storage-access.md)).
+- If the literal placeholder reaches the runtime, the app breaks. Newer Streamlit runtimes refuse to start it, with an error that names the placeholder. Older ones start, but show `NameError: name 'QUERY_DATA_FUNCTION' is not defined` in the browser.
 
 ## Path B — Claude Code / local agent with filesystem + MCP
 

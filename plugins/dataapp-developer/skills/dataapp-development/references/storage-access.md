@@ -171,13 +171,13 @@ Full reference and runnable harness: [duckdb-caching.md](duckdb-caching.md) and 
 ## Direct RO workspace queries
 
 Use this when:
-- You're using the MCP `modify_streamlit_data_app` flow and the `{QUERY_DATA_FUNCTION}` placeholder gets injected automatically — most agent-driven Streamlit creation works this way.
+- You're using the MCP `modify_streamlit_data_app` flow, which replaces the `{QUERY_DATA_FUNCTION}` placeholder with a `query_data` helper. Most agent-driven Streamlit creation works this way.
 - The cached dataset would be too large for an in-memory cache, OR the freshness requirement is sub-minute.
 - You're prototyping and haven't wired DuckDB yet.
 
 Two paths to call the workspace:
 
-- **MCP-injected `query_data`** — when `modify_streamlit_data_app` is involved, a `query_data(sql) -> pd.DataFrame` function is dropped into the source code via the `{QUERY_DATA_FUNCTION}` placeholder. Use it as-is; don't roll your own.
+- **MCP-injected `query_data`** — when `modify_streamlit_data_app` saves the app, it replaces the `{QUERY_DATA_FUNCTION}` placeholder with a `query_data(sql) -> pd.DataFrame` function. Use it as-is; don't roll your own. Only this MCP tool does the replacement — the placeholder is not a platform feature. If the configuration is written any other way (Storage API, kbagent, a script), leave the placeholder out and define `query_data` yourself with one of the options below, or the app breaks (see [deployment-paths.md](deployment-paths.md), Path A).
 - **Query Service via the official SDK** — for Python/JS apps without MCP injection, call the Query Service API (`https://query.<stack>.keboola.com/api/v1/...`) using `keboola-query-service` (Python) or `@keboola/api-client`'s `queryService` client + `queryService` SDK (JS/TS: `createQueryServiceSdk({ queryServiceClient })`). The SDK handles submit + poll + paginate; you call `executeQuery(...)` and get back columns + rows.
 
 **On Snowflake, do NOT post to `/v2/storage/branch/<b>/workspaces/<w>/query`.** That older Storage API workspace-query endpoint returns `workspace.workspaceNotFound` 404s on Snowflake projects — use the Query Service instead. On BigQuery it does work and is a valid alternative (see "Alternative: Storage API workspace-query endpoint" below), but default to the Query Service on both backends.
