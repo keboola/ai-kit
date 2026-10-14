@@ -9,7 +9,7 @@
 - POST handling on /
 - Python dependencies (`uv sync`, no `pip install`)
 - Default shape: React + Vite + Express in one Node container
-- Keboola's app preview: `kaiPreview()` in every Vite app
+- Keboola's app preview: `kaiPreview()` in new Vite apps, on request in existing ones
 - Multi-server pattern (Python backend + JS frontend)
 - Local development
 - Keboola-hosted dev mode (`KBC_APP_MODE=dev`)
@@ -183,23 +183,23 @@ Why it wins:
 
 Pairs with [duckdb-caching.md](duckdb-caching.md) by default — for read-only dashboards, cache once into an in-memory DuckDB so the dashboard never re-hits Snowflake on a page render.
 
-## Keboola's app preview: `kaiPreview()` in every Vite app
+## Keboola's app preview: `kaiPreview()` in new Vite apps, on request in existing ones
 
 `@keboola/vite-plugin-kai-preview` connects a Vite app to the preview in Keboola's app Builder:
 
 - On every page, in dev and in the build, it tells the preview whether the app rendered or crashed.
 - On the dev server, it lets the user pick parts of the page. Their message then names where each part is written (`src/File.tsx:line:col`) — edit there.
 
-The template ships it. An existing Vite app without it gets it in the first change you make to that app, so it works the same as a new one:
+The template ships it. An existing Vite app without it gets it only when the user asks to pick parts of the page — the Builder's "Enable picking" button sends that request. Never add it on your own while making another change: it costs the user a redeploy they did not ask for. On request:
 
 1. `npm install --save-dev @keboola/vite-plugin-kai-preview`, and commit the lockfile.
 2. In `vite.config.ts`, `import { kaiPreview } from '@keboola/vite-plugin-kai-preview'` and add `kaiPreview()` to `plugins`. An app that renders into an element other than `#root` passes it: `kaiPreview({ mount: '#app' })`.
 3. Remove what it replaces, or the preview hears two signals: an inline plugin that injects an error/healthy script (older apps call it `kaiPreviewErrorHandler`), and copied `preview-signal.js`, `preview-picker.js` or `preview-source.js` with the plugins that load them.
 4. Keep the app's error boundary. It still sets `window.__kaiPreviewCrashed` and calls `window.__kaiNotifyError`; type those with the package's `KaiPreviewWindow`.
 5. Type-check and push. The running dev container installs the package and restarts its `app` program, so Vite must run as `[program:app]` in `keboola-config/supervisord-dev/`, started as in §Supervisord. An app on `[program:vite]` renames the section inside its existing `.conf` and runs the binary. If it did not run the binary before (`npx vite`, `npm run dev`), it then runs `deploy_data_app(mode='dev')` once: the stopped wrapper left Vite on port 3000. Check the preview for the pick button.
-6. Keep it out of the conversation: the user asked for their change, not this. No progress line about it, no mention in the reply — unless a step fails and holds up their change; then say so in one line.
+6. Tell the user picking is ready; keep the steps out of the reply unless one fails.
 
-An app on an older release updates it the same way: `npm install --save-dev @keboola/vite-plugin-kai-preview@^<version>`, then steps 5 and 6.
+An app on an older release updates it the same way: `npm install --save-dev @keboola/vite-plugin-kai-preview@^<version>`, then step 5. That one is not the user's request, so leave it out of the reply unless it fails.
 
 Without React the picker still works but cannot name source locations. An app not built with Vite gets none of it — leave it as it is.
 
