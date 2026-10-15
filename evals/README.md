@@ -37,7 +37,8 @@ per-skill precision/recall, every misroute with the router's actual pick).
 
 ## How Tier 1 works
 
-The classifier (Claude Haiku, temperature 0) is shown the **full list of the
+The classifier (Claude Haiku 5.5 at effort `low`; override with
+`AIKIT_EVAL_CLASSIFIER_MODEL`) is shown the **full list of the
 marketplace's skill descriptions** — the same surface the real harness routes
 on — plus one user utterance, and asked which skills it would invoke. Grading
 is deterministic: the skill under test must appear iff the case says

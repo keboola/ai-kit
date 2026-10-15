@@ -29,7 +29,8 @@ jobs:
     # The paid tier only runs once the free deterministic tier is green.
     needs: tier0-lint
     # Needs an LLM classifier; runs only where the secret is available
-    # (skipped on forks). Deterministic grading, temperature 0.
+    # (skipped on forks). Deterministic grading; the Haiku 5.5 classifier has
+    # no temperature control, so a borderline case can flip between runs.
     steps:
       - uses: actions/checkout@v4
 
