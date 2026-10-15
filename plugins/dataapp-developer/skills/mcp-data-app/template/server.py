@@ -27,6 +27,12 @@ Required env vars (set as data-app secrets):
 Optional env vars:
     KBC_WORKSPACE_SCHEMA    Schema for SQL transformation tools. Find it in
                             your project's Snowflake/BigQuery workspace.
+    KBC_WORKSPACE_ID        Pin every tool call to this workspace ID instead
+                            of the default per-branch MCP-managed workspace —
+                            e.g. set it to this data app's own WORKSPACE_ID so
+                            queries run under the app's (often more
+                            restricted) permissions. Takes precedence over
+                            KBC_WORKSPACE_SCHEMA when both are set.
     MCP_PUBLIC_URL          Override for this app's externally reachable
                             origin, no trailing slash, no `/mcp`. Normally
                             leave unset: on Keboola the platform injects

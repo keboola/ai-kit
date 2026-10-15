@@ -67,6 +67,11 @@ Use the SAME Keboola Storage API token the app already has. Pass it on every Kai
 
 No separate Kai token. No OAuth flow on top. If your app authenticates the end user via OIDC (or whatever) you still use the project's Storage token for the Kai call — the end-user identity is conveyed via Kai's chat history association.
 
+**Pin Kai's queries to this app's own workspace.** Keboola injects `WORKSPACE_ID` into every Data App container — forward it as `x-workspace-id` on every Kai request so Kai queries this app's own (often more restricted) workspace instead of the default per-branch one:
+- Header: `x-workspace-id: <WORKSPACE_ID>` (omit when empty — e.g. local dev outside a Data App)
+
+Requires a `kai-client` release that includes the `workspace_id` param on `KaiClient`/`from_storage_api()` ([keboola/kai-client#48](https://github.com/keboola/kai-client/pull/48)). For a JS embed there's nothing to install; just add the header.
+
 ## Pattern A — Streamlit embed
 
 ```python
@@ -93,6 +98,7 @@ async def stream_response(chat_id, prompt):
     client = await KaiClient.from_storage_api(
         storage_api_token=os.environ["KBC_TOKEN"],
         storage_api_url=os.environ["KBC_URL"],
+        workspace_id=os.environ.get("WORKSPACE_ID") or None,  # Keboola injects this in Data Apps
     )
     async with client:
         async for event in client.send_message(chat_id, prompt):
@@ -159,6 +165,8 @@ async function proxySSE(payload, res) {
       'Content-Type': 'application/json',
       'x-storageapi-token': process.env.KBC_TOKEN,
       'x-storageapi-url': process.env.KBC_URL,
+      // Keboola injects WORKSPACE_ID into every Data App container
+      ...(process.env.WORKSPACE_ID && { 'x-workspace-id': process.env.WORKSPACE_ID }),
     },
     body: JSON.stringify(payload),
   });
