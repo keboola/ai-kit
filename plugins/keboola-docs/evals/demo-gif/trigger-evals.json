@@ -1,0 +1,34 @@
+[
+  {
+    "query": "add a demo gif to this repo's README",
+    "should_trigger": true
+  },
+  {
+    "query": "record a terminal demo of the CLI with vhs for the README",
+    "should_trigger": true
+  },
+  {
+    "query": "make the README more visual with a gif of the tool in action",
+    "should_trigger": true
+  },
+  {
+    "query": "record a web demo with Playwright and turn it into a README gif",
+    "should_trigger": true
+  },
+  {
+    "query": "record a clip of the Keboola UI for a help.keboola.com page",
+    "should_trigger": false
+  },
+  {
+    "query": "take a UI screenshot of the deploy wizard for the docs",
+    "should_trigger": false
+  },
+  {
+    "query": "make the docs page clip brighter",
+    "should_trigger": false
+  },
+  {
+    "query": "write the README for my new component",
+    "should_trigger": false
+  }
+]

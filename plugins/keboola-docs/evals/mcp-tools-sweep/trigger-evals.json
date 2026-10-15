@@ -1,0 +1,34 @@
+[
+  {
+    "query": "the MCP docs page tool list is outdated compared to the server",
+    "should_trigger": true
+  },
+  {
+    "query": "reconcile ai/mcp-server tools with keboola/mcp-server TOOLS.md",
+    "should_trigger": true
+  },
+  {
+    "query": "collapse these three MCP tool drift alerts into one sweep",
+    "should_trigger": true
+  },
+  {
+    "query": "a reviewer says the MCP page is missing two new tools",
+    "should_trigger": true
+  },
+  {
+    "query": "set up the Keboola MCP server in Claude Desktop",
+    "should_trigger": false
+  },
+  {
+    "query": "host an MCP server as a Keboola data app",
+    "should_trigger": false
+  },
+  {
+    "query": "write a how-to for connecting Cursor to Keboola MCP",
+    "should_trigger": false
+  },
+  {
+    "query": "list the tools my MCP server exposes",
+    "should_trigger": false
+  }
+]

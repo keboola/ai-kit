@@ -1,0 +1,34 @@
+[
+  {
+    "query": "record a short clip of Kai building an app for the docs page",
+    "should_trigger": true
+  },
+  {
+    "query": "запиши гифку для страницы getting started",
+    "should_trigger": true
+  },
+  {
+    "query": "the hub clip is too dark, re-render it brighter",
+    "should_trigger": true
+  },
+  {
+    "query": "export the docs clip as a GIF for Slack",
+    "should_trigger": true
+  },
+  {
+    "query": "take a screenshot of the Apps list for the docs",
+    "should_trigger": false
+  },
+  {
+    "query": "add numbered stage dots to the build-locally how-to",
+    "should_trigger": false
+  },
+  {
+    "query": "add a demo GIF of my CLI to its GitHub README",
+    "should_trigger": false
+  },
+  {
+    "query": "render a marketing video for the product launch with the Kai mascot",
+    "should_trigger": false
+  }
+]

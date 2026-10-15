@@ -1,0 +1,34 @@
+[
+  {
+    "query": "where should the migrated dev-docs Generic Writer section live in help?",
+    "should_trigger": true
+  },
+  {
+    "query": "audit this migration PR for duplicated pages and wrong placement",
+    "should_trigger": true
+  },
+  {
+    "query": "find the right home for the Extend pages in the help information architecture",
+    "should_trigger": true
+  },
+  {
+    "query": "this cross-cutting topic sits under the wrong parent after the migration",
+    "should_trigger": true
+  },
+  {
+    "query": "split this page into how-to and reference",
+    "should_trigger": false
+  },
+  {
+    "query": "rework the ported extend/ pages and fix their anchors",
+    "should_trigger": false
+  },
+  {
+    "query": "move my files to another folder in the repo",
+    "should_trigger": false
+  },
+  {
+    "query": "migrate my component to the new Python template",
+    "should_trigger": false
+  }
+]

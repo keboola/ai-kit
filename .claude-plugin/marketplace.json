@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "keboola-claude-kit",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "metadata": {
     "description": "Client-facing Claude Kit marketplace for Keboola workflows — component development, data app building, project management and review, and semantic layer toolkit"
   },
@@ -63,6 +63,13 @@
       "version": "3.0.0",
       "source": "./plugins/sl-toolkit",
       "category": "development"
+    },
+    {
+      "name": "keboola-docs",
+      "description": "Write, update, retire and ship pages on help.keboola.com (keboola/connection-docs) by the Diátaxis rules: a guided page workflow with proposals and stops, rule and link checks, UI screenshots and clips (Remotion included), a commit gate, and PR labels.",
+      "version": "0.4.1",
+      "source": "./plugins/keboola-docs",
+      "category": "documentation"
     }
   ]
 }

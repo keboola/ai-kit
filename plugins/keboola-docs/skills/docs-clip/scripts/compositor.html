@@ -1,0 +1,477 @@
+<!doctype html>
+<!-- compositor.html — local-only post-production stage for docs clips (gitignored).
+     Loads a source mp4, plays it with a variable-rate timeline, and overlays
+     spotlights, highlight boxes, caption chips and a cursor. record-composite.mjs
+     screen-records this page playing. Config per clip lives in CLIPS below. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #fff; }
+  #stage { position: relative; width: 100%; height: 100%; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* caption chip */
+  .chip {
+    position: absolute; left: 24px; bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+    background: #0b2039; color: #fff;
+    font: 600 17px/1.35 -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 11px 20px; border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(11, 32, 57, .35);
+    opacity: 0; transform: translateY(14px);
+    transition: opacity .45s ease, transform .45s ease;
+    max-width: 640px;
+  }
+  .chip.on { opacity: 1; transform: translateY(0); }
+  .chip b { color: #7cc4ff; font-weight: 800; }
+
+  /* highlight box around the thing to look at */
+  .hl {
+    position: absolute; border: 3px solid #1f8feb; border-radius: 12px;
+    box-shadow: 0 0 0 6px rgba(31, 143, 235, .18), 0 0 26px rgba(31, 143, 235, .45);
+    opacity: 0; transition: opacity .4s ease;
+    animation: pulse 1.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .hl.on { opacity: 1; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 6px rgba(31,143,235,.18), 0 0 26px rgba(31,143,235,.45); }
+    50%      { box-shadow: 0 0 0 11px rgba(31,143,235,.07), 0 0 34px rgba(31,143,235,.6); }
+  }
+
+  /* spotlight: dim everything except a cut-out rectangle */
+  .spot {
+    position: absolute; border-radius: 10px; opacity: 0;
+    transition: opacity .45s ease, left .5s ease, top .5s ease, width .5s ease, height .5s ease;
+    box-shadow: 0 0 0 9999px rgba(12, 18, 28, .66);
+    pointer-events: none;
+  }
+  .spot.on { opacity: 1; }
+
+  /* cursor: a dot that travels, with a ripple on click */
+  .cursor {
+    position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+    border-radius: 50%; background: rgba(17, 24, 39, .85);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .9), 0 4px 10px rgba(0, 0, 0, .3);
+    opacity: 0; transition: opacity .3s ease, left .45s cubic-bezier(.4,0,.2,1), top .45s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+  }
+  .cursor.on { opacity: 1; }
+  .ripple {
+    position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    border-radius: 50%; border: 2px solid rgba(31, 143, 235, .9);
+    opacity: 0; pointer-events: none;
+  }
+  .ripple.go { animation: ripple .5s ease-out 1; }
+  @keyframes ripple {
+    from { opacity: .9; transform: scale(.4); }
+    to   { opacity: 0;  transform: scale(3.2); }
+  }
+
+  /* intro acts: raw-file tiles, then the question */
+  .veil {
+    position: absolute; inset: 0; background: rgba(12, 18, 28, .66);
+    opacity: 0; transition: opacity .6s ease; pointer-events: none;
+  }
+  .veil.on { opacity: 1; }
+  .veil.thin { background: rgba(12, 18, 28, .82); }
+
+  .cards {
+    position: absolute; inset: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    padding: 60px 76px 118px; align-content: center;
+    opacity: 0; transition: opacity .5s ease; pointer-events: none;
+  }
+  .cards.on { opacity: 1; }
+  .tile {
+    background: #fff; border: 2px solid #dce7f2; border-radius: 14px; padding: 13px 16px 15px;
+    box-shadow: 0 4px 16px rgba(11, 32, 57, .09);
+    opacity: 0; transform: translateY(12px);
+    transition: opacity .45s ease, transform .45s ease;
+  }
+  .cards.on .tile { opacity: 1; transform: translateY(0); }
+  .cards.on .tile:nth-child(2) { transition-delay: .12s; }
+  .cards.on .tile:nth-child(3) { transition-delay: .24s; }
+  .cards.on .tile:nth-child(4) { transition-delay: .36s; }
+  .tile .fname {
+    font: 800 15px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #1f8feb; margin-bottom: 9px;
+  }
+  .tile .cols, .tile .row {
+    font: 500 14px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tile .cols { color: #8aa2b8; }
+  .tile .row { color: #0b2039; font-weight: 700; }
+  .tile .hi { background: #fff1a8; border-radius: 4px; padding: 1px 3px; }
+  .tile:nth-child(5) { grid-column: 1 / -1; }
+
+  .qcard {
+    position: absolute; left: 54px; right: 54px; top: 48%;
+    background: #fff; border-radius: 18px; padding: 42px 44px 46px;
+    box-shadow: 0 18px 60px rgba(6, 12, 22, .45);
+    transform: translateY(-50%) scale(.95); text-align: center;
+    opacity: 0; transition: opacity .6s ease, transform .6s cubic-bezier(.34, 1.4, .64, 1);
+    pointer-events: none;
+  }
+  .qcard.on { opacity: 1; transform: translateY(-50%) scale(1); }
+  .qcard .q {
+    font: 800 37px/1.26 -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #0b2039; letter-spacing: -.015em;
+  }
+  .qcard .q em { color: #1f8feb; font-style: normal; }
+  .qcard .sub {
+    margin-top: 16px; font: 700 18px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #5a7796;
+  }
+
+  /* bright look (2026-09-24): no scrim; an outline marks the point and the camera eases in.
+     Nikita found the dimmed clip dark (mean luma 71 of 255 against 229 for its screenshots). */
+  #cam {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    transform-origin: 0 0; transition: transform 1.2s cubic-bezier(.2, .7, .2, 1);
+  }
+  .bright .spot {
+    border: 3px solid #1f8feb;
+    box-shadow: 0 0 0 5px rgba(31, 143, 235, .16), 0 0 22px rgba(31, 143, 235, .35);
+  }
+  .bright .chip { font-size: 24px; padding: 13px 24px; max-width: 900px; }
+
+  /* pulsing map marker for the tour */
+  .ring {
+    position: absolute; width: 34px; height: 34px; border-radius: 50%;
+    border: 5px solid #1f8feb; background: rgba(31,143,235,.28);
+    opacity: 0; transition: opacity .35s ease;
+    animation: ringpulse 1.6s ease-out infinite; pointer-events: none;
+  }
+  .ring.on { opacity: 1; }
+  @keyframes ringpulse {
+    0%   { box-shadow: 0 0 0 0 rgba(31,143,235,.45); }
+    100% { box-shadow: 0 0 0 22px rgba(31,143,235,0); }
+  }
+
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="v" muted playsinline preload="auto"></video>
+  <div id="overlays"></div>
+</div>
+<script>
+const CHIP_ICON = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="6" fill="#1f8feb"/>
+</svg>`;
+
+const CLIPS = {
+  // Apps, pause page: ⋮ → Pause app → Pause now → Sleeping, then Start → Deploying → Running.
+  // Source 1280x700 (the 1280x800 take cropped below the top bar and right of the sidebar).
+  // Recorded 2026-10-14 in project 264 on the author's own test app; dialog backdrop painted light.
+  'app-pause': {
+    src: 'pause.src.mp4', w: 1280, h: 700, endAt: 47.6, holdMs: 2500, look: 'bright',
+    segments: [ { until: 3.8, rate: 6 }, { until: 9.8, rate: 1.4 }, { until: 21.6, rate: 1 }, { until: 43.8, rate: 12 }, { until: 99, rate: 1 } ],
+    overlays: [
+      { type: 'chip', from: 4.0, to: 9.7, html: 'A running app. Open the <b>⋮</b> menu in the header' },
+      { type: 'spot', from: 9.9, to: 11.7, rect: [1188, 32, 46, 42] },
+      { type: 'chip', from: 9.9, to: 14.5, html: '<b>Pause app</b>, then confirm with <b>Pause now</b>' },
+      { type: 'spot', from: 12.0, to: 13.9, rect: [728, 428, 126, 50] },
+      { type: 'chip', from: 14.8, to: 19.5, html: 'The app is <b>Sleeping</b>; the header now shows <b>Start</b>' },
+      { type: 'spot', from: 15.0, to: 19.5, rect: [974, 84, 108, 48] },
+      { type: 'chip', from: 19.8, to: 43.9, html: '<b>Start</b> brings it back: Starting, then Deploying…' },
+      { type: 'chip', from: 44.3, html: '<b>Running</b> again, same URL and settings' },
+    ],
+  },
+  // Getting Started, ask page: Kai answers the staffing question. Source 1280x800, trimmed to start
+  // at 6.5 s (panel already open, prompt being typed). Recorded 2026-09-14 in project 264.
+  'kai-ask-staffing': {
+    src: 'kai-ask-staffing.src.mp4', w: 1280, h: 800, endAt: 73, holdMs: 3500,
+    // 0–2 s typing tail + send · 2–52 s thinking/querying (compressed) · 52–60 the table lands · 60–78 the conclusion
+    segments: [ { until: 2.2, rate: 0.9 }, { until: 52, rate: 9.0 }, { until: 60, rate: 0.8 }, { until: 99, rate: 0.9 } ],
+    overlays: [
+      { type: 'chip', from: 0.3, to: 12, html: 'Ask Kai — <b>read-only</b>, nothing to set up' },
+      { type: 'chip', from: 12.5, to: 52, html: 'Kai reads the table schema, then queries all 42 rows' },
+      { type: 'chip', from: 53, to: 68, html: 'Two red days: both <b>Brno</b>, both on a <b>2-person</b> roster' },
+      { type: 'spot', from: 69, rect: [905, 250, 365, 175] },
+      { type: 'chip', from: 69.5, html: '<b>Dry, warm days</b> hit the thinnest roster: Tuesday is the sharpest mismatch' },
+    ],
+  },
+};
+
+// Scene mode: no source video — a static background the spotlight tours, stop by stop.
+// Coordinates are native pixels of the background image.
+const SCENES = {
+  // Getting Started hub: five files → the question → the grid. bg = grid-bg.png (966x744, the app's
+  // draft preview on 2026-09-14). Coordinates are native pixels of that image.
+  'outlook-tour': {
+    w: 966, h: 724,
+    travelMs: 2000, dwellMs: 3000, finalHoldMs: 3800,
+    cards: {
+      chip: 'Five files: sales, products, stores, staffing, weather. <b>None of them answers alone.</b>',
+      holdMs: 3600,
+      tiles: [
+        { file: 'sales.csv', cols: 'date, store_id, product_id, units, revenue_czk',
+          row: '2026-06-01, <span class="hi">S02</span>, P01, 24, 1896', point: true },
+        { file: 'stores.csv', cols: 'store_id, store_name, city, seats, terrace_seats',
+          row: '<span class="hi">S02</span>, Boolabean Zelný trh, Brno, 30, 18' },
+        { file: 'staffing.csv', cols: 'date, store_id, staff_on_shift, labour_hours',
+          row: '2026-06-01, S02, 2, 16' },
+        { file: 'weather_daily.csv', cols: 'date, store_id, temp_max_c, rain_mm',
+          row: '2026-06-01, S02, 19.7, 5.2' },
+        { file: 'products.csv', cols: 'product_id, product_name, category, price_czk',
+          row: '<span class="hi">P01</span>, Filter of the Day, coffee, 79' },
+      ],
+    },
+    question: {
+      q: 'Which day next week will leave<br><em>a café short-handed?</em>',
+      sub: 'Five files and a live forecast in. One grid out.',
+      holdMs: 3600,
+    },
+    stops: [
+      // x and y are the CENTRE of the cut-out, and the sizes are aligned to the
+      // grid's own cell edges: columns start at 192 and run 107 wide, rows are 100
+      // tall from 165. A box that lands mid-cell slices the text it is meant to be
+      // revealing, which is what every stop used to do (Nikita, 2026-09-15).
+      { x: 152, y: 62, w: 280, h: 76, chip: 'The answer is one line: <b>two red café-days</b> this week' },
+      { x: 213, y: 694, w: 378, h: 54, chip: '<b>Brno, Tuesday</b>: 85 cups per person, on a two-person roster' },
+      { x: 678, y: 215, w: 100, h: 92, chip: 'A dash means the summer never had a day like it: <b>not</b> an error' },
+      { x: 860, y: 40, chip: 'Five files → one pipeline → this grid, rebuilt <b>every morning at six</b>', noRing: true },
+    ],
+  },
+  // Getting Started hub, bright look (2026-09-25, third cut). No scrim and no camera move: an
+  // outline marks the point. Backgrounds are 16:10 crops of 2x captures from project 264, shown at
+  // 1280x800. The Kai frames stop above the chat's input box, whose border read as a second
+  // outline; the Apps list stops after row five; the grid is cut between two lines of text, above
+  // a line its own screenshot slices. Captions stay up at least 3 s. Five scenes, recorded one per
+  // background and joined with 0.35 s crossfades.
+  'hub-ask': {
+    look: 'bright', w: 1280, h: 800, travelMs: 700, dwellMs: 3600, finalHoldMs: 4000, zoomMax: 1, chipInset: 12,
+    stops: [ { x: 606, y: 287, w: 947, h: 118, chip: 'Ask the table a question. Kai answers from the data, <b>and says why</b>.' } ],
+  },
+  'hub-whatif': {
+    look: 'bright', w: 1280, h: 800, travelMs: 700, dwellMs: 3600, finalHoldMs: 4000, zoomMax: 1, chipInset: 12,
+    stops: [ { x: 605, y: 370, w: 948, h: 342, chip: 'Ask a what-if. <b>Same table</b>, one question.' } ],
+  },
+  'hub-describe': {
+    look: 'bright', w: 1280, h: 800, travelMs: 700, dwellMs: 3600, finalHoldMs: 4000, zoomMax: 1,
+    stops: [ { x: 643, y: 632, w: 1115, h: 125, chip: 'Describe an app <b>in a paragraph</b>.' } ],
+  },
+  'hub-apps': {
+    // the hub's own words ("Where to start instead"), so the caption adds no fact the page lacks
+    look: 'bright', w: 1280, h: 800, travelMs: 700, dwellMs: 3600, finalHoldMs: 4000, zoomMax: 1, chipLeft: 24,
+    stops: [ { x: 640, y: 400, chipAt: 'top', noRing: true, chip: 'Go straight to a data app on <b>data you already have</b>.' } ],
+  },
+  'hub-grid': {
+    look: 'bright', w: 1280, h: 800, travelMs: 700, dwellMs: 3600, finalHoldMs: 4000, zoomMax: 1, chipLeft: 470,
+    stops: [
+      { x: 441, y: 747, w: 232, h: 36, chip: 'Six cafés by seven days, <b>red where it will hurt</b>.' },
+      { x: 640, y: 400, chipAt: 'top', noRing: true, chip: 'The seven steps below build <b>the table behind all of this</b>.' },
+    ],
+  },
+};
+
+const params = new URLSearchParams(location.search);
+const sceneId = params.get('scene');
+
+if (sceneId) {
+  const sc = SCENES[sceneId];
+  const stage = document.getElementById('stage');
+  document.getElementById('v').remove();
+  const bright = sc.look === 'bright';
+  if (bright) stage.classList.add('bright');
+  // In the bright look the image and its outline ride a camera the tour eases in; the chip stays put.
+  const cam = bright ? document.createElement('div') : null;
+  if (cam) { cam.id = 'cam'; stage.insertBefore(cam, stage.firstChild); }
+  const bg = document.createElement('img');
+  bg.src = params.get('bg');
+  Object.assign(bg.style, { position: 'absolute', left: 0, top: 0, width: (sc.w || 966) + 'px', height: (sc.h || 744) + 'px' });
+  (cam || stage).insertBefore(bg, (cam || stage).firstChild);
+
+  // The guide is a spotlight, not a character: a cut-out rectangle over the
+  // point being made, everything else dimmed. Nikita asked for the mascot to go
+  // (2026-09-14) and Michal's "být sušší" points the same way.
+  const spot = document.createElement('div');
+  spot.className = 'spot';
+  (cam || stage).appendChild(spot);
+
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.style.left = (sc.chipLeft ?? 368) + 'px'; // clear of the app sidebar; a scene may override
+  chip.innerHTML = `<span></span><span></span>`;
+  stage.appendChild(chip);
+
+  // intro acts: a veil over the map, the raw-file tiles, and the question card
+  const veil = document.createElement('div');
+  veil.className = bright ? 'veil' : 'veil on';   // dimmed look: frame 0 is the scrim, never the finished grid
+  veil.style.transition = 'none';
+  const under = bright ? chip : spot;              // overlays go above the image, below the chip
+  stage.insertBefore(veil, under);
+  requestAnimationFrame(() => { veil.style.transition = ''; });
+
+  const cards = document.createElement('div');
+  cards.className = 'cards';
+  if (sc.cards) {
+    cards.innerHTML = sc.cards.tiles.map(t => `
+      <div class="tile">
+        <div class="fname">${t.file}</div>
+        <div class="cols">${t.cols}</div>
+        <div class="row">${t.row}</div>
+      </div>`).join('');
+  }
+  stage.insertBefore(cards, under);
+
+
+  const qcard = document.createElement('div');
+  qcard.className = 'qcard';
+  if (sc.question) {
+    qcard.innerHTML = `<div class="q">${sc.question.q}</div><div class="sub">${sc.question.sub}</div>`;
+  }
+  stage.insertBefore(qcard, under);
+
+  // The caption sits in whichever half the spotlight is not in. The grid's last
+  // row is its bottom row, so a chip pinned to the bottom covered the café the
+  // whole clip is about (Nikita, 2026-09-15).
+  const placeChip = (centreY) => {
+    const low = centreY != null && centreY > sc.h * 0.55;
+    const inset = (sc.chipInset ?? 22) + 'px';
+    if (low) { chip.style.top = inset; chip.style.bottom = 'auto'; }
+    else { chip.style.bottom = inset; chip.style.top = 'auto'; }
+  };
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  // Put the spotlight over a rect without animating the move (act changes).
+  const placeSpot = (x, y, w, h, animate = true) => {
+    const t = spot.style.transition;
+    if (!animate) spot.style.transition = 'opacity .45s ease';
+    Object.assign(spot.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    if (!animate) { void spot.offsetWidth; spot.style.transition = t; }
+  };
+  // A stop is a point; the spotlight around it is a fixed window centred there.
+  const SPOT_W = 320, SPOT_H = 132;
+  const spotAt = (x, y, animate = true, w = SPOT_W, h = SPOT_H) =>
+    placeSpot(Math.max(8, x - w / 2), Math.max(8, y - h / 2), w, h, animate);
+  // Bright look: ease the camera in on a stop, as far as keeps its outline 28px inside the frame
+  // (at most sc.zoomMax, 1.10 by default); a stop with no outline eases back out.
+  const W = sc.w || 966, H = sc.h || 744, MARGIN = 28, ZMAX = sc.zoomMax ?? 1.10;
+  const zoomTo = (s) => {
+    if (!cam) return;
+    if (s.noRing || !s.w || !s.h) { cam.style.transform = 'scale(1)'; return; }
+    const hw = s.w / 2, hh = s.h / 2;
+    const z = Math.min(ZMAX, (s.x - MARGIN) / hw, (W - MARGIN - s.x) / hw, (s.y - MARGIN) / hh, (H - MARGIN - s.y) / hh);
+    if (!(z > 1.005)) { cam.style.transform = 'scale(1)'; return; }
+    cam.style.transformOrigin = `${s.x}px ${s.y}px`;
+    cam.style.transform = `scale(${z.toFixed(3)})`;
+  };
+
+  window.start = async () => {
+    document.title = 'COMPOSITE-PLAYING';
+
+    // ---- Act 1: four raw files, none of them answering ----
+    if (sc.cards) {
+      veil.classList.add('on');
+      cards.classList.add('on');
+      await sleep(900);
+      // the spotlight lands on the id that means nothing on its own
+      const hiIdx = sc.cards.tiles.findIndex(t => t.point);
+      const tile = cards.children[hiIdx < 0 ? 0 : hiIdx];
+      const r = tile.getBoundingClientRect();
+      // Light the whole tile, never the token inside it: a cut-out sized to
+      // `S02` cut through the characters either side of it (Nikita, 2026-09-15).
+      placeSpot(r.left - 8, r.top - 8, r.width + 16, r.height + 16, false);
+      spot.classList.add('on');
+      placeChip(r.top + r.height / 2);
+      chip.querySelector('span + span').innerHTML = sc.cards.chip;
+      chip.classList.add('on');
+      await sleep(sc.cards.holdMs);
+      spot.classList.remove('on');
+    }
+
+    // ---- Act 2: the question, over the map ----
+    if (sc.question) {
+      cards.classList.remove('on');
+      chip.classList.remove('on');
+      veil.classList.add('thin');
+      spot.classList.remove('on');
+      await sleep(500);
+      qcard.classList.add('on');
+      await sleep(sc.question.holdMs);
+      qcard.classList.remove('on');
+      veil.classList.remove('on');
+      await sleep(650);
+    }
+
+    // ---- Act 3: the tour ----
+    for (let i = 0; i < sc.stops.length; i++) {
+      const s = sc.stops[i];
+      const last = i === sc.stops.length - 1;
+      chip.classList.remove('on');
+      if (s.noRing) spot.classList.remove('on');           // a closing line points at nothing
+      else if (i === 0 || !spot.classList.contains('on')) { spotAt(s.x, s.y, false, s.w, s.h); spot.classList.add('on'); }
+      else spotAt(s.x, s.y, true, s.w, s.h);
+      zoomTo(s);
+      await sleep(sc.travelMs + 150);
+      // chipAt pins the caption; otherwise it takes the half the outline is not in
+      placeChip(s.chipAt === 'top' ? sc.h : s.chipAt === 'bottom' ? 0 : (s.noRing ? null : s.y));
+      chip.querySelector('span + span').innerHTML = s.chip;
+      chip.classList.add('on');
+      await sleep(last ? sc.finalHoldMs : sc.dwellMs);
+    }
+    document.title = 'COMPOSITE-DONE';
+  };
+} else {
+
+const clip = CLIPS[params.get('clip')];
+if (clip.look === 'bright') document.getElementById('stage').classList.add('bright');   // outline, no scrim (2026-09-24 rule), clip mode too
+const v = document.getElementById('v');
+const box = document.getElementById('overlays');
+v.src = params.get('src') || clip.src;
+
+const els = clip.overlays.map(o => {
+  let el;
+  if (o.type === 'chip') {
+    el = document.createElement('div'); el.className = 'chip';
+    el.innerHTML = `<span></span><span>${o.html}</span>`;
+  } else if (o.type === 'hl') {
+    el = document.createElement('div'); el.className = 'hl';
+    const [x, y, w, h] = o.rect;
+    Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  } else if (o.type === 'spot') {
+    el = document.createElement('div'); el.className = 'spot';
+    const [x, y, w, h] = o.rect;
+    Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  } else if (o.type === 'cursor') {
+    el = document.createElement('div'); el.className = 'cursor';
+    Object.assign(el.style, { left: o.x + 'px', top: o.y + 'px' });
+  }
+  box.appendChild(el);
+  return { o, el };
+});
+
+let ended = false;
+function tick() {
+  const t = v.currentTime;
+  const seg = clip.segments.find(s => t < s.until);
+  if (seg && v.playbackRate !== seg.rate) v.playbackRate = seg.rate;
+  for (const { o, el } of els) {
+    const on = t >= o.from && (o.to === undefined || t < o.to);
+    el.classList.toggle('on', on || (ended && o.to === undefined && t >= o.from - 0.3));
+  }
+  if (!ended && clip.endAt && t >= clip.endAt) { v.pause(); finish(); return; }
+  if (!ended) requestAnimationFrame(tick);
+}
+function finish() {
+  ended = true;
+  for (const { o, el } of els) if (o.to === undefined) el.classList.add('on');
+  setTimeout(() => { document.title = 'COMPOSITE-DONE'; }, clip.holdMs);
+}
+v.addEventListener('ended', finish);
+window.start = async () => {
+  await v.play();
+  document.title = 'COMPOSITE-PLAYING';
+  requestAnimationFrame(tick);
+};
+
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "keboola-docs",
+  "displayName": "Keboola docs (help.keboola.com)",
+  "version": "0.4.1",
+  "description": "Write, update, retire and ship pages on help.keboola.com (keboola/connection-docs) by the Diátaxis rules: a guided page workflow with proposals and stops, rule and link checks, UI screenshots and clips (Remotion included), a commit gate, and PR labels.",
+  "author": {
+    "name": "Keboola :(){:|:&};: s.r.o.",
+    "email": "support@keboola.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "keboola",
+    "docs",
+    "diataxis",
+    "starlight"
+  ],
+  "experimental": {
+    "evals": "evals-behavior"
+  }
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "query": "delete the data-apps/old-page doc, it duplicates operate",
+    "should_trigger": true
+  },
+  {
+    "query": "merge storage/files/index and storage/files/overview into one page with a redirect",
+    "should_trigger": true
+  },
+  {
+    "query": "rename the slug cli/commands to cli/reference on help.keboola.com",
+    "should_trigger": true
+  },
+  {
+    "query": "слей эти две страницы и поставь редирект",
+    "should_trigger": true
+  },
+  {
+    "query": "the screenshot on the transformations page is outdated",
+    "should_trigger": false
+  },
+  {
+    "query": "write a new explanation page on how Keboola branches work",
+    "should_trigger": false
+  },
+  {
+    "query": "check all links on the PR I just made",
+    "should_trigger": false
+  },
+  {
+    "query": "delete this git branch locally",
+    "should_trigger": false
+  }
+]
