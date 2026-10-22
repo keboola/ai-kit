@@ -1,0 +1,34 @@
+[
+  {
+    "query": "I couldn't check this claim live, how do I flag it on the docs page?",
+    "should_trigger": true
+  },
+  {
+    "query": "the diff has VERIFY(Michal) comments, should I delete them before the PR?",
+    "should_trigger": true
+  },
+  {
+    "query": "View as Markdown shows our internal notes to readers, what went wrong?",
+    "should_trigger": true
+  },
+  {
+    "query": "list every open VERIFY marker on main for one owner",
+    "should_trigger": true
+  },
+  {
+    "query": "check this page against Diátaxis rules",
+    "should_trigger": false
+  },
+  {
+    "query": "fact-check the new data apps reference page",
+    "should_trigger": false
+  },
+  {
+    "query": "add a TODO comment in my Python code",
+    "should_trigger": false
+  },
+  {
+    "query": "verify my email address in Keboola",
+    "should_trigger": false
+  }
+]

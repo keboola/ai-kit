@@ -1,0 +1,16 @@
+{
+  "app": "https://kaide.agnes-fleet.keboola.systems",
+  "chatPath": "/chat",
+  "loginPath": "/login",
+  "state": "~/.keboola-shots/state-kaide.json",
+  "composer": "#chat-input",
+  "send": "button.cloud-chat-send-btn",
+  "chatLink": "nav.rail .cloud-chat-list-link",
+  "sessionParam": "session",
+  "busyLabel": "stop|cancel generat",
+  "viewport": [
+    1280,
+    800
+  ],
+  "zoomOn": ".msg-sources"
+}

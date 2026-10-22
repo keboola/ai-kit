@@ -56,6 +56,10 @@ def test_relative_markdown_links_resolve(path):
     for target in MARKDOWN_LINK_RE.findall(text):
         if target.startswith(("http://", "https://", "mailto:", "#", "<")):
             continue
+        # Site-absolute paths (/section/page/) are routes on a docs site, not files next to
+        # this markdown: keboola-docs templates and its check.mjs fixtures are docs pages.
+        if target.startswith("/"):
+            continue
         # strip anchors and querystrings
         clean = target.split("#", 1)[0].split("?", 1)[0]
         if not clean:

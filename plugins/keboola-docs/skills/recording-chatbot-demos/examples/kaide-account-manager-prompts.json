@@ -1,0 +1,51 @@
+[
+ {
+  "prompt": "We are opening the new flexibles plant in Jackson. How much of it do we still need to fill, in units and in dollars a year?",
+  "expect": [
+   "23[.,]9",
+   "26[.,]4|26[.,]5"
+  ]
+ },
+ {
+  "prompt": "Show me potential customers in my region that look like the customers buying flexibles from us elsewhere.",
+  "expect": [
+   "Drosomora",
+   "Belvorne"
+  ]
+ },
+ {
+  "prompt": "For the top ones that are not customers yet, who should I talk to? I would rather reach someone in engineering or product development than purchasing.",
+  "expect": [
+   "Erica Le",
+   "Drosomora"
+  ]
+ },
+ {
+  "prompt": "How many of those lookalikes am I already selling rigids to?",
+  "expect": [
+   "\\b6\\b|\\bSix\\b",
+   "6\\.0\\d?M|6,035,855"
+  ]
+ },
+ {
+  "prompt": "Which of my customers have open quote requests for a rigid product that I should call today to see if they need an associated flexible component?",
+  "expect": [
+   "Ostrelle",
+   "Belvorne"
+  ]
+ },
+ {
+  "prompt": "Belvorne's request is a PETG tray. Do we make a lid like that? Based on like products, generate me a spec sheet and a quote proposal for that lid, with a price range based on the last 10 prices.",
+  "expect": [
+   "PK-50018",
+   "EtO"
+  ]
+ },
+ {
+  "prompt": "Show me Collin Berry's open quote requests in Packaging North and West.",
+  "expect": [
+   "Collin Berry",
+   "can.t|cannot|not available|isn.t available"
+  ]
+ }
+]
