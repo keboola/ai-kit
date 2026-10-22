@@ -27,6 +27,14 @@ Required env vars (set as data-app secrets):
 Optional env vars:
     KBC_WORKSPACE_SCHEMA    Schema for SQL transformation tools. Find it in
                             your project's Snowflake/BigQuery workspace.
+    KBC_WORKSPACE_ID        Override only. With Storage Access enabled, tool
+                            calls already run in this data app's own
+                            workspace: the WORKSPACE_ID that Keboola injects
+                            is read at startup, so it follows the workspace
+                            that is recreated on every start or wake. Set this
+                            only to pin a stable workspace you manage
+                            yourself. Takes precedence over
+                            KBC_WORKSPACE_SCHEMA when both are set.
     MCP_PUBLIC_URL          Override for this app's externally reachable
                             origin, no trailing slash, no `/mcp`. Normally
                             leave unset: on Keboola the platform injects
@@ -86,7 +94,13 @@ MCP_PUBLIC_URL = (
 
 # Build the Keboola MCP Server config from KBC_*-prefixed env vars; see
 # keboola_mcp_server.config.Config for the full list of fields.
-config = Config.from_dict(dict(os.environ))
+env = dict(os.environ)
+# The server ignores the bare WORKSPACE_ID on purpose (it could pin every
+# tenant of a shared server), so this single-tenant app maps its own workspace
+# here. The value can carry a WORKSPACE_ prefix; the API wants the numeric ID.
+if not env.get("KBC_WORKSPACE_ID") and env.get("WORKSPACE_ID"):
+    env["KBC_WORKSPACE_ID"] = env["WORKSPACE_ID"].removeprefix("WORKSPACE_")
+config = Config.from_dict(env)
 if not config.storage_api_url or not config.storage_token:
     raise SystemExit(
         "Missing required env vars: set KBC_STORAGE_API_URL and KBC_STORAGE_TOKEN "
