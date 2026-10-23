@@ -22,8 +22,6 @@ export class RowLevelSecurityError extends Error {
  * - Every row, or `[]` for a statement without a result set (INSERT, UPDATE); fewer rows than the service counted is an error.
  * - Logs row counts and a redacted SQL preview, never values.
  * - An HTTP failure is rethrown as a plain `Error`: the SDK's `ApiError` carries the request, token included.
- * - Inside a request it sends the user's `X-Kbc-App-User-Token` (`userToken.ts`), so a governed workspace answers
- *   with that user's rows. A row-level security refusal is a `RowLevelSecurityError`.
  */
 export async function runQuery(sql: string, options?: ExecuteQueryOptions): Promise<Record<string, unknown>[]> {
   const env = readEnv();

@@ -13,8 +13,8 @@ async function serve(app: express.Express) {
 
 function appEchoingToken() {
   const app = express();
-  app.use(express.json());
   app.use(userTokenScope);
+  app.use(express.json());
   app.post('/echo', async (req, res) => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     const scope = currentUserToken();
