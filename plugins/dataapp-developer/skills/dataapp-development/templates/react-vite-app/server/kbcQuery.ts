@@ -1,6 +1,17 @@
-import { isApiError } from '@keboola/api-client';
+import { isApiError, type ApiError, type MiddlewareFn } from '@keboola/api-client';
 import { createQueryServiceClient } from '@keboola/api-client/queryService';
 import { createQueryServiceSdk, type ExecuteQueryOptions } from '@keboola/api-client/sdk/queryService';
+import { currentUserToken, USER_TOKEN_HEADER } from './userToken.ts';
+
+const RLS_DENIED = 'Row-level security does not allow this query';
+
+/** Query Service refused the query by row-level security; `message` is fit to show the user. */
+export class RowLevelSecurityError extends Error {
+  constructor() {
+    super('You have no access to this data. Sign in again, or ask the app owner for access.');
+    this.name = 'RowLevelSecurityError';
+  }
+}
 
 /**
  * Runs SQL in the app's Storage workspace through the Query Service SDK and returns every row.
@@ -11,14 +22,17 @@ import { createQueryServiceSdk, type ExecuteQueryOptions } from '@keboola/api-cl
  * - Every row, or `[]` for a statement without a result set (INSERT, UPDATE); fewer rows than the service counted is an error.
  * - Logs row counts and a redacted SQL preview, never values.
  * - An HTTP failure is rethrown as a plain `Error`: the SDK's `ApiError` carries the request, token included.
+ * - Inside a request it sends the user's `X-Kbc-App-User-Token` (`userToken.ts`), so a governed workspace answers
+ *   with that user's rows. A row-level security refusal is a `RowLevelSecurityError`.
  */
 export async function runQuery(sql: string, options?: ExecuteQueryOptions): Promise<Record<string, unknown>[]> {
   const env = readEnv();
+  const scope = currentUserToken();
   const sdk = createQueryServiceSdk({
     queryServiceClient: createQueryServiceClient({
       baseUrl: env.QUERY_SERVICE_URL ?? (await queryServiceUrlFromIndex(env.KBC_URL)),
       auth: { type: 'sapi-token', token: env.KBC_TOKEN },
-      middlewares: [],
+      middlewares: scope?.userToken ? [userTokenMiddleware(scope.userToken)] : [],
     }),
   });
   const [result] = await sdk
@@ -29,6 +43,14 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
     })
     .catch((err: unknown) => {
       if (!isApiError(err)) throw err;
+      if (isRowLevelSecurityRefusal(err)) {
+        console.warn(
+          scope?.userToken
+            ? '[kbcQuery] row-level security refused the query for this user'
+            : `[kbcQuery] row-level security refused a query sent without ${USER_TOKEN_HEADER}: ${scope ? 'the request has none' : 'it ran outside a user request (startup, timer, background job)'}`,
+        );
+        throw new RowLevelSecurityError();
+      }
       const data = err.data as { exception?: string; message?: string } | undefined;
       throw new Error(`query service ${err.response.status}: ${data?.exception ?? data?.message ?? err.message}`);
     });
@@ -41,6 +63,22 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
   }
   console.debug(`[kbcQuery] ${rows.length} rows <- ${previewSql(sql)}`);
   return rows;
+}
+
+function userTokenMiddleware(userToken: string): MiddlewareFn {
+  return (next) => (fetchRequest) => {
+    fetchRequest.request.headers.set(USER_TOKEN_HEADER, userToken);
+    return next(fetchRequest);
+  };
+}
+
+/** Status, header and text together: a governed workspace sends `X-KBC-RLS-Mode: enforce` on its other 403s too. */
+function isRowLevelSecurityRefusal(err: ApiError) {
+  return (
+    err.response.status === 403 &&
+    err.response.headers.get('X-KBC-RLS-Mode') === 'enforce' &&
+    (err.data as { exception?: string } | undefined)?.exception === RLS_DENIED
+  );
 }
 
 const NUMBER_TYPE = /^(fixed|real|integer|int64|float|float64|numeric|bignumeric)$/i;

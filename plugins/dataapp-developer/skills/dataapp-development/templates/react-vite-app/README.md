@@ -20,7 +20,9 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 │   └── lib/api.ts                # fetchJson + QueryClient
 ├── server/
 │   ├── index.ts                  # Express: /api/*, JSON errors, the built client in prod
-│   └── kbcQuery.ts               # runQuery(sql) on @keboola/api-client — every row, Snowflake or BigQuery
+│   ├── kbcQuery.ts               # runQuery(sql) on @keboola/api-client — every row, Snowflake or BigQuery
+│   ├── userToken.ts              # keeps the request's X-Kbc-App-User-Token for runQuery
+│   └── *.test.ts                 # npm test (node:test, no extra dependency)
 └── keboola-config/
     ├── nginx/sites/default.conf  # 8888 → :3000, answers the platform's POST / health check, gzip
     ├── setup.sh / setup-dev.sh   # prod: npm install + vite build · dev: npm install
@@ -56,12 +58,19 @@ In dev mode the user can pick a part of the page in Keboola's app preview and as
 - **Server:** `runQuery(sql)` in `server/kbcQuery.ts` runs SQL in the app's workspace through `@keboola/api-client`'s Query Service SDK and returns every row. Write the SQL in the project's dialect (`references/storage-access.md`). Rows come back typed — numbers, booleans, `YYYY-MM-DD` dates, ISO timestamps — with lower-case keys (`COUNT(*) AS n` is `row.n` on both backends).
 - **Client:** `useQuery({ queryKey, queryFn: ({ signal }) => fetchJson(url, { signal }) })`. Results stay fresh for 5 minutes — every refetch is a warehouse query.
 - **Errors:** the API answers `{ error }` as JSON and the client shows it at once. Only "API not up" (network error, 502–504) is retried, with backoff up to ~15 s.
+- **User token:** Keboola's apps proxy adds `X-Kbc-App-User-Token` to every request. `server/userToken.ts` keeps it for the request, and `runQuery` sends it to the Query Service, so a workspace with row-level security returns that user's rows. Route code does nothing for it. A refusal is a `RowLevelSecurityError`, which the API answers as 403 with a "sign in again, or ask for access" message.
+- **No user, no token:** `runQuery` outside a request (at startup, in a timer, in a background job) sends no user token. A workspace with row-level security refuses it, and the server log says so.
+- **Caches:** a cache in the server must not give one user's rows to another. Key it by user, or do not cache. `references/storage-access.md` §Row-level security.
 
 ## Dependencies
 
 - Add one by editing `package.json` — the setup scripts run `npm install`, never `npm ci`, so a lagging lockfile still boots. Commit the regenerated lockfile.
 - Generate the lockfile with the image's npm (11.12.1 in the `…_node-24` images; `npm -v` in the container tells), or the container rewrites it on first install and every push looks like a dependency change: `npx -y npm@11.12.1 install --package-lock-only`.
 - npm, not bun: the dev-mode watcher looks for the legacy `bun.lockb`.
+
+## Tests
+
+`npm test` runs `server/*.test.ts` with Node's own test runner. Add tests next to the code they cover.
 
 ## Local development
 
