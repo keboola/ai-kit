@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
 import express from 'express';
-import { currentUserToken, userTokenScope } from './userToken.ts';
+import { currentUserKey, currentUserToken, userTokenScope, userTokenStorage } from './userToken.ts';
 
 async function serve(app: express.Express) {
   const server = app.listen(0, '127.0.0.1');
@@ -54,4 +54,24 @@ test('a request without the header is in a request scope with no token', async (
 
 test('code outside a request has no scope', () => {
   assert.equal(currentUserToken(), undefined);
+});
+
+function fakeToken(payload: object) {
+  return ['{"alg":"ES256"}', JSON.stringify(payload)].map((part) => Buffer.from(part).toString('base64url')).join('.') + '.sig';
+}
+
+test('the user key is idp and sub, the same for every token of that user', () => {
+  const key = (payload: object) => userTokenStorage.run({ userToken: fakeToken(payload) }, currentUserKey);
+  const anna = key({ idp: 'https://login.example.com', sub: 'anna', jti: '1' });
+  assert.equal(anna, key({ idp: 'https://login.example.com', sub: 'anna', jti: '2' }));
+  assert.notEqual(anna, key({ idp: 'https://login.example.com', sub: 'bob', jti: '1' }));
+  assert.notEqual(anna, key({ idp: 'https://other.example.com', sub: 'anna', jti: '1' }));
+  assert.doesNotMatch(String(anna), /sig/);
+});
+
+test('no token or an unreadable one has no user key', () => {
+  assert.equal(currentUserKey(), undefined);
+  assert.equal(userTokenStorage.run({ userToken: undefined }, currentUserKey), undefined);
+  assert.equal(userTokenStorage.run({ userToken: 'not-a-jwt' }, currentUserKey), undefined);
+  assert.equal(userTokenStorage.run({ userToken: fakeToken({ sub: 'anna' }) }, currentUserKey), undefined);
 });

@@ -60,7 +60,7 @@ In dev mode the user can pick a part of the page in Keboola's app preview and as
 - **Errors:** the API answers `{ error }` as JSON and the client shows it at once. Only "API not up" (network error, 502–504) is retried, with backoff up to ~15 s.
 - **User token:** Keboola's apps proxy adds `X-Kbc-App-User-Token` to every request. `server/userToken.ts` keeps it for the request, and `runQuery` sends it to the Query Service, so a workspace with row-level security returns that user's rows. Route code does nothing for it. A refusal is a `RowLevelSecurityError`, which the API answers as 403 with a "sign in again, or ask for access" message.
 - **No user, no token:** `runQuery` outside a request (at startup, in a timer, in a background job) sends no user token. A workspace with row-level security refuses it, and the server log says so.
-- **Caches:** a cache in the server must not give one user's rows to another. Key it by user, or do not cache. `references/storage-access.md` §Row-level security.
+- **Caches:** a cache in the server must not give one user's rows to another. Key it by `currentUserKey()` (`server/userToken.ts`), and cache nothing when it is `undefined`. `references/storage-access.md` §Row-level security.
 
 ## Dependencies
 
