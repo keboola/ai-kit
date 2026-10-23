@@ -98,6 +98,14 @@ Source: https://github.com/keboola/keboola_streamlit
 
 Streamlit utility package: read/write tables via simple `keboola.read_table()` / `keboola.write_table()`, AgGrid Enterprise license accessor, Snowflake session helpers. Pre-installed in the Streamlit base image — you don't need to declare it.
 
+## Row-level security terms
+
+- **`X-Kbc-App-User-Token`** — a request header that Keboola's apps proxy adds after an OAuth/OIDC login: a JWT that says "user X, acting through app Y". It lives 5 minutes and is new on each request. The user key is its `idp` + `sub` claims. The app forwards it unchanged to Query Service; the browser cannot send it.
+- **Governed workspace** — a workspace where Query Service enforces row-level security policies. Its responses carry `X-KBC-RLS-Mode: enforce`.
+- **Row-level security refusal** — Query Service `403` with the exception `Row-level security does not allow this query`, the same text for "no policy" and "access denied". A `503` `Row-level security could not be applied to this workspace` means Query Service could not enforce the policies.
+
+Details and the app-side rules: "Row-level security" in [storage-access.md](storage-access.md).
+
 ## Keboola Connection UI locations
 
 When a reference mentions a UI navigation step, here's where to find it. The exact wording varies by UI version.

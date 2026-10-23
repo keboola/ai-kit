@@ -101,6 +101,4 @@ whatever auth the app has. If the user wants the finished app public, set
 
 ## Row-level data filtering pointer
 
-Per-user / row-level data access control is a storage-access concern, not an auth concern. See the "Data access management" PLACEHOLDER section in [storage-access.md](storage-access.md) — no documented pattern exists yet for either JS/Python or legacy Streamlit apps.
-
-The platform supports authenticating WHO the user is (via the six auth options above), but does NOT yet support scoping their data access at the storage layer. If you need row-level filtering today, you must implement it inside the app using whatever identity claims the chosen auth method exposes.
+Per-user / row-level data access is a storage-access concern, not an auth concern. In a workspace governed by row-level security, Query Service filters the rows by the signed-in user. The app only forwards the user token that Keboola's apps proxy adds after an OAuth/OIDC login; the React + Vite template does that by itself. Password login and no-auth apps get no token, so a governed workspace refuses their queries. See "Row-level security" in [storage-access.md](storage-access.md).

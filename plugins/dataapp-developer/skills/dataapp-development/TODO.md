@@ -33,7 +33,8 @@ Smaller gaps; kbagent already covers most of the data-app lifecycle.
 
 Sections we know are incomplete because the underlying pattern isn't firm yet. Mostly tracked by Linear above, but listed here as the writing tasks.
 
-- **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
+- **Row-level security in Streamlit and Python backends.** `storage-access.md` §Row-level security documents the React + Vite template, which forwards `X-Kbc-App-User-Token` by itself. The Streamlit template does not forward it yet, and its token expires on the long-lived WebSocket (apps-proxy follow-up). `templates/duckdb-cache/` has no per-user mode.
+- **Switch the template to the api-client helpers.** When `@keboola/api-client` ships its app-user-token middleware and `RowLevelSecurityError`, replace the hand-written ones in `templates/react-vite-app/server/`.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/api-client`'s `queryService` client (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
 - **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
   - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.

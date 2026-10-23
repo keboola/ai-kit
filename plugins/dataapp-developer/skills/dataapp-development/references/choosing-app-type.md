@@ -54,4 +54,4 @@ Stack: one Node container — React + Vite + Tailwind client, Express serving it
 - The Python/JS app type does not currently support paste-in-UI "Code" deployment; only Git deployment. Streamlit retains "Code" mode.
 - A Python/JS app is a **prod** config that owns the git repo plus **drafts** that branch off it. Before any `modify_python_js_data_app` call, read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): an empty `configuration_id` creates a second app, and the app you want usually exists already.
 
-For read-only dashboarding apps (all three shapes), default to a DuckDB cache in front of the workspace — see [duckdb-caching.md](duckdb-caching.md). Querying Snowflake on every render is wasteful; caching is the default, not an optimization.
+For read-only dashboarding apps (all three shapes), default to a DuckDB cache in front of the workspace — see [duckdb-caching.md](duckdb-caching.md). Querying Snowflake on every render is wasteful; caching is the default, not an optimization. The exception is a workspace governed by row-level security: there the cache must be per user (see "Row-level security" in [storage-access.md](storage-access.md)).

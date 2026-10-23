@@ -30,6 +30,7 @@ Apply this pattern when all of:
 ## When to skip DuckDB caching
 
 Fall back to direct access when:
+- The workspace is governed by row-level security. Query Service refuses the refresh (it runs outside a user request, so it has no user token), and one shared cache would show one user's rows to another. See "Row-level security" in [storage-access.md](storage-access.md).
 - The app writes back via Storage Access (RW). See [storage-access.md](storage-access.md) — every read must be current; no caching.
 - The user expects sub-minute freshness (live operational dashboards, real-time monitoring).
 - The dataset is too large to fit in memory. Use pagination + direct RO workspace queries instead, or pre-aggregate before caching.

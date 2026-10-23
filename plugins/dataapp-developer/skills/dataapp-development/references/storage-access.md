@@ -10,7 +10,7 @@
 - Read-write direct access (Storage Access wrapper + SQL injection validation)
 - Query Service return shape — cells come back as strings (both backends)
 - Input mapping — discouraged for new apps
-- Data access management — PLACEHOLDER
+- Row-level security — the app user token, per-user caches, background jobs
 
 ## Enabling Storage access on a deployed app
 
@@ -162,6 +162,7 @@ The pattern (applies on both Snowflake and BigQuery):
 5. Every dashboard query runs against DuckDB, not the warehouse.
 
 When NOT to use this default:
+- The workspace is governed by row-level security — see "Row-level security" below. A shared cache would show one user's rows to another, and Query Service refuses the background refresh.
 - The app writes back via Storage Access — see "Read-write direct access" below. Every read must be current; no caching.
 - The user needs sub-minute freshness (live operational monitoring) — see "Direct RO workspace queries".
 - The cached dataset would exceed container memory. Rule of thumb: pulling more than a few hundred MB at a time is the warning sign — either pull aggregates instead of raw rows, or fall back to "Direct RO workspace queries".
@@ -636,10 +637,29 @@ import pandas as pd
 df = pd.read_csv("/data/in/tables/customers.csv")
 ```
 
-## Data access management — PLACEHOLDER
+## Row-level security — the app user token
 
-Per-user / row-level data access control at the app-storage layer is **not currently supported by the platform**. Column-level permissions are also missing.
+A project can govern its workspace with row-level security. Query Service then returns only the rows the signed-in user may see, and it marks every response with `X-KBC-RLS-Mode: enforce`. The app does not filter rows itself.
 
-Internal patterns differ between JS/Python apps and legacy Streamlit apps. They will be documented here once the patterns are firmed up and verified.
+**How the user reaches Query Service.** Keboola's apps proxy signs a short-lived token (`X-Kbc-App-User-Token`, a JWT that lives 5 minutes, new on each request) and adds it to every request it passes to the app. The app forwards the same header, unchanged, on every Query Service call it makes for that request. The browser cannot send it: the apps proxy drops any copy from the browser, and Query Service does not allow it in CORS. So only the server side can forward it.
 
-**Until then, this section is intentionally empty. Do not invent a pattern based on app-specific code you encounter in customer repos — those are convention-specific to that app, not platform features.**
+**The React + Vite template does it for you.** `server/userToken.ts` keeps the header for the request, and `runQuery` sends it. Route code does nothing for it. Keep `app.use(userTokenScope)` in `server/index.ts`, and call `runQuery` from the request handler (directly or through other functions), not from a `setTimeout` or a queue started earlier. An app on another stack has to do the same: read the header from the incoming request and send it on each Query Service call for that request (Python: per call, not once on a shared client).
+
+**Who has no token.** A governed workspace refuses every query from:
+
+- Code outside a user request: work at startup, a `setInterval`, a scheduled refresh, a background job. It has only the app's own `KBC_TOKEN`, which is not a user.
+- Requests the apps proxy does not sign: apps with password login or no login, public paths, drafts and Kai's preview of a draft.
+
+`runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs the token.
+
+**The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. The template turns it into a `RowLevelSecurityError`, and the API answers `403` with "You have no access to this data. Sign in again, or ask the app owner for access." Show that message as it is. Two other failures are not this refusal: a `403` "Failed to get workspace credentials" (it also carries `X-KBC-RLS-Mode`), and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
+
+**Caches must be per user.** A cache in the server is shared by every user of the app. In a governed workspace, one user's rows in a shared cache are a leak to the next user.
+
+- Key every server-side cache of query results by user. In the template, use `currentUserKey()` from `server/userToken.ts`: it is the token's `idp` and `sub`, the same for every token of that user. Never key by the token itself, it changes on every request. Cache nothing when `currentUserKey()` is `undefined`.
+- The shared DuckDB cache ("Preferred default for read-only apps" above, [duckdb-caching.md](duckdb-caching.md)) does not work in a governed workspace. Its refresh runs outside a user request, so Query Service refuses it, and one shared table would mix users anyway. Query the workspace per request instead, with a per-user cache if it is needed.
+- The client cache (TanStack Query in the browser) belongs to one user and needs no change.
+
+**Streamlit is not supported yet.** Streamlit holds one WebSocket open for the whole session (up to hours), and the apps proxy signs the token only once, when the socket opens. After 5 minutes the token has expired and Query Service refuses the queries. A refresh bound to the live connection is a follow-up. Also, `@st.cache_data` is shared by all users and is keyed only by its arguments. See [streamlit-apps.md](streamlit-apps.md).
+
+Column-level permissions are not part of this.

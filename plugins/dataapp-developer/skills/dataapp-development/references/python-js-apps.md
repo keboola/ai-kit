@@ -218,7 +218,7 @@ The overlay's `keboola-config/` is the working reference — copy it, don't rety
 
 Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy to route `/api/*` to the backend — Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.mts`. That way the frontend code calls `/api/...` everywhere and it works the same locally as in Keboola.
 
-User-identity passthrough across the local-vs-Keboola boundary (e.g. injecting an email header for testing) is app-specific convention, not a platform feature — see the placeholder in [storage-access.md](storage-access.md).
+The user's identity reaches the backend as the `X-Kbc-App-User-Token` header, added by Keboola's apps proxy. Forward it on every Query Service call made for that request; a Python backend has to do this itself (the React + Vite template's Node server already does). Locally there is no apps proxy and no token. See "Row-level security" in [storage-access.md](storage-access.md).
 
 Runnable starter: `templates/python-node-app/`.
 
