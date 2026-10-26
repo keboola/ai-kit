@@ -20,7 +20,7 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 - DuckDB caching for read-only apps (Python and Node patterns)
 - Styling — Keboola palette as Tailwind tokens in the bundled template, shadcn/ECharts option, Streamlit theming
 - Dashboard patterns — SQL-first, sidebar filters, charts, formatting, sortable tables
-- Kai integration — optional natural-language assistant via `kai-client`
+- Kai integration — optional natural-language assistant via `kai-client` and `kai-agent`; `runtime.kai.enabled` with its own token and `x-workspace-id`
 - Dev workflow — validate → build → verify loop with Keboola MCP and Playwright MCP
 - Troubleshooting — POST/, PEP 668, WebSocket, streaming, port mismatch, exit 153, non-numeric `WORKSPACE_ID`, missing env vars
 
@@ -93,7 +93,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.10.3
+1.10.5
 
 ## Maintainer
 

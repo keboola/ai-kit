@@ -17,6 +17,7 @@
 - `KeyError` on Storage Access env var
 - Query Service auth error with narrow-scoped token
 - `Insufficient privileges` on write
+- Kai chat returns 400 / 401 / 403
 - Reading logs (incl. Streamlit silent exceptions)
 
 ## "Cannot POST /" / "Method Not Allowed" on startup
@@ -114,6 +115,19 @@
 - **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the ephemeral workspace is re-provisioned.
 - **Local dev:** create a dedicated workspace and grant write access on the same tables. See [storage-access.md](storage-access.md) §`WORKSPACE_ID`.
 - Bucket stage (`in.` vs `out.`) isn't the issue — the workspace grant is.
+
+## Kai chat returns 400 / 401 / 403
+
+**Cause:** The Kai request carries the wrong token or workspace, or the project or app is not set up for Kai. The error message names which:
+- 403 `Storage token has no associated Keboola user` — the app sent `KBC_TOKEN`, the app's own token with no user behind it.
+- 403 `A Data App Kai token requires the x-workspace-id header` — the `x-workspace-id` header is missing.
+- 403 `The pinned workspace does not belong to the Data App of this Kai token` or `… is not available to this Data App Kai token` — `x-workspace-id` is not this app's `WORKSPACE_ID` (often a value copied from local dev).
+- 403 `Project does not have the agent-chat feature enabled` — the project has no Kai.
+- 403 `Kai is not available in a Data App with row-level security yet` — the app's workspace uses row-level security.
+- 400 `Invalid x-workspace-id header; expected a positive integer` — `WORKSPACE_ID` is not numeric.
+- 401 `Invalid storage API token` — the Kai token expired (90 days after the deploy) or was revoked.
+
+**Fix:** Send `KAI_STORAGE_API_TOKEN` (with `runtime.kai.enabled`) and `x-workspace-id: $WORKSPACE_ID` on every Kai request; redeploy the app for a fresh token. See [kai-integration.md](kai-integration.md) §Token and headers.
 
 ## Reading logs
 

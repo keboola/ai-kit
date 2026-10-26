@@ -35,9 +35,7 @@ Sections we know are incomplete because the underlying pattern isn't firm yet. M
 
 - **`storage-access.md` §Data access management — PLACEHOLDER.** Per-user / row-level data access control. No documented pattern; internal apps diverge. Cross-referenced from `authentication.md`.
 - **SQL helpers in Query Service SDKs.** Once `SQL.literal()` / `SQL.ident()` / `sql.format()` ship in `keboola-query-service` (Py) and `@keboola/api-client`'s `queryService` client (JS), replace the manual sanitization patterns in `storage-access.md` §SQL injection with SDK-driven examples.
-- **Two Max Ottomansky suggestions from AI-3147 not yet picked up:**
-  - Prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled.
-  - `KAI_TOKEN` secret workaround for embedding Kai chat without manual user token entry. Belongs in `kai-integration.md` once the contract with `kai-client` is firm.
+- **A Max Ottomansky suggestion from AI-3147 not yet picked up:** prebuilt JS apps — committing `dist/` to skip `npm install` / build on cold start. Worth a short subsection in `python-js-apps.md` once the deployment story is settled. (His other one, a Kai token without manual user token entry, is now the platform's `runtime.kai.enabled` — see `kai-integration.md`.)
 
 ## Evals
 
@@ -49,7 +47,7 @@ The skill has been validated end-to-end in three sessions, but not against every
 
 - **Python-only app (Flask + `uv`)** template path has never been live-tested.
 - **kbagent end-to-end** path — partial coverage (used in one debug session for `data-app deploy --wait`). Hasn't been driven from scratch (`data-app create` → secrets → first deploy → iteration → deploy).
-- **Kai integration** path — no live test against a real `kai-client` deployment.
+- **Kai integration** path — no live test against a real `kai-client` deployment, and none of the `runtime.kai` token, `x-workspace-id` and strict-mode behaviour from a deployed app.
 - **BigQuery project** — identifier quoting, bucket→dataset mangling, read queries, the Query Service return shape (string cells, like Snowflake), and `INSERT` DML (via the Query Service: `rows_affected` populated, round-trip confirmed, statements share a session) are verified on a real BQ project (AJDA-2835, AJDA-2840). A `direct-grant` write to a real Storage table from a *deployed* app is verified too (2026-09-17: a cell edit in the app's UI → `MERGE` via the Query Service → one row changed in Storage, row count unchanged).
 
 ## Asset / link hygiene
