@@ -57,9 +57,13 @@ test('a refusal outside a request is a RowLevelSecurityError too', async () => {
   await assert.rejects(runQuery('SELECT 1'), RowLevelSecurityError);
 });
 
+test('the refusal text is enough, without the X-KBC-RLS-Mode header', async () => {
+  answer = { status: 403, headers: {}, exception: RLS_DENIED };
+  await assert.rejects(runQuery('SELECT 1'), RowLevelSecurityError);
+});
+
 for (const [name, status, headers, exception] of [
   ['the workspace credentials 403 of a governed workspace', 403, { 'x-kbc-rls-mode': 'enforce' }, 'Failed to get workspace credentials'],
-  ['the RLS text without the enforce header', 403, {}, RLS_DENIED],
   ['the RLS 503', 503, { 'x-kbc-rls-mode': 'enforce' }, 'Row-level security could not be applied to this workspace'],
 ] as const) {
   test(`${name} stays a plain error`, async () => {

@@ -70,13 +70,8 @@ function userTokenMiddleware(userToken: string): MiddlewareFn {
   };
 }
 
-/** Status, header and text together: a governed workspace sends `X-KBC-RLS-Mode: enforce` on its other 403s too. */
 function isRowLevelSecurityRefusal(err: ApiError) {
-  return (
-    err.response.status === 403 &&
-    err.response.headers.get('X-KBC-RLS-Mode') === 'enforce' &&
-    (err.data as { exception?: string } | undefined)?.exception === RLS_DENIED
-  );
+  return err.response.status === 403 && (err.data as { exception?: string } | undefined)?.exception === RLS_DENIED;
 }
 
 const NUMBER_TYPE = /^(fixed|real|integer|int64|float|float64|numeric|bignumeric)$/i;
