@@ -652,7 +652,7 @@ A project can govern its workspace with row-level security. Query Service then r
 
 `runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs the token.
 
-**The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. The template turns it into a `RowLevelSecurityError`, and the API answers `403` with "You have no access to this data. Sign in again, or ask the app owner for access." Show that message as it is. Two other failures are not this refusal: a `403` "Failed to get workspace credentials" (it also carries `X-KBC-RLS-Mode`), and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
+**The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. The template turns it into a `RowLevelSecurityError`, and the API answers `403` with "You have no access to this data. Sign in again, or ask the app owner for access." Show that message as it is. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
 
 **Caches must be per user.** A cache in the server is shared by every user of the app. In a governed workspace, one user's rows in a shared cache are a leak to the next user.
 
