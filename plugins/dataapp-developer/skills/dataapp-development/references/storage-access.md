@@ -116,7 +116,7 @@ A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-back
 
 **Read-only data app — reuse the MCP session's workspace.** Call `mcp__keboola__get_project_info` and read the `workspace_id` field. That's the workspace the agent's MCP session is already using; it has read access to everything in the project. Paste it into `.env.local` and you're done. No need to create a new workspace just for local dev.
 
-**Read-write data app — create a dedicated workspace.** The platform provisions an ephemeral, permission-scoped workspace at deploy time, but that workspace doesn't exist locally. For local testing of writes, you need to create your own workspace with grants matching the production setup:
+**Read-write data app — create a dedicated workspace.** The platform provisions a permission-scoped workspace at deploy time, but that workspace doesn't exist locally. For local testing of writes, you need to create your own workspace with grants matching the production setup:
 
 - Via the UI: project → **Workspaces** → **New Workspace** → Snowflake/BigQuery → pick a size (XS or S is enough). Open the workspace detail and grant it write access on the same tables the app's `direct-grant` output mapping covers.
 - Via kbagent (if you're already on that path): `kbagent workspace create ...` then grant the same tables.
@@ -125,7 +125,7 @@ In both cases, use the numeric ID (e.g. `12345`), not the Snowflake schema name 
 
 Notes:
 - One read-only workspace can serve multiple local-dev sessions across developers — no need to provision per-person.
-- Never reuse a write-enabled local workspace for production data app deployment. The platform owns workspace provisioning for deployed apps and uses ephemeral, fresh-on-each-start workspaces with `direct-grant` output mappings (see "Read-write direct access" below).
+- Never reuse a write-enabled local workspace for production data app deployment. The platform owns workspace provisioning for deployed apps and uses its own workspaces with `direct-grant` output mappings (see "Read-write direct access" below).
 
 ### BRANCH_ID
 
@@ -402,7 +402,7 @@ access on a deployed app" above):
 
 **Bucket stage doesn't restrict writes.** The destination can be in any stage — `out.`, `in.`, or otherwise — as long as the workspace has write privileges on it. The `out.` examples here are convention; writing back into an `in.` bucket your workspace owns is equally valid. The `direct-grant` strategy is what makes the grant work; the bucket-name prefix is just a label.
 
-Workspace lifecycle: **ephemeral**. A fresh workspace is created each time the app starts or wakes from sleep. The previous workspace is deleted. Permission changes take effect on the next start.
+Workspace lifecycle: **managed by the platform**. The workspace is kept while the app sleeps and wakes. Each redeploy creates a new workspace, so read its ID at startup and never copy it into config or secrets. Permission changes take effect on the next redeploy.
 
 Env vars set when Storage Access is enabled:
 - `KBC_WORKSPACE_MANIFEST_PATH` — path to a JSON manifest with `workspaceId` and other metadata. **Preferred source for the workspace ID.**

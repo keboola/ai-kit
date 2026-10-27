@@ -69,7 +69,7 @@ These tools are live today.
 | `#KBC_STORAGE_TOKEN` | Yes | Storage API token scoping this app to a project |
 | `#MCP_API_KEY` | Yes | Generate with `openssl rand -hex 32` |
 | `#MCP_PUBLIC_URL` | No | Override only. See The app's own URL below |
-| `#KBC_WORKSPACE_ID` | No | Override only. With Storage Access enabled, `server.py` already pins tool calls to this app's own workspace from the injected `WORKSPACE_ID` at startup (the workspace is recreated on every start or wake, so never copy its ID into a secret). Set this only for a stable workspace you manage yourself |
+| `#KBC_WORKSPACE_ID` | No | Override only. With Storage Access enabled, `server.py` already pins tool calls to this app's own workspace from the injected `WORKSPACE_ID` at startup (each redeploy creates a new workspace, so never copy its ID into a secret). Set this only for a stable workspace you manage yourself |
 
 Via kbagent: `kbagent --allow-env-manage-token data-app secrets-set --project <alias> --app-id <id> '#KEY=VAL'` then redeploy.
 
