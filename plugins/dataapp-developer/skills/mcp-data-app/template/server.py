@@ -97,9 +97,10 @@ MCP_PUBLIC_URL = (
 env = dict(os.environ)
 # The server ignores the bare WORKSPACE_ID on purpose (it could pin every
 # tenant of a shared server), so this single-tenant app maps its own workspace
-# here. The value can carry a WORKSPACE_ prefix; the API wants the numeric ID.
+# here. Pass it unchanged: the number in a WORKSPACE_<n> schema name is not the
+# workspace ID, so a non-numeric value must fail instead of being stripped.
 if not env.get("KBC_WORKSPACE_ID") and env.get("WORKSPACE_ID"):
-    env["KBC_WORKSPACE_ID"] = env["WORKSPACE_ID"].removeprefix("WORKSPACE_")
+    env["KBC_WORKSPACE_ID"] = env["WORKSPACE_ID"]
 config = Config.from_dict(env)
 if not config.storage_api_url or not config.storage_token:
     raise SystemExit(

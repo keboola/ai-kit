@@ -51,8 +51,8 @@ async function discoverKaiUrl(storageApiUrl, storageApiToken) {
   });
   if (!res.ok) throw new Error(`Storage API discovery failed: ${res.status}`);
   const data = await res.json();
-  const kai = (data.services || []).find((s) => s.id === 'kai-assistant');
-  if (!kai?.url) throw new Error('kai-assistant service not found');
+  const kai = (data.services || []).find((s) => s.id === 'kai-agent');
+  if (!kai?.url) throw new Error('kai-agent service not found');
   return kai.url.replace(/\/$/, '');
 }
 ```
@@ -68,9 +68,11 @@ Use the SAME Keboola Storage API token the app already has. Pass it on every Kai
 No separate Kai token. No OAuth flow on top. If your app authenticates the end user via OIDC (or whatever) you still use the project's Storage token for the Kai call — the end-user identity is conveyed via Kai's chat history association.
 
 **Pin Kai's queries to this app's own workspace.** With Storage Access enabled, Keboola injects `WORKSPACE_ID` into the Data App container — forward it as `x-workspace-id` on every Kai request so Kai queries this app's own (often more restricted) workspace instead of the default per-branch one:
-- Header: `x-workspace-id: <WORKSPACE_ID>`, numeric ID only — strip a `WORKSPACE_` prefix (see [troubleshooting.md](troubleshooting.md)); omit when empty, e.g. local dev outside a Data App
+- Header: `x-workspace-id: <WORKSPACE_ID>`, passed unchanged; omit when empty, e.g. local dev outside a Data App
+- The value must be the numeric workspace ID. Never strip a `WORKSPACE_` prefix: the number in a `WORKSPACE_<n>` schema name is a different number, so stripping it can pin the wrong workspace. Kai rejects a non-numeric value with a 400; fix the value at its source (see [troubleshooting.md](troubleshooting.md))
+- Only the `kai-agent` service reads this header. `kai-assistant` ignores it without an error, so always discover `kai-agent`
 
-Requires `kai-client>=0.13.0` (the `workspace_id` param on `KaiClient`/`from_storage_api()`). For a JS embed there's nothing to install; just add the header.
+Requires `kai-client>=0.13.0` (the `workspace_id` param on `KaiClient`/`from_storage_api()`, and `kai-agent` as the default service). For a JS embed there's nothing to install; just add the header.
 
 ## Pattern A — Streamlit embed
 
@@ -98,8 +100,8 @@ async def stream_response(chat_id, prompt):
     client = await KaiClient.from_storage_api(
         storage_api_token=os.environ["KBC_TOKEN"],
         storage_api_url=os.environ["KBC_URL"],
-        # Keboola injects WORKSPACE_ID in Data Apps with Storage Access; may carry a WORKSPACE_ prefix
-        workspace_id=os.environ.get("WORKSPACE_ID", "").removeprefix("WORKSPACE_") or None,
+        # Keboola injects WORKSPACE_ID in Data Apps with Storage Access
+        workspace_id=os.environ.get("WORKSPACE_ID") or None,
     )
     async with client:
         async for event in client.send_message(chat_id, prompt):
@@ -107,16 +109,16 @@ async def stream_response(chat_id, prompt):
                 yield event.text
             elif event.type == "tool-call":
                 yield f"\n[Calling tool: {event.tool_name}]\n"
+                # state == "input-available" may mean the tool waits for approval — see below
             elif event.type == "finish":
                 return
-            # event.type == "tool-approval-required" — see below
 ```
 
 Event types to handle:
 - `text` — stream chunk; append to the active assistant message.
-- `tool-call` — informational; show the tool name in the chat UI.
+- `tool-call` — show the tool name in the chat UI.
 - `finish` — terminate the stream.
-- `tool-approval-required` — pause the loop, render Approve / Deny buttons, resume with the user's response.
+- `tool-call` with `state == "input-available"` — a tool that needs approval stops the stream here until you answer. Render Approve / Deny buttons and call `await client.submit_approval(chat_id, event.tool_call_id, approved)`; the same stream then continues with the tool output. Read-only tools also pass through this state without waiting; answering them returns a 404 (`KaiNotFoundError`), which is safe to ignore.
 
 Streamlit-specific gotchas:
 
@@ -166,8 +168,8 @@ async function proxySSE(payload, res) {
       'Content-Type': 'application/json',
       'x-storageapi-token': process.env.KBC_TOKEN,
       'x-storageapi-url': process.env.KBC_URL,
-      // Keboola injects WORKSPACE_ID in Data Apps with Storage Access; may carry a WORKSPACE_ prefix
-      ...(process.env.WORKSPACE_ID && { 'x-workspace-id': process.env.WORKSPACE_ID.replace(/^WORKSPACE_/, '') }),
+      // Keboola injects WORKSPACE_ID in Data Apps with Storage Access
+      ...(process.env.WORKSPACE_ID && { 'x-workspace-id': process.env.WORKSPACE_ID }),
     },
     body: JSON.stringify(payload),
   });
@@ -188,11 +190,25 @@ async function proxySSE(payload, res) {
 }
 
 app.post('/api/chat', (req, res) => proxySSE(req.body, res));
-app.post('/api/chat/:chatId/:action/:approvalId', (req, res) => {
-  // Tool approval — forward to Kai with the approval response payload
-  proxySSE(/* approval payload */, res);
+// Tool approval: a plain JSON call. The chat stream from /api/chat stays open and
+// continues with the tool output once Kai gets the decision.
+app.post('/api/chat/:chatId/approval', async (req, res) => {
+  const { toolUseId, approved, reason } = req.body;
+  const upstream = await fetch(`${await getKaiUrl()}/api/chat/${encodeURIComponent(req.params.chatId)}/approval`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-storageapi-token': process.env.KBC_TOKEN,
+      'x-storageapi-url': process.env.KBC_URL,
+      ...(process.env.WORKSPACE_ID && { 'x-workspace-id': process.env.WORKSPACE_ID }),
+    },
+    body: JSON.stringify({ toolUseId, approved, ...(reason && { reason }) }),
+  });
+  res.status(upstream.status).json(await upstream.json().catch(() => ({})));
 });
 ```
+
+A tool that needs approval shows up in the raw stream as a `tool-input-available` event. Send its `toolCallId` as `toolUseId`. Read-only tools also pass through this state without waiting; Kai answers their approval call with a 404, which is safe to ignore.
 
 The frontend reads the SSE stream (`new EventSource('/api/chat', ...)` or `fetch` with manual reader) and renders chunks progressively. A minimal browser-side reader:
 
