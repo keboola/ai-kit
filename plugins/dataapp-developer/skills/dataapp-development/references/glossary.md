@@ -106,6 +106,8 @@ Streamlit utility package: read/write tables via simple `keboola.read_table()` /
 - **Governed workspace** — a workspace where Query Service enforces row-level security policies. Its responses carry `X-KBC-RLS-Mode: enforce`.
 - **Row-level security refusal** — Query Service `403` with the exception `Row-level security does not allow this query`, the same text for "no policy" and "access denied". A `503` `Row-level security could not be applied to this workspace` means Query Service could not enforce the policies.
 
+- **Streamlit** — row-level security is not supported yet; use a Python/JS app for per-user data.
+
 Details and the app-side rules: "The app user token" and "Row-level security" in [storage-access.md](storage-access.md).
 
 ## Keboola Connection UI locations
