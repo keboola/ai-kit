@@ -12,7 +12,6 @@
     "dev:api": "tsx watch --env-file-if-exists=.env server/index.ts",
     "build": "vite build",
     "typecheck": "tsc",
-    "test": "node --test",
     "start": "node server/index.ts"
   },
   "dependencies": {

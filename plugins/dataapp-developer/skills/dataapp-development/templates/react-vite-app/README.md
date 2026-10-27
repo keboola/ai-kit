@@ -21,8 +21,7 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 ├── server/
 │   ├── index.ts                  # Express: /api/*, JSON errors, the built client in prod
 │   ├── kbcQuery.ts               # runQuery(sql) on @keboola/api-client — every row, Snowflake or BigQuery
-│   ├── userToken.ts              # keeps the request's X-Kbc-App-User-Token for runQuery
-│   └── *.test.ts                 # npm test (node:test, no extra dependency)
+│   └── userToken.ts              # keeps the request's X-Kbc-App-User-Token for runQuery
 └── keboola-config/
     ├── nginx/sites/default.conf  # 8888 → :3000, answers the platform's POST / health check, gzip
     ├── setup.sh / setup-dev.sh   # prod: npm install + vite build · dev: npm install
@@ -68,10 +67,6 @@ In dev mode the user can pick a part of the page in Keboola's app preview and as
 - Add one by editing `package.json` — the setup scripts run `npm install`, never `npm ci`, so a lagging lockfile still boots. Commit the regenerated lockfile.
 - Generate the lockfile with the image's npm (11.12.1 in the `…_node-24` images; `npm -v` in the container tells), or the container rewrites it on first install and every push looks like a dependency change: `npx -y npm@11.12.1 install --package-lock-only`.
 - npm, not bun: the dev-mode watcher looks for the legacy `bun.lockb`.
-
-## Tests
-
-`npm test` runs `server/*.test.ts` with Node's own test runner. Add tests next to the code they cover.
 
 ## Local development
 
