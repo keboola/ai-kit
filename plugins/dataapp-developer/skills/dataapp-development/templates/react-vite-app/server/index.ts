@@ -1,7 +1,6 @@
-import { isApiError } from '@keboola/api-client';
+import { isApiError, isRowLevelSecurityError } from '@keboola/api-client';
 import express from 'express';
 import path from 'node:path';
-import { RowLevelSecurityError } from './kbcQuery.ts';
 import { userTokenScope } from './userToken.ts';
 
 const app = express();
@@ -30,11 +29,10 @@ app.get('/{*path}', (_req, res) => {
 
 // Errors answer as JSON, so the client shows the message instead of retrying.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (err instanceof RowLevelSecurityError) {
+  if (isRowLevelSecurityError(err)) {
     res.status(403).json({ error: err.message });
     return;
   }
-  // An `@keboola/api-client` ApiError carries its request, token included: log the call, not the object.
   console.error(isApiError(err) ? `ApiError ${err.response.status} ${err.request.method} ${err.request.url}` : err);
   res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
 });
