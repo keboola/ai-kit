@@ -31,7 +31,7 @@ Optional env vars:
                             calls already run in this data app's own
                             workspace: the WORKSPACE_ID that Keboola injects
                             is read at startup, so it follows the workspace
-                            that is recreated on every start or wake. Set this
+                            even after a redeploy creates a new one. Set this
                             only to pin a stable workspace you manage
                             yourself. Takes precedence over
                             KBC_WORKSPACE_SCHEMA when both are set.

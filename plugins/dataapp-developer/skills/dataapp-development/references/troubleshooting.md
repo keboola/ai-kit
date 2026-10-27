@@ -111,7 +111,7 @@
 **Cause:** Destination table not in `storage.output.tables` with `unload_strategy: "direct-grant"` (production), or the local workspace lacks write grants on the table (local dev).
 
 **Fix:**
-- **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the ephemeral workspace is re-provisioned.
+- **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the workspace gets the new grant.
 - **Local dev:** create a dedicated workspace and grant write access on the same tables. See [storage-access.md](storage-access.md) §`WORKSPACE_ID`.
 - Bucket stage (`in.` vs `out.`) isn't the issue — the workspace grant is.
 
