@@ -145,7 +145,7 @@ function readEnv() {
   };
   const missing = Object.keys(env).filter((key) => !env[key as keyof typeof env]);
   if (missing.length) throw new Error(`kbcQuery: missing required env vars: ${missing.join(', ')}`);
-  return { ...(env as Record<keyof typeof env, string>), QUERY_SERVICE_URL: process.env.QUERY_SERVICE_URL };
+  return env as Record<keyof typeof env, string>;
 }
 
 function previewSql(sql: string) {

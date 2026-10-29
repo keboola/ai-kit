@@ -186,7 +186,7 @@ Two paths to call the workspace:
 
 Required env vars (Keboola auto-injects them on deploy once Storage access is enabled — see
 "Enabling Storage access on a deployed app" above if the app is missing `WORKSPACE_ID`):
-- `KBC_URL`, `KBC_TOKEN` — auth + base host. In a deployed app the Storage token is also the file named by `STORAGE_API_TOKEN_PATH`, which the platform can rotate. The image restarts the app when that file changes, so `KBC_TOKEN` read once at start stays current; the React + Vite template still reads the file before every request as a safeguard (see "The app user token" below).
+- `KBC_URL`, `KBC_TOKEN` — auth + base host. In a deployed app the Storage token is also the file named by `STORAGE_API_TOKEN_PATH`, which the platform can rotate; the image then restarts the app (see "The app user token" below).
 - `QUERY_SERVICE_URL` — Query Service host. If unset, read it from the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`); the React + Vite template's `runQuery` does that for you.
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
@@ -687,6 +687,6 @@ A project can govern its workspace with row-level security. Query Service then r
 - The shared DuckDB cache ("Preferred default for read-only apps" above, [duckdb-caching.md](duckdb-caching.md)) does not work in a governed workspace. Its refresh runs outside a user request, so Query Service refuses it, and one shared table would mix users anyway. Query the workspace per request instead, with a per-user cache if it is needed.
 - The client cache (TanStack Query in the browser) belongs to one user and needs no change.
 
-**Streamlit is not supported yet.** Streamlit holds one WebSocket open for the whole session (up to hours), and the apps proxy signs the token only once, when the socket opens. After 5 minutes the token has expired and Query Service refuses the queries. A refresh bound to the live connection is a follow-up. Also, `@st.cache_data` is shared by all users and is keyed only by its arguments. See [streamlit-apps.md](streamlit-apps.md).
+**Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
 
 Column-level permissions are not part of this.

@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 export const USER_TOKEN_HEADER = 'X-Kbc-App-User-Token';
 
-export const userTokenStorage = new AsyncLocalStorage<{ userToken: string | undefined }>();
+const userTokenStorage = new AsyncLocalStorage<{ userToken: string | undefined }>();
 
 export function userTokenScope(req: Request, _res: Response, next: NextFunction) {
   userTokenStorage.run({ userToken: req.get(USER_TOKEN_HEADER) || undefined }, next);
