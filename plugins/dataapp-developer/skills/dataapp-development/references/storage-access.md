@@ -186,7 +186,7 @@ Two paths to call the workspace:
 
 Required env vars (Keboola auto-injects them on deploy once Storage access is enabled — see
 "Enabling Storage access on a deployed app" above if the app is missing `WORKSPACE_ID`):
-- `KBC_URL`, `KBC_TOKEN` — auth + base host. In a deployed app the Storage token is also the file named by `STORAGE_API_TOKEN_PATH`, which the platform can rotate; read it before every request (see "The app user token" below).
+- `KBC_URL`, `KBC_TOKEN` — auth + base host. In a deployed app the Storage token is also the file named by `STORAGE_API_TOKEN_PATH`, which the platform can rotate. The image restarts the app when that file changes, so `KBC_TOKEN` read once at start stays current; the React + Vite template still reads the file before every request as a safeguard (see "The app user token" below).
 - `QUERY_SERVICE_URL` — Query Service host. If unset, read it from the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`); the React + Vite template's `runQuery` does that for you.
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
@@ -646,7 +646,7 @@ df = pd.read_csv("/data/in/tables/customers.csv")
 
 **The token does not depend on row-level security.** It works on any workspace, governed or not, so forward it everywhere.
 
-**Read the Storage token before every request.** The platform mounts the app's Storage token as a file and names it in `STORAGE_API_TOKEN_PATH`; it can rotate the token. `KBC_TOKEN` holds the same value for local runs. Read the file when the variable is set, `KBC_TOKEN` otherwise. If the file cannot be read, fail the call; do not fall back to a `KBC_TOKEN` that may be stale.
+**Read the Storage token before every request.** The platform mounts the app's Storage token as a file and names it in `STORAGE_API_TOKEN_PATH`; it can rotate the token. `KBC_TOKEN` holds the same value for local runs. Read the file when the variable is set, `KBC_TOKEN` otherwise. If the file cannot be read, fail the call; do not fall back to a `KBC_TOKEN` that may be stale. This is a safeguard, not a requirement: the image restarts the app when the token file changes, so existing code that reads `KBC_TOKEN` once at start is correct and needs no rewrite.
 
 **The React + Vite template does all of this for you.** `server/userToken.ts` keeps the request's user token in an `AsyncLocalStorage`. `server/kbcQuery.ts` has one Query Service client whose `auth` is a provider that `@keboola/api-client` calls before every request (polls and result pages included):
 

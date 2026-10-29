@@ -50,7 +50,7 @@ def _resolve_workspace_id() -> str | None:
 # is shared by all users. See references/streamlit-apps.md §Row-level security — not supported yet.
 @st.cache_resource
 def _client() -> Client:
-    """Single Query Service client per Streamlit session.
+    """One Query Service client for the whole process, shared by every session and user.
 
     `@st.cache_resource` keeps the same Client across reruns so the HTTP
     pool isn't re-created on every interaction.
