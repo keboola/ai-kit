@@ -1,0 +1,125 @@
+{
+ "src": "src.mp4",
+ "srcW": 2560,
+ "srcH": 1600,
+ "total": 776,
+ "camera": [
+  {
+   "t": 0,
+   "cx": 1280,
+   "cy": 800,
+   "z": 1
+  },
+  {
+   "t": 1.6,
+   "cx": 1280,
+   "cy": 800,
+   "z": 1
+  },
+  {
+   "t": 2.18,
+   "cx": 1760,
+   "cy": 500,
+   "z": 1.6
+  },
+  {
+   "t": 9.3,
+   "cx": 1760,
+   "cy": 500,
+   "z": 1.6
+  },
+  {
+   "t": 11.78,
+   "cx": 1760,
+   "cy": 1000,
+   "z": 1.6
+  },
+  {
+   "t": 23.48,
+   "cx": 1760,
+   "cy": 1000,
+   "z": 1.6
+  },
+  {
+   "t": 24.28,
+   "cx": 1280,
+   "cy": 800,
+   "z": 1
+  },
+  {
+   "t": 25.88,
+   "cx": 1280,
+   "cy": 800,
+   "z": 1
+  }
+ ],
+ "rings": [
+  {
+   "from": 0.45,
+   "to": 3.14,
+   "x": 2269,
+   "y": 16,
+   "w": 187,
+   "h": 64
+  },
+  {
+   "from": 5.16,
+   "to": 5.91,
+   "x": 1828,
+   "y": 760,
+   "w": 700,
+   "h": 200
+  },
+  {
+   "from": 14.98,
+   "to": 17.08,
+   "x": 2173,
+   "y": 1158,
+   "w": 133,
+   "h": 64
+  }
+ ],
+ "captions": [
+  {
+   "from": 0,
+   "to": 4.5,
+   "n": "1",
+   "html": "Open <b>Kai Agent</b>, top right of every project page",
+   "pill": ""
+  },
+  {
+   "from": 4.5,
+   "to": 8.9,
+   "n": "2",
+   "html": "Paste the prompt into the chat and press <b>Enter</b>",
+   "pill": ""
+  },
+  {
+   "from": 8.9,
+   "to": 12.38,
+   "n": "",
+   "html": "Kai works on it",
+   "pill": "sped up 10×"
+  },
+  {
+   "from": 12.38,
+   "to": 17.38,
+   "n": "3",
+   "html": "When Kai asks, click <b>Approve</b>",
+   "pill": ""
+  },
+  {
+   "from": 17.38,
+   "to": 25.877,
+   "n": "",
+   "html": "Kai creates it, opens it on the left and asks before the next change",
+   "pill": "sped up 2×",
+   "pillTo": 21.88
+  }
+ ],
+ "steps": [
+  0,
+  4.5,
+  12.38
+ ]
+}

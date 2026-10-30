@@ -1,0 +1,10 @@
+[
+  {"query": "сделай эту страницу в доках keboola нагляднее: вместо трёх абзацев про то, как работает загрузка, нужна схема из блоков", "should_trigger": true},
+  {"query": "add a Before you start box and where-you-are / when-you-finish cards to the data-apps operate page", "should_trigger": true},
+  {"query": "the task page needs Prompt, UI and CLI tabs like the getting started pages", "should_trigger": true},
+  {"query": "визуализация для страницы help.keboola.com про sample data: таблицы как карточки", "should_trigger": true},
+  {"query": "record a short clip of Kai building an app for the docs page", "should_trigger": false},
+  {"query": "retake the stale screenshot of the Apps list on the reference page", "should_trigger": false},
+  {"query": "check whether this docs page is one Diátaxis type", "should_trigger": false},
+  {"query": "design a dashboard app in Keboola that shows revenue cards", "should_trigger": false}
+]

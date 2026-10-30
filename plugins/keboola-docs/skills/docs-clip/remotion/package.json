@@ -1,0 +1,24 @@
+{
+  "name": "keboola-docs-clips",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Remotion compositions for help.keboola.com clips: a narrated recording with a caption band, a typographic explainer, a ring of app cards.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "still": "remotion still",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.533",
+    "@remotion/media": "4.0.533",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.533"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}

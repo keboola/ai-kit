@@ -1,0 +1,34 @@
+[
+  {
+    "query": "take a screenshot of the Apps list for the data-apps docs",
+    "should_trigger": true
+  },
+  {
+    "query": "the Create App screenshot on help.keboola.com is stale, capture a new one",
+    "should_trigger": true
+  },
+  {
+    "query": "shoot the Kai chat panel for the getting started page",
+    "should_trigger": true
+  },
+  {
+    "query": "replace the placeholder image on the deploy wizard page with a live capture",
+    "should_trigger": true
+  },
+  {
+    "query": "record a clip of Kai working for the docs",
+    "should_trigger": false
+  },
+  {
+    "query": "screenshot my terminal for the README",
+    "should_trigger": false
+  },
+  {
+    "query": "add stage dots with a screenshot per stage to the build-locally page",
+    "should_trigger": false
+  },
+  {
+    "query": "take a screenshot of the failing CI job",
+    "should_trigger": false
+  }
+]

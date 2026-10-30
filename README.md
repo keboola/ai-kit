@@ -30,6 +30,7 @@ claude-kit/
 │   ├── component-developer/ # Keboola Python component development
 │   ├── dataapp-developer/   # Data app development & deployment for Keboola
 │   ├── keboola-cli/         # Keboola project management and review
+│   ├── keboola-docs/        # help.keboola.com docs by Diátaxis: write, update, retire, ship
 │   ├── keboola-git/         # Keboola-managed Git (Forgejo) access for data apps
 │   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
 │   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
@@ -114,6 +115,20 @@ A project management and review toolkit for Keboola projects. Includes CLI sync 
 - 🦆 **DuckDB Transformation**: SQL dialect, block orchestration, dynamic backends, Snowflake migration, best practices
 
 **[→ View Keboola CLI Plugin Documentation](./plugins/keboola-cli/README.md)**
+
+### Keboola Docs Plugin
+
+**Location**: [`./plugins/keboola-docs`](./plugins/keboola-docs)
+
+Write, update, retire and ship pages on help.keboola.com (keboola/connection-docs) by the Diátaxis rules.
+
+**Features:**
+- 📝 **Page lifecycle**: `docs-page` (new page from a PRDCT id or a phrase, six templates), `docs-update`, `docs-retire` (redirects, nav, inbound links), `docs-ship` (PR only on "ok")
+- ✅ **Checks**: Diátaxis rules D1–D16 (script + judge agent), links and redirects, VERIFY markers, fact-checker and guide-tester agents
+- 🎬 **Media**: UI screenshots from your own Chrome over CDP, states GIFs with click rings, Remotion compositions for narrated clips and explainers, and `docs-visuals`, a catalog of the page elements the Apps and Getting Started sections use
+- 🚦 **Commit gate**: a hook that blocks commits with FAIL-tier findings, plus sidebar regeneration and PR labels
+
+**[→ View Keboola Docs Plugin Documentation](./plugins/keboola-docs/README.md)**
 
 ### Keboola Git Plugin
 

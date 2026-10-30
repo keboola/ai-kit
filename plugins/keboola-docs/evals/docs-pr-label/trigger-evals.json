@@ -1,0 +1,34 @@
+[
+  {
+    "query": "label my open connection-docs PRs",
+    "should_trigger": true
+  },
+  {
+    "query": "this docs PR now mostly touches Getting Started, relabel it",
+    "should_trigger": true
+  },
+  {
+    "query": "which labels should PR 1187 in connection-docs get?",
+    "should_trigger": true
+  },
+  {
+    "query": "add the apps-ga label to the docs PRs for the Apps launch",
+    "should_trigger": true
+  },
+  {
+    "query": "triage the open PRs in connection-docs",
+    "should_trigger": false
+  },
+  {
+    "query": "create a new label in the repo",
+    "should_trigger": false
+  },
+  {
+    "query": "open the PR for my docs branch",
+    "should_trigger": false
+  },
+  {
+    "query": "label these Linear issues as docs-feedback",
+    "should_trigger": false
+  }
+]
