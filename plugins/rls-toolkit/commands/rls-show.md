@@ -9,51 +9,41 @@ argument-hint: "[project-alias] [--table in.c-bucket.table] [--app APP_ID]"
 
 # Show RLS/CLS
 
-Read-only. Nothing in this command writes. Command details: the `kbagent` plugin,
-the `rls-workflow` reference of the kbagent skill; the data model: the `rls-policies` skill of this plugin.
+Read-only: nothing here writes. Model, rules and gotchas: the `rls-policies` skill; command flags: the
+`rls-workflow` reference of the kbagent skill.
 
-## 1. Preconditions
+## 0. Project and conversation id
 
-Run `kbagent rls --help`. If it fails with "No such command", the installed kbagent is too old: tell
-the user to update kbagent (`kbagent update`) and stop. Pick the project: the argument, the only
-registered alias, or ask with `kbagent --json project list`.
+Pick the project: the argument, the only registered alias, or ask (`kbagent --json project list`).
+Set `export KBAGENT_CONVERSATION_ID="$(uuidgen)"` in every Bash call (the harness does not keep shell
+state), as `sl-build` does, and use `SCRATCH=$(mktemp -d)`.
 
-## 2. Policies
-
-```bash
-kbagent --json rls list --project ALIAS
-kbagent --json cls list --project ALIAS
-```
-
-Print one row per policy: table, kind (rls/cls), scope, selector kinds (`groups`/`subjects`),
-whether a `default` exists, schema version (flag `principal`/`principals` policies as legacy: they
-still enforce, but cannot be edited into new rules). With `--table`, show `rls detail` /
-`cls detail` of the matching policies in full.
-
-## 3. Bindings and workspaces
+## 1. Read everything once, in parallel
 
 ```bash
-kbagent --json rls bindings --project ALIAS
-kbagent --json workspace list --project ALIAS
+export KBAGENT_CONVERSATION_ID="$(uuidgen)"; P=ALIAS
+kbagent --json rls list --project $P > $SCRATCH/rls.json &
+kbagent --json cls list --project $P > $SCRATCH/cls.json &
+kbagent --json rls bindings --project $P > $SCRATCH/bindings.json &
+kbagent --json workspace list --project $P > $SCRATCH/workspaces.json &
+kbagent --json data-app list --project $P > $SCRATCH/apps.json &
+kbagent --json storage tables --project $P > $SCRATCH/tables.json &
+wait
 ```
 
-Show governed workspaces (`login_type` governed), their bindings and any binding whose
-`workspace_exists` is false (leftovers: `rls bindings-sweep` removes them, only on request).
-A governed workspace without a binding gets every policy of the project.
+If `rls list` fails with "No such command", the installed kbagent is too old: tell the user to update
+kbagent and stop. Then `kbagent --json config detail --project $P --component-id keboola.data-apps
+--config-id ID` once per app, only for apps with Storage access on (or only for `--app`).
 
-## 4. Data apps
+## 2. Report
 
-```bash
-kbagent --json data-app list --project ALIAS
-kbagent --json config detail --project ALIAS --component-id keboola.data-apps --config-id CONFIG_ID
-```
-
-For each app (or the one in `--app`) report `runtime.workspace.enabled` and
-`runtime.workspace.rlsPolicies` (the policy UUIDs, matched to the policies above by id). An app with
-Storage access on and no `rlsPolicies` reads with every policy of the project.
-
-## 5. Coverage gaps
-
-List Storage tables (`kbagent --json storage tables --project ALIAS`) that no rls-policy covers.
-A governed reader gets nothing from them (an administrator is refused, an ordinary reader gets an
-empty result). Report the gaps; offer `/rls-build` to close them. Do not create anything here.
+- **Policies:** one row per policy: table, kind, scope, selector kinds (`groups`/`subjects`), whether a
+  `default` exists, schema version (flag `principal`/`principals` policies as legacy: they still
+  enforce, but their rules cannot be edited). With `--table`, `rls detail` / `cls detail` in full.
+- **Workspaces and bindings:** governed workspaces (`login_type` governed) with their bindings, and
+  bindings whose `workspace_exists` is false (leftovers; `rls bindings-sweep` removes them, only on
+  request). A governed workspace without a binding gets every policy of the project.
+- **Data apps:** per app `runtime.workspace.enabled` and `runtime.workspace.rlsPolicies` matched to the
+  policies by id. An app with Storage access on and no `rlsPolicies` reads with every policy.
+- **Coverage gaps:** Storage tables no rls-policy covers (default deny, see the skill). Offer
+  `/rls-build` to close them. Create nothing here.

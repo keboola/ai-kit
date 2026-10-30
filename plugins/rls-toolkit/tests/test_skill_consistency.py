@@ -1,4 +1,4 @@
-"""Static checks of the rls-toolkit skill: the rules the skill teaches must hold in its own examples."""
+"""Static checks of the rls-toolkit skill: the rules it teaches must hold in its own examples and links."""
 
 import json
 import re
@@ -8,8 +8,10 @@ import pytest
 
 PLUGIN = Path(__file__).resolve().parent.parent
 SKILL = PLUGIN / "skills" / "rls-policies"
-DOCS = [SKILL / "SKILL.md", *sorted((SKILL / "references").glob("*.md")), *sorted((PLUGIN / "commands").glob("*.md"))]
+COMMANDS = sorted((PLUGIN / "commands").glob("*.md"))
+DOCS = [SKILL / "SKILL.md", *sorted((SKILL / "references").glob("*.md")), *COMMANDS]
 JSON_BLOCK = re.compile(r"```json\n(.*?)\n```", re.S)
+WRITE_VERBS = re.compile(r"\b(rls (create|update|delete|bind|unbind)|cls (create|update|delete)|config update|data-app deploy)\b")
 
 
 def _text(path: Path) -> str:
@@ -24,20 +26,23 @@ def _policies():
                 yield path.name, data
 
 
-def test_skill_frontmatter_has_no_allowed_tools():
-    front = _text(SKILL / "SKILL.md").split("---")[1]
-    assert "allowed-tools" not in front
-
-
-def test_skill_documents_the_working_directory():
-    assert "## Working Directory Context" in _text(SKILL / "SKILL.md")
+def test_skill_frontmatter_and_working_directory_section():
+    text = _text(SKILL / "SKILL.md")
+    assert "allowed-tools" not in text.split("---")[1]
+    assert "## Working Directory Context" in text
 
 
 @pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)
 def test_no_email_selector_and_no_removed_kbagent_group(path):
     text = _text(path)
-    assert not re.search(r'"principals?"\s*:', text), "email is not a selector in schema 1.2.0"
+    assert not re.search(r"principals?\"?\s*[:\]]", text.replace("`principal` / `principals`", "")), path.name
     assert "kbagent tool call" not in text, "the tool group was removed in kbagent 0.85.0"
+
+
+@pytest.mark.parametrize("path", [SKILL / "SKILL.md", *COMMANDS], ids=lambda p: p.name)
+def test_referenced_files_exist(path):
+    for ref in re.findall(r"`(?:skills/rls-policies/)?references/([\w\-]+\.md)`", _text(path)):
+        assert (SKILL / "references" / ref).exists(), f"{path.name}: {ref}"
 
 
 def test_example_policies_are_well_formed():
@@ -48,13 +53,18 @@ def test_example_policies_are_well_formed():
         for rule in policy["rules"]:
             assert ("groups" in rule) != ("subjects" in rule), f"{name}: exactly one selector per rule"
         rls = [r for r in policy["rules"] if "condition" in r]
-        if rls:
-            assert "default" in policy, f"{name}: an rls example always sets a default"
         cls = [r for r in policy["rules"] if "visible_columns" in r]
-        assert not (rls and cls), name
+        assert bool(rls) != bool(cls), f"{name}: a policy is either rls or cls"
+        assert (not rls) or "default" in policy, f"{name}: an rls example always sets a default"
         assert not (cls and "default" in policy), f"{name}: a cls-policy has no default"
 
 
-def test_every_command_asks_for_go_before_writing():
-    assert '"go"' in _text(PLUGIN / "commands" / "rls-build.md")
-    assert "--dry-run" in _text(PLUGIN / "commands" / "rls-build.md")
+def test_rls_show_is_read_only():
+    assert not WRITE_VERBS.search(_text(PLUGIN / "commands" / "rls-show.md"))
+
+
+def test_rls_build_gates_every_write_behind_go():
+    text = _text(PLUGIN / "commands" / "rls-build.md")
+    go, apply_section = text.index('answered "go"'), text.index("## 4. Apply")
+    assert go < apply_section and "Ask for \"go\"" in text
+    assert text.index("--dry-run") < apply_section

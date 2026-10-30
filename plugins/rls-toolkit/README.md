@@ -26,23 +26,20 @@ interview and the gotchas.
 
 ## Requirements
 
-- kbagent with the `rls` / `cls` command groups (`kbagent rls --help` must work)
+- kbagent with the `rls` / `cls` command groups (a kbagent release; `kbagent rls schema` is the probe).
+  The kbagent plugin is an external marketplace entry pinned by its own release job; this plugin does
+  not bump it.
 - A project-admin Storage token for writes; an organization admin for grants and organization scope
-- The kbagent plugin is an external marketplace entry, pinned by its own release job; this plugin
-  does not bump it. A kbagent release that contains `rls` / `cls` must be published there first
 - For a data app: Storage access on, every path behind SSO (oidc, gitlab, github, jumpcloud)
 
 ## What it does and does not do
 
-- Asks the questions a setup needs: where it is enforced, which IdP and groups, which tables, rows
-  and/or columns, defaults, administrators, scope. It reads the app configuration to find the
-  providers and the candidate tables, and proposes rules from column names and sampled values.
-- Default deny is taught everywhere: with RLS on an app every table it reads needs an rls-policy.
-- Binds to a data app by writing the policy UUIDs to `runtime.workspace.rlsPolicies`; the app must
-  be redeployed for a changed list. CLS cannot be bound to a data app yet.
+- Asks what a setup needs (where it is enforced, which IdP and groups, which tables, rows and/or
+  columns, defaults, administrators, scope), reads the app configuration for providers and candidate
+  tables, and proposes rules from column names and sampled values.
+- Binds to a data app by writing the policy UUIDs to `runtime.workspace.rlsPolicies`; a changed list
+  needs a redeploy. CLS cannot be bound to a data app yet.
 - Cannot list the groups of an identity provider (Keboola does not manage membership): it asks.
 - Never writes before a dry-run summary and an explicit "go".
-
-## Versioning
-
-Current version: **1.0.0** — first release: `rls-policies` skill, `/rls-show`, `/rls-build`.
+- `kbagent rls setup` is kbagent's own terminal-only wizard (one simple comparison per selector); this
+  plugin is the agent-driven path with data app discovery and binding.
