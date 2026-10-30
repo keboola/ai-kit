@@ -1,0 +1,12 @@
+[
+  {"query": "set up row-level security for my data app so each sales team only sees its own region", "should_trigger": true},
+  {"query": "which rls policies protect the tables in my keboola project?", "should_trigger": true},
+  {"query": "hide the salary and email columns from everyone except the hr group in my data app tables", "should_trigger": true},
+  {"query": "my data app uses OIDC with Entra groups, how do I limit which rows each group can read?", "should_trigger": true},
+  {"query": "bind these rls-policy objects to my governed workspace", "should_trigger": true},
+  {"query": "why does my admin get no rows from a governed workspace table?", "should_trigger": true},
+  {"query": "add a revenue metric to the semantic layer", "should_trigger": false},
+  {"query": "forward the X-Kbc-App-User-Token header in my Streamlit app queries", "should_trigger": false},
+  {"query": "create a Python component that extracts data from a REST API", "should_trigger": false},
+  {"query": "why did my flow fail on the transformation job last night?", "should_trigger": false}
+]

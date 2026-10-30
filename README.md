@@ -32,6 +32,7 @@ claude-kit/
 │   ├── keboola-cli/         # Keboola project management and review
 │   ├── keboola-git/         # Keboola-managed Git (Forgejo) access for data apps
 │   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
+│   ├── rls-toolkit/         # Row- and column-level security: guided policy setup for data apps
 │   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
 ├── README.md                # This file
 └── LICENSE                  # MIT license
@@ -130,6 +131,22 @@ Access Keboola-managed Git (Forgejo) repos for python-js data apps via the `kbag
 - 🛠️ **kbagent-CLI driven**: ships no MCP server
 
 **[→ View Keboola Git Plugin Documentation](./plugins/keboola-git/README.md)**
+
+### rls-toolkit Plugin
+
+**Location**: [`./plugins/rls-toolkit`](./plugins/rls-toolkit)
+
+Row- and column-level security for Keboola — set up `rls-policy` / `cls-policy` objects in bulk for the tables a data app reads, per IdP group, and bind them to the app. Companion to the `kbagent` plugin.
+
+**Features:**
+- ⚡ **Commands**: `/rls-show` (read-only overview), `/rls-build` (guided setup)
+- 🗣️ **Interview**: asks where policies are enforced, which IdP and groups, which tables, rows and/or columns, defaults and administrators
+- 🔎 **Discovery**: reads the data app configuration for providers, SSO and candidate tables; suggests rules from column names and sampled values
+- 🔒 **Default deny aware**: every table a governed app reads needs a policy; the close-out lists tables that still have none
+- ✅ **Safe writes**: dry-run summary and an explicit "go" before anything is written; updates instead of delete + create
+- 🛠️ **kbagent-CLI driven**: ships no MCP server
+
+**[→ View rls-toolkit Plugin Documentation](./plugins/rls-toolkit/README.md)**
 
 ### sl-toolkit Plugin
 
