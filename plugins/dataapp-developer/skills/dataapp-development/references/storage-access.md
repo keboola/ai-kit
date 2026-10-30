@@ -675,7 +675,14 @@ A governed workspace also refuses a query on a table that has no policy, and `SH
 - The shared DuckDB cache ("Preferred default for read-only apps" above, [duckdb-caching.md](duckdb-caching.md)) does not work in a governed workspace. Its refresh runs outside a user request, so Query Service refuses it, and one shared table would mix users anyway. Query the workspace per request instead, with a per-user cache if it is needed.
 - The client cache (TanStack Query in the browser) belongs to one user and needs no change.
 
-**An existing Node app.** An app built before `@keboola/api-client/sdk/dataAppServer` may query with only its Storage token. Move it over: `@keboola/api-client` `^52.1.0` in `package.json`, `server/kbcQuery.ts` from the template (it keeps `runQuery(sql)` and `currentUserKey()`, so callers stay as they are), the two `app.use` lines in `server/index.ts`, and delete an old `server/userToken.ts`. On a workspace without row-level security the app answers exactly as before. Turning row-level security on is a config change and a redeploy, which gives the app a new governed workspace; the app needs an OAuth/OIDC login on every path, and a policy on every table it queries.
+**An existing Node app.** An app built before `@keboola/api-client/sdk/dataAppServer` queries with only its Storage token, so once row-level security is on, every query it makes is refused (403 `Row-level security does not allow this query`) even for a signed-in user. Move it over:
+
+1. `@keboola/api-client` `^52.1.0` in `package.json`, `server/kbcQuery.ts` from the template, the two `app.use` lines in `server/index.ts`; delete an old `server/userToken.ts`.
+2. Check what the old `runQuery` returned. Apps from the template since 2026-10-12 got the same typed records with lower-case keys, so their callers stay as they are. Older apps got string cells (or had no `kbcQuery.ts` and call Query Service themselves): convert those callers, and drop casts such as `Number(row.TOTAL)` the SDK now does.
+3. Key any server cache by `currentUserKey()` and move queries made at startup or in a timer into the request.
+4. Preview on a draft as usual. A draft gets no `rlsPolicies` from prod, so it shows the data but not the filtering; the filtering applies after promote.
+
+On a workspace without row-level security the app answers as before. Turning row-level security on is a config change and a redeploy, which gives the app a new governed workspace; the app needs an OAuth/OIDC login on every path, and a policy on every table it queries.
 
 **Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
 
