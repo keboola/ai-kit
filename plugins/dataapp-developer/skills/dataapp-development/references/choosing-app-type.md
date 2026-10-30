@@ -9,6 +9,7 @@ There are three viable shapes for a Keboola App. Pick the lowest one in this lis
 ### 1. Streamlit (Python)
 
 **Pick when:**
+- The app does not need per-user data. Row-level security is not supported in Streamlit yet: for per-user data or a governed workspace, pick option 2.
 - The team is Python-only.
 - The UI is mostly sidebar filters + main pane with charts/tables.
 - The app is internal or a quick prototype.
@@ -46,6 +47,7 @@ Stack: one Node container — React + Vite + Tailwind client, Express serving it
 | Deploy mode | Code or Git | Git only | Git only |
 | MCP support today | Yes (`modify_streamlit_data_app`) | Yes (`modify_python_js_data_app` + git) | Yes (`modify_python_js_data_app` + git) |
 | Cold-start time | Fast | Fast (build runs once per prod deploy) | Slowest |
+| Row-level security / per-user data | Not supported yet | Yes (the template sends the user token) | With `keboola-query-service` 0.4.0 (not released yet) |
 
 ## Migration notes
 
@@ -54,4 +56,4 @@ Stack: one Node container — React + Vite + Tailwind client, Express serving it
 - The Python/JS app type does not currently support paste-in-UI "Code" deployment; only Git deployment. Streamlit retains "Code" mode.
 - A Python/JS app is a **prod** config that owns the git repo plus **drafts** that branch off it. Before any `modify_python_js_data_app` call, read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): an empty `configuration_id` creates a second app, and the app you want usually exists already.
 
-For read-only dashboarding apps (all three shapes), default to a DuckDB cache in front of the workspace — see [duckdb-caching.md](duckdb-caching.md). Querying Snowflake on every render is wasteful; caching is the default, not an optimization.
+For read-only dashboarding apps (all three shapes), default to a DuckDB cache in front of the workspace — see [duckdb-caching.md](duckdb-caching.md). Querying Snowflake on every render is wasteful; caching is the default, not an optimization. The exception is a workspace governed by row-level security: there the cache must be per user (see "Row-level security" in [storage-access.md](storage-access.md)).

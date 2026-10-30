@@ -1,6 +1,20 @@
-import { isApiError } from '@keboola/api-client';
-import { createQueryServiceClient } from '@keboola/api-client/queryService';
+import { readFile } from 'node:fs/promises';
+import { isApiError, isRowLevelSecurityError } from '@keboola/api-client';
+import { createQueryServiceClient, type QueryServiceCredential } from '@keboola/api-client/queryService';
 import { createQueryServiceSdk, type ExecuteQueryOptions } from '@keboola/api-client/sdk/queryService';
+import { currentUserToken, USER_TOKEN_HEADER } from './userToken.ts';
+
+const queryService = createQueryServiceSdk({
+  queryServiceClient: createQueryServiceClient({
+    baseUrl: async () => process.env.QUERY_SERVICE_URL ?? queryServiceUrlFromIndex(readEnv().KBC_URL),
+    auth: (): QueryServiceCredential => {
+      const userToken = currentUserToken()?.userToken;
+      return userToken
+        ? { type: 'app-user-token', token: userToken, storageToken }
+        : { type: 'sapi-token', token: storageToken };
+    },
+  }),
+});
 
 /**
  * Runs SQL in the app's Storage workspace through the Query Service SDK and returns every row.
@@ -10,24 +24,26 @@ import { createQueryServiceSdk, type ExecuteQueryOptions } from '@keboola/api-cl
  * - Env vars are read per call, so a missing one fails that request, not the server start.
  * - Every row, or `[]` for a statement without a result set (INSERT, UPDATE); fewer rows than the service counted is an error.
  * - Logs row counts and a redacted SQL preview, never values.
- * - An HTTP failure is rethrown as a plain `Error`: the SDK's `ApiError` carries the request, token included.
+ * - A row-level security refusal is rethrown as `RowLevelSecurityError`; any other HTTP failure as a plain `Error`.
  */
 export async function runQuery(sql: string, options?: ExecuteQueryOptions): Promise<Record<string, unknown>[]> {
   const env = readEnv();
-  const sdk = createQueryServiceSdk({
-    queryServiceClient: createQueryServiceClient({
-      baseUrl: env.QUERY_SERVICE_URL ?? (await queryServiceUrlFromIndex(env.KBC_URL)),
-      auth: { type: 'sapi-token', token: env.KBC_TOKEN },
-      middlewares: [],
-    }),
-  });
-  const [result] = await sdk
+  const scope = currentUserToken();
+  const [result] = await queryService
     .executeQuery(env.BRANCH_ID, env.WORKSPACE_ID, { statements: [sql], transactional: false }, {
-      maxWaitTime: 60_000,
+      timeout: 60_000,
       pageSize: 10_000,
       ...options,
     })
     .catch((err: unknown) => {
+      if (isRowLevelSecurityError(err)) {
+        console.warn(
+          scope?.userToken
+            ? '[kbcQuery] row-level security refused the query for this user'
+            : `[kbcQuery] row-level security refused a query sent without ${USER_TOKEN_HEADER}: ${scope ? 'the request has none' : 'it ran outside a user request (startup, timer, background job)'}`,
+        );
+        throw err;
+      }
       if (!isApiError(err)) throw err;
       const data = err.data as { exception?: string; message?: string } | undefined;
       throw new Error(`query service ${err.response.status}: ${data?.exception ?? data?.message ?? err.message}`);
@@ -41,6 +57,24 @@ export async function runQuery(sql: string, options?: ExecuteQueryOptions): Prom
   }
   console.debug(`[kbcQuery] ${rows.length} rows <- ${previewSql(sql)}`);
   return rows;
+}
+
+/**
+ * The app's Storage token, read again before every Query Service request.
+ *
+ * - `STORAGE_API_TOKEN_PATH` is the file the platform mounts and rotates; `KBC_TOKEN` (local runs) only without it.
+ * - An unreadable file fails the request instead of falling back to a `KBC_TOKEN` that may be stale.
+ */
+async function storageToken(): Promise<string> {
+  const file = process.env.STORAGE_API_TOKEN_PATH;
+  if (file) {
+    const token = await readFile(file, 'utf8').catch((err: NodeJS.ErrnoException) => {
+      throw new Error(`kbcQuery: cannot read the Storage token file STORAGE_API_TOKEN_PATH=${file}: ${err.code ?? err.message}`);
+    });
+    return token.trim();
+  }
+  if (process.env.KBC_TOKEN) return process.env.KBC_TOKEN;
+  throw new Error('kbcQuery: no Storage token: set STORAGE_API_TOKEN_PATH or KBC_TOKEN');
 }
 
 const NUMBER_TYPE = /^(fixed|real|integer|int64|float|float64|numeric|bignumeric)$/i;
@@ -100,19 +134,18 @@ function queryServiceUrlFromIndex(kbcUrl: string): Promise<string> {
 /**
  * The Storage access env vars, as the data-app image provides them.
  *
- * - `WORKSPACE_ID` and `KBC_TOKEN` come from the platform's workspace manifest and token file.
- * - The image restarts the app when either rotates, so `process.env` is always current.
+ * - `WORKSPACE_ID` comes from the platform's workspace manifest; the image restarts the app when it changes.
+ * - The Storage token is not here: `storageToken()` reads it before every request.
  */
 function readEnv() {
   const env = {
     KBC_URL: process.env.KBC_URL,
-    KBC_TOKEN: process.env.KBC_TOKEN,
     BRANCH_ID: process.env.BRANCH_ID,
     WORKSPACE_ID: process.env.WORKSPACE_ID,
   };
   const missing = Object.keys(env).filter((key) => !env[key as keyof typeof env]);
   if (missing.length) throw new Error(`kbcQuery: missing required env vars: ${missing.join(', ')}`);
-  return { ...(env as Record<keyof typeof env, string>), QUERY_SERVICE_URL: process.env.QUERY_SERVICE_URL };
+  return env as Record<keyof typeof env, string>;
 }
 
 function previewSql(sql: string) {

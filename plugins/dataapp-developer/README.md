@@ -15,7 +15,7 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 - Streamlit apps — Code/Git deployment, theming, secrets, AgGrid Enterprise
 - Python/JS apps — `/app` contract, nginx + supervisord, React + Vite + Express default, Python backend overlay when needed
 - Three deployment paths — MCP-only (Claude Desktop), Claude Code + MCP, kbagent CLI (Python/JS is git-backed on all three)
-- Storage access — RO workspace (default), RW direct via Query Service, input mapping (legacy)
+- Storage access — RO workspace (default), RW direct via Query Service, input mapping (legacy), row-level security (the app user token, per-user caches)
 - Authentication — None / Basic / OIDC / GitHub / GitLab / JumpCloud
 - DuckDB caching for read-only apps (Python and Node patterns)
 - Styling — Keboola palette as Tailwind tokens in the bundled template, shadcn/ECharts option, Streamlit theming
@@ -93,7 +93,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.10.3
+1.11.0
 
 ## Maintainer
 

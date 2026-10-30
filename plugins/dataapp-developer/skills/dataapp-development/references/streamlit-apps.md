@@ -162,6 +162,15 @@ def load_recent_crashes() -> list[dict]:
 
 If you reach this question, you usually want both — `@st.cache_resource` for the client, `@st.cache_data` for the result data with a TTL appropriate to how stale the user can tolerate.
 
+### Row-level security — not supported yet
+
+In a workspace governed by row-level security, Query Service returns only the rows of the signed-in user. It needs the user token (`X-Kbc-App-User-Token`) that Keboola's apps proxy adds to the request. Streamlit cannot use it yet:
+
+- Streamlit holds one WebSocket open for the whole session, up to hours. The apps proxy signs the token once, when the socket opens, and the token lives 5 minutes. After that, Query Service refuses the queries. A refresh bound to the live connection is a follow-up.
+- `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. In a governed workspace it would show one user's rows to another.
+
+For per-user data today, build a Python/JS app from `templates/react-vite-app/`, which forwards the token by itself. See "Row-level security" in [storage-access.md](storage-access.md).
+
 ## Local development
 
 **This section applies to git-deployed apps (Path B / C in [deployment-paths.md](deployment-paths.md)) and to humans iterating on a checkout.** If you're an agent deploying via `modify_streamlit_data_app` (Path A), skip — the tool argument is the deployment artifact, there's no local-vs-prod parity to maintain, and even Claude Desktop's sandbox filesystem doesn't change that. Compose the source code directly into the tool call.
