@@ -677,7 +677,7 @@ A governed workspace also refuses a query on a table that has no policy, and `SH
 
 **An existing Node app.** An app built before `@keboola/api-client/sdk/dataAppServer` queries with only its Storage token, so once row-level security is on, every query it makes is refused (403 `Row-level security does not allow this query`) even for a signed-in user. Move it over:
 
-1. `@keboola/api-client` `^52.1.0` in `package.json`, `server/kbcQuery.ts` from the template, the two `app.use` lines in `server/index.ts`; delete an old `server/userToken.ts`.
+1. `@keboola/api-client` `^53.0.0` in `package.json`, `server/kbcQuery.ts` from the template, the two `app.use` lines in `server/index.ts`; delete an old `server/userToken.ts`.
 2. Check what the old `runQuery` returned. Apps from the template since 2026-10-12 got the same typed records with lower-case keys, so their callers stay as they are. Older apps got string cells (or had no `kbcQuery.ts` and call Query Service themselves): convert those callers, and drop casts such as `Number(row.TOTAL)` the SDK now does.
 3. Key any server cache by `currentUserKey()` and move queries made at startup or in a timer into the request.
 4. Preview on a draft as usual. A draft gets no `rlsPolicies` from prod, so it shows the data but not the filtering; the filtering applies after promote.

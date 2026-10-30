@@ -15,7 +15,7 @@
     "start": "node server/index.ts"
   },
   "dependencies": {
-    "@keboola/api-client": "^52.1.0",
+    "@keboola/api-client": "^53.0.0",
     "@tanstack/react-query": "^5.104.1",
     "express": "^5.2.1",
     "lucide-react": "^1.53.0",
