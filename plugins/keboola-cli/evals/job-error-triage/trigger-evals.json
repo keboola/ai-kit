@@ -1,0 +1,62 @@
+[
+  {
+    "query": "resolve this job error, job ID 12345",
+    "should_trigger": true
+  },
+  {
+    "query": "this job failed, fix it",
+    "should_trigger": true
+  },
+  {
+    "query": "the config update didn't apply — update_config seemed to go through but the value never changed, sort it out",
+    "should_trigger": true
+  },
+  {
+    "query": "my update_config write was rejected, figure out why and get the change in with a single fix",
+    "should_trigger": true
+  },
+  {
+    "query": "the deploy failed — get it working",
+    "should_trigger": true
+  },
+  {
+    "query": "this flow won't run because of a config error, resolve it",
+    "should_trigger": true
+  },
+  {
+    "query": "I've tried updating this transformation config three times and it keeps not sticking — stop guessing and fix it properly",
+    "should_trigger": true
+  },
+  {
+    "query": "modify_flow returned success but the flow still has the old steps — the write didn't take, fix it",
+    "should_trigger": true
+  },
+  {
+    "query": "how many rows are in the orders table and what's the date range?",
+    "should_trigger": false
+  },
+  {
+    "query": "set up a brand-new python component repo for the stripe api from scratch",
+    "should_trigger": false
+  },
+  {
+    "query": "my custom python app job failed with a traceback ending in asyncio.run(main()) — debug the component code",
+    "should_trigger": false
+  },
+  {
+    "query": "job 998877 ended with 'Component terminated. Possibly due to out of memory error' — figure out the code problem",
+    "should_trigger": false
+  },
+  {
+    "query": "explain what this transformation config.json does — what do the blocks and codes mean",
+    "should_trigger": false
+  },
+  {
+    "query": "walk me through what this extractor configuration is set up to do",
+    "should_trigger": false
+  },
+  {
+    "query": "write unit tests for the transform function in my component",
+    "should_trigger": false
+  }
+]
