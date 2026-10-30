@@ -20,7 +20,7 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 │   └── lib/api.ts                # fetchJson + QueryClient
 ├── server/
 │   ├── index.ts                  # Express: /api/*, JSON errors, the built client in prod
-│   └── kbcQuery.ts               # runQuery(sql), currentUserKey() on @keboola/api-client/sdk/dataApp
+│   └── kbcQuery.ts               # runQuery(sql), currentUserKey() on @keboola/api-client/sdk/dataAppServer
 └── keboola-config/
     ├── nginx/sites/default.conf  # 8888 → :3000, answers the platform's POST / health check, gzip
     ├── setup.sh / setup-dev.sh   # prod: npm install + vite build · dev: npm install
@@ -53,7 +53,7 @@ In dev mode the user can pick a part of the page in Keboola's app preview and as
 
 ## Data and errors
 
-- **Server:** `runQuery(sql)` in `server/kbcQuery.ts` runs SQL in the app's workspace through `@keboola/api-client/sdk/dataApp` and returns every row. Write the SQL in the project's dialect (`references/storage-access.md`). Rows come back typed — numbers, booleans, `YYYY-MM-DD` dates, ISO timestamps — with lower-case keys (`COUNT(*) AS n` is `row.n` on both backends). A decimal a number cannot hold exactly (`NUMBER(38,6)`, an ID past 2^53) stays a string, and two columns with one name throw: alias them with `AS`.
+- **Server:** `runQuery(sql)` in `server/kbcQuery.ts` runs SQL in the app's workspace through `@keboola/api-client/sdk/dataAppServer` and returns every row. Write the SQL in the project's dialect (`references/storage-access.md`). Rows come back typed — numbers, booleans, `YYYY-MM-DD` dates, ISO timestamps — with lower-case keys (`COUNT(*) AS n` is `row.n` on both backends). A decimal a number cannot hold exactly (`NUMBER(38,6)`, an ID past 2^53) stays a string, and two columns with one name throw: alias them with `AS`.
 - **Client:** `useQuery({ queryKey, queryFn: ({ signal }) => fetchJson(url, { signal }) })`. Results stay fresh for 5 minutes — every refetch is a warehouse query.
 - **Errors:** the API answers `{ error }` as JSON and the client shows it at once. Only "API not up" (network error, 502–504) is retried, with backoff up to ~15 s.
 - **User token:** Keboola's apps proxy adds `X-Kbc-App-User-Token` to every request. `kbc.server.expressMiddleware()` keeps it for the request, and `runQuery` sends it to the Query Service together with the app's Storage token, so a workspace with row-level security returns that user's rows. Route code does nothing for it. A refusal is `@keboola/api-client`'s `RowLevelSecurityError`, which `kbc.server.expressErrorHandler()` answers as `403 { error, code: "ROW_LEVEL_SECURITY" }`.

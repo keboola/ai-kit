@@ -467,7 +467,7 @@ class Storage:
 storage = Storage()  # module-level singleton
 ```
 
-**Node.js / TypeScript:** use `templates/react-vite-app/server/kbcQuery.ts` — `runQuery(sql)` from `@keboola/api-client/sdk/dataApp` reads the platform's settings on first use (a missing var fails the request, not the server start), finds the Query Service URL without guessing it, reads the Storage token before every request, and sends the signed-in user's token with it (see "The app user token" below).
+**Node.js / TypeScript:** use `templates/react-vite-app/server/kbcQuery.ts` — `runQuery(sql)` from `@keboola/api-client/sdk/dataAppServer` reads the platform's settings on first use (a missing var fails the request, not the server start), finds the Query Service URL without guessing it, reads the Storage token before every request, and sends the signed-in user's token with it (see "The app user token" below).
 
 Usage from the rest of the app:
 
@@ -648,7 +648,7 @@ df = pd.read_csv("/data/in/tables/customers.csv")
 
 **Read the Storage token before every request.** The platform mounts the app's Storage token as a file and names it in `STORAGE_API_TOKEN_PATH`; it can rotate the token. `KBC_TOKEN` holds the same value for local runs. Read the file when the variable is set, `KBC_TOKEN` otherwise. If the file cannot be read, fail the call; do not fall back to a `KBC_TOKEN` that may be stale. This is a safeguard, not a requirement: the image restarts the app when the token file changes, so existing code that reads `KBC_TOKEN` once at start is correct and needs no rewrite.
 
-**The React + Vite template does all of this for you,** through `@keboola/api-client/sdk/dataApp`. `server/kbcQuery.ts` calls `initializeApp()` once; `server/index.ts` mounts `kbc.server.expressMiddleware()` first and `kbc.server.expressErrorHandler()` before its own error handler. Every Query Service call `runQuery` makes inside a request (submit, polls, result pages) then carries that request's user token with a freshly read Storage token.
+**The React + Vite template does all of this for you,** through `@keboola/api-client/sdk/dataAppServer`. `server/kbcQuery.ts` calls `initializeApp()` once; `server/index.ts` mounts `kbc.server.expressMiddleware()` first and `kbc.server.expressErrorHandler()` before its own error handler. Every Query Service call `runQuery` makes inside a request (submit, polls, result pages) then carries that request's user token with a freshly read Storage token.
 
 Route code does nothing for it. Keep both `app.use` lines in `server/index.ts`, and call `runQuery` from the request handler (directly or through other functions), not from work started outside the request (a timer set at startup, a queue). Never share one in-flight query between requests (for example `pending ??= runQuery(sql)` to merge equal queries): the second user gets the first user's rows.
 
@@ -675,7 +675,7 @@ A governed workspace also refuses a query on a table that has no policy, and `SH
 - The shared DuckDB cache ("Preferred default for read-only apps" above, [duckdb-caching.md](duckdb-caching.md)) does not work in a governed workspace. Its refresh runs outside a user request, so Query Service refuses it, and one shared table would mix users anyway. Query the workspace per request instead, with a per-user cache if it is needed.
 - The client cache (TanStack Query in the browser) belongs to one user and needs no change.
 
-**An existing Node app.** An app built before `@keboola/api-client/sdk/dataApp` may query with only its Storage token. Move it over: `@keboola/api-client` `^52.1.0` in `package.json`, `server/kbcQuery.ts` from the template (it keeps `runQuery(sql)` and `currentUserKey()`, so callers stay as they are), the two `app.use` lines in `server/index.ts`, and delete an old `server/userToken.ts`. On a workspace without row-level security the app answers exactly as before. Turning row-level security on is a config change and a redeploy, which gives the app a new governed workspace; the app needs an OAuth/OIDC login on every path, and a policy on every table it queries.
+**An existing Node app.** An app built before `@keboola/api-client/sdk/dataAppServer` may query with only its Storage token. Move it over: `@keboola/api-client` `^52.1.0` in `package.json`, `server/kbcQuery.ts` from the template (it keeps `runQuery(sql)` and `currentUserKey()`, so callers stay as they are), the two `app.use` lines in `server/index.ts`, and delete an old `server/userToken.ts`. On a workspace without row-level security the app answers exactly as before. Turning row-level security on is a config change and a redeploy, which gives the app a new governed workspace; the app needs an OAuth/OIDC login on every path, and a policy on every table it queries.
 
 **Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
 

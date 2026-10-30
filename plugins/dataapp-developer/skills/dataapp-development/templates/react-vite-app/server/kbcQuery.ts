@@ -1,4 +1,4 @@
-import { initializeApp, type RunQueryOptions } from '@keboola/api-client/sdk/dataApp';
+import { initializeApp, type RunQueryOptions } from '@keboola/api-client/sdk/dataAppServer';
 
 /** Keboola access for this server: the app's workspace and each request's signed-in user. */
 export const kbc = initializeApp();
