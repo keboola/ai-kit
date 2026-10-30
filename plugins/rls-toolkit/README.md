@@ -28,6 +28,8 @@ interview and the gotchas.
 
 - kbagent with the `rls` / `cls` command groups (`kbagent rls --help` must work)
 - A project-admin Storage token for writes; an organization admin for grants and organization scope
+- The kbagent plugin is an external marketplace entry, pinned by its own release job; this plugin
+  does not bump it. A kbagent release that contains `rls` / `cls` must be published there first
 - For a data app: Storage access on, every path behind SSO (oidc, gitlab, github, jumpcloud)
 
 ## What it does and does not do

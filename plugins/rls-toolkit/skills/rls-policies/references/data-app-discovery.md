@@ -55,14 +55,36 @@ kbagent --json config update --project P --component-id keboola.data-apps --conf
 ```
 
 Re-run without `--dry-run` after the user agrees, then read the config back
-(`config detail`) and check that `runtime.workspace.rlsPolicies` is exactly the list: a merge may
-append to rather than replace an existing list. The list is 1-100 unique UUIDs. `[]` is refused:
-to switch RLS off remove the key. A changed list takes effect only on the next deployment
-(`kbagent data-app deploy`); ask before deploying.
+(`config detail`) and check `runtime.workspace.rlsPolicies`. `--merge` is a deep merge of objects
+only: a list REPLACES the existing list (kbagent `deep_merge`: "anything else, source wins,
+including list replaces list"). So send the complete list every time: read the current UUIDs
+first, add or remove, and write the whole result; never send just the new UUID. The list is 1-100
+unique UUIDs. `[]` is refused: to switch RLS off remove the key (read the config, delete the key
+and write it back without `--merge`, only after the user agrees, since that replaces the whole
+configuration). A changed list takes effect only on the next deployment (`kbagent data-app
+deploy`); ask before deploying.
 
-There is no `clsPolicies` key in the app configuration yet, so a cls-policy cannot be bound to a
-data app. Create cls-policies anyway only when the user also uses a governed workspace (MCP,
-kbagent) and say what applies where.
+## Column-level policies for a data app (pending)
+
+Today a cls-policy cannot be bound to a data app: the app configuration has no key for it, so the
+app reads every column of a table that an rls-policy opens. What is coming and what the skill does:
+
+- The keboola-operator is gaining `clsPolicies` next to `rlsPolicies` on the workspace of a
+  Sandbox (operator PR AJDA-3593). Both lists end up in the workspace's policy-binding
+  (`rlsPolicyUUIDs`, `clsPolicyUUIDs`). `clsPolicies` requires `rlsPolicies` (a cls-policy alone
+  grants no rows), is immutable on the workspace like `rlsPolicies`, and is rejected on an App
+  (Sandbox only). Same limits: 1-100 unique ids.
+- sandboxes-service must still copy the list from the app configuration into the Sandbox
+  (AJDA-3594; the copy exists only for `rlsPolicies`). The configuration key is not defined yet:
+  by analogy it will be `runtime.workspace.clsPolicies`. Do NOT write it before the data-apps
+  documentation or a successful deployment confirms it: an unknown key is not an error you can
+  see, the policies would simply not apply.
+- Until then: create the cls-policies if the user also uses a governed MCP/kbagent workspace
+  (bind them there with `kbagent rls bind --cls-policy`), tell the user plainly that the data app
+  does not apply them, and keep their ids in the summary for the day the key exists.
+- When the key exists: bind the same way as `rlsPolicies` (complete list, merge, redeploy), only
+  for tables that also have an rls-policy in the app's list, and tell the user that a binding with
+  only `clsPolicies` refuses every table.
 
 ## Backends
 

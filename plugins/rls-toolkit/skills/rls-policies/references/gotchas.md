@@ -6,6 +6,8 @@
 | An admin sees no data | admins are not exempt; they read as `keboola|<user id>` | add a rule for that subject or a group |
 | Group rules never match | the token carries no `groups` claim (IdP does not send it, tenant not configured, header over 4096 bytes), or the strings differ in case or are ids | ask the user for the exact strings; `*` rules still match |
 | Policy exists, app still unfiltered or refused | the app config does not list its UUID, or the app was not redeployed after the list changed | check `runtime.workspace.rlsPolicies`, redeploy |
+| Earlier policies of the app vanished after binding a new one | `config update --merge` replaces a list: only the new UUID was sent | read the current list, add, and write the complete list |
+| A cls-policy does nothing for a data app | no configuration key binds cls-policies to an app yet | say so; see "Column-level policies for a data app (pending)" |
 | `rlsPolicies: []` is refused | the platform refuses an empty list | remove the key to switch RLS off |
 | Deployment fails with HTTP 400 | a path with `auth_required: false`, a password provider, or a rule without a provider | all paths need SSO of type oidc, gitlab, github or jumpcloud |
 | 409 deleting a policy | it is listed in a binding | unbind first (`rls unbind`, or remove the UUID from the app config) |

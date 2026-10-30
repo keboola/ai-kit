@@ -62,10 +62,12 @@ policies are updated).
 
 - **Data app:** write the RLS policy UUIDs into the app configuration at
   `runtime.workspace.rlsPolicies` (details and the exact command in
-  `references/data-app-discovery.md`). Tell the user that a changed list takes effect only after the
-  app is redeployed or restarted, and ask before running `kbagent data-app deploy`.
-  CLS policies cannot be bound to a data app yet (no `clsPolicies` key in the app configuration);
-  say so, and keep them for governed workspaces of MCP/kbagent.
+  `references/data-app-discovery.md`). `--merge` replaces a list, so read the current UUIDs and
+  write the COMPLETE list. Tell the user that a changed list takes effect only after the app is
+  redeployed or restarted, and ask before running `kbagent data-app deploy`.
+  CLS policies cannot be bound to a data app yet (no `clsPolicies` key in the app configuration,
+  see "Column-level policies for a data app (pending)" in `references/data-app-discovery.md`); say
+  so, and keep them for governed workspaces of MCP/kbagent.
 - **Governed workspace (MCP, kbagent):** `kbagent rls bind --project ALIAS --workspace-id WS
   --rls-policy ID --cls-policy ID --stack-id STACK --dry-run`, then without `--dry-run`. A wrong
   stack id writes a binding nothing reads, so confirm the stack id with the user.

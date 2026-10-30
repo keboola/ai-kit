@@ -71,7 +71,8 @@ Rules that decide every conversation:
 
 Data-app route: policies are bound by listing their UUIDs in the app configuration
 (`runtime.workspace.rlsPolicies`); the operator turns that into the workspace binding. You do not
-write a binding for an app. CLS is not bindable to an app yet. Config paths, SSO preconditions,
+write a binding for an app. CLS is not bindable to an app yet (operator and sandboxes-service
+work pending; `references/data-app-discovery.md` has the section). Config paths, SSO preconditions,
 provider facts and how to find the tables an app reads: `references/data-app-discovery.md`.
 
 ## Interview
