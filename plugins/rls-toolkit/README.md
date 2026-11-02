@@ -40,8 +40,8 @@ it; the kbagent commands are in `skills/rls-policies/references/kbagent.md` and 
 - Asks what a setup needs (where it is enforced, which IdP and groups, which tables, rows and/or
   columns, defaults, administrators, scope), reads the app configuration for providers and candidate
   tables, and proposes rules from column names and sampled values.
-- Binds to a data app by writing the policy UUIDs to `runtime.workspace.rlsPolicies`; a changed list
-  needs a redeploy. CLS cannot be bound to a data app yet.
+- Binds to a data app by writing the policy UUIDs to `runtime.workspace.rlsPolicies` and, for column
+  policies, `runtime.workspace.clsPolicies` (independent of each other); a changed list needs a redeploy.
 - Cannot list the groups of an identity provider (Keboola does not manage membership): it asks.
 - Never writes before a dry-run summary and an explicit "go".
 - `kbagent rls setup` is kbagent's own terminal-only wizard (one simple comparison per selector); this

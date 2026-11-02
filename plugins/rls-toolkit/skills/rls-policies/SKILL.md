@@ -36,11 +36,11 @@ directory (`mktemp -d`), never into the user's repository.
 
 ## Rules that decide every conversation
 
-1. **Default deny.** On a governed workspace a table without an rls-policy gives the reader no rows:
+1. **Default deny.** On a governed workspace a table without any policy gives the reader no rows:
    an ordinary reader gets an empty result, an administrator is refused (Query Service v1.23.0 and
-   later; before it both were refused). A cls-policy alone grants nothing, and a cls-policy that does
-   not name the reader refuses the table for everyone. With RLS on an app, EVERY table the app reads
-   needs an rls-policy.
+   later; before it both were refused). A cls-policy alone opens the table for the readers it names, with
+   all rows and only the columns it allows; a cls-policy that does not name the reader refuses the table
+   for them. With a policy on an app, EVERY table the app reads needs a policy (rls or cls).
 2. **Selectors.** Rules select readers by IdP `groups` or `subjects` (`<idp>|<sub>`), exactly one per
    rule; `["*"]` is every signed-in reader. Never an email. Groups and `*` are the practical choice
    for apps.
@@ -60,9 +60,10 @@ directory (`mktemp -d`), never into the user's repository.
 
 ## Data apps
 
-Policies are bound to an app by listing their UUIDs in `runtime.workspace.rlsPolicies`; the operator
-writes the workspace binding, so nobody writes one for an app. An app without the list is not
-governed: RLS is off and it reads every row. CLS is not bindable to an app yet.
+Policies are bound to an app by listing their UUIDs in `runtime.workspace.rlsPolicies` (row policies) and
+`runtime.workspace.clsPolicies` (column policies), independent of each other; the operator writes the
+workspace binding, so nobody writes one for an app. An app with neither list is not
+governed: it reads every row and column.
 Everything about the app side (preconditions, providers and groups, finding the tables, the list
 itself) is in `references/data-app-discovery.md`.
 

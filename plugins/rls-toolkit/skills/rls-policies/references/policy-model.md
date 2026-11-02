@@ -49,8 +49,8 @@ generating rules:
 "clsPolicyUUIDs": [...]}`: at least one list, 1-100 unique UUIDs each. A workspace without a binding
 gets every policy of the project (a governed workspace that is not a data app: a data app's
 workspace always has a binding, its `rlsPolicies` list, and an app without the list is not governed at
-all); a list that is absent contributes none, so a binding of only `clsPolicyUUIDs` refuses every
-table. The operator writes the binding of a data app's workspace; any other governed workspace needs
+all); a list that is absent contributes none, so a binding of only `clsPolicyUUIDs` opens the tables of
+those cls-policies for the readers they name and refuses every other table. The operator writes the binding of a data app's workspace; any other governed workspace needs
 one written by whoever creates it.
 
 ## Who may do what

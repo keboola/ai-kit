@@ -12,7 +12,7 @@
 | `rlsPolicies: []` is refused | the platform refuses an empty list | remove the key (see `data-app-discovery.md`) |
 | Deployment or app update fails with HTTP 400 | `rlsPolicies` is set and a path is public (`auth_required: false`), has no provider, names an unknown provider or one of another type than oidc, gitlab, github, jumpcloud, or the app has no login rule | all paths need SSO |
 | 409 deleting a policy | it is listed in a binding | unbind, or remove the UUID from the app config |
-| A cls-policy does nothing for an app | no configuration key binds cls-policies to an app yet | say so |
+| A cls-policy does nothing for an app | its UUID is not in `runtime.workspace.clsPolicies` (the rls list does not carry it), or the app was not redeployed | add it to `clsPolicies`, redeploy |
 | A table created later is unreadable | new tables have no policy: default deny | offer a policy at the end of the conversation |
 | A reader sees the conditions of a policy | the query history and status of Query Service still return the rewritten SQL, with the rule conditions, values and group names (a fix is tracked as AJDA-3699) | keep nothing secret in rule values or group names |
 | An added policy removed access | several policies on one table combine with AND (CLS: intersection), an added policy only narrows | check the other policies of the table |

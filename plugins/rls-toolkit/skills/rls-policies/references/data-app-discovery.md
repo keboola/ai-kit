@@ -44,7 +44,12 @@ on the next deployment, and a deployment restarts the app, so its users lose the
 before deploying. To switch RLS off, remove the key: prefer the Row-level security box of the app's
 Advanced settings in the UI over rewriting the whole configuration.
 
-## Column-level policies for a data app (pending)
+## Column-level policies for a data app
 
-A cls-policy cannot be bound to a data app yet, so the app reads every column of a table an
-rls-policy opens. Say so plainly, and check the release notes before writing any key for it.
+Bind cls-policies with `runtime.workspace.clsPolicies`, a list of 1-100 unique policy UUIDs like
+`rlsPolicies`; an empty list is refused (remove the key instead) and a changed list needs a redeploy.
+The two keys are independent: an app is governed when either is set, and the same preconditions
+(SSO login, no public path) apply. A cls-policy alone opens a table for the readers it names, with all
+rows and only the columns it allows; a reader it does not name is refused. With both an rls-policy and
+a cls-policy on a table, rows come from the rls-policy and columns from the cls-policy. List the
+cls-policy UUIDs separately from the rls ones: the lists are not interchangeable.

@@ -66,10 +66,9 @@ failure stop and report what was written (rerunning is idempotent).
 
 ## 5. Bind
 
-- **Data app:** write the complete list of RLS UUIDs to `runtime.workspace.rlsPolicies` as described in
-  "Binding" of `references/kbagent.md`, redeploy only after the user agrees. Until the app lists a policy
-  and is redeployed, the policy does nothing for it. CLS: say it is not applied to the app yet and keep
-  the ids.
+- **Data app:** write the complete list of RLS UUIDs to `runtime.workspace.rlsPolicies` and of CLS UUIDs to
+  `runtime.workspace.clsPolicies` as described in "Binding" of `references/kbagent.md`, redeploy only after
+  the user agrees. Until the app lists a policy and is redeployed, the policy does nothing for it.
 - **Governed workspace (MCP, kbagent):** `kbagent rls bind` as in the same section. Confirm the stack id
   with the user: a wrong one writes a binding nothing reads.
 
