@@ -9,7 +9,8 @@ These command groups need a kbagent release that contains them.
 One conversation id per run: generate it once (`uuidgen`, print it) and pass the same literal value
 as `--conversation-id CONV` on every kbagent call, or set `KBAGENT_CONVERSATION_ID` in the harness env.
 A new id per call correlates nothing, and an `export ...` in front of a command stops it matching a
-`Bash(kbagent ...)` allow rule. The harness keeps no shell state either: create the scratch directory
+`Bash(kbagent ...)` allow rule. The command examples below leave `--conversation-id CONV` out to stay
+readable: add it to every one you run. The harness keeps no shell state either: create the scratch directory
 once (`mktemp -d`), print its path and use that literal path (written `<SCRATCH>` below) in every
 later call. Rule files and read results go there.
 

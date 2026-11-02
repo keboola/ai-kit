@@ -133,7 +133,7 @@ def test_verified_facts_are_stated_without_a_question_mark():
     assert "(?)" not in gotchas
     discovery = _text(SKILL / "references" / "data-app-discovery.md")
     assert not re.search(r"HTTP 400[^|]*\(\?\)", discovery)
-    skill = _text(SKILL / "SKILL.md")
-    assert "An app with neither list is not\ngoverned" in skill
-    assert "a\n   policy that is not listed is ignored" in skill
+    skill = " ".join(_text(SKILL / "SKILL.md").split())  # the asserts must not depend on where the prose wraps
+    assert "An app with neither list is not governed" in skill
+    assert "a policy that is not listed is ignored" in skill
     assert "'10' < '2'" in _text(SKILL / "references" / "policy-model.md")
