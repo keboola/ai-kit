@@ -10,6 +10,9 @@ generating rules:
   `{"false":true}`. No `not`, no free SQL. `value` may be `{"$identity":"email"}`, `values`
   `{"$identity":"groups"}` (a reader without a verified email is refused on the first: an ordinary
   reader then reads no rows).
+- Ranges: `gt`/`gte`/`lt`/`lte` on an untyped table compare text, because Query Service writes the value
+  as a string literal (`"col" >= '2'`), so `'10' < '2'` and a numeric range silently drops rows. Use
+  `eq`/`in`, or ranges only on typed numeric or date columns.
 - cls-policy: `{table, dialect?, rules[]}`; a rule is `{groups|subjects, visible_columns[]}`; no
   `default`: a reader that matches no rule is refused on the table.
 - `table` is the Storage id `<stage>.<bucket>.<table>`. `dialect` is optional: omit it unless the
@@ -44,9 +47,11 @@ generating rules:
 
 `{"kid": "KID:<stack>[:branch-N]:project-<id>:workspace-<wsId>", "rlsPolicyUUIDs": [...],
 "clsPolicyUUIDs": [...]}`: at least one list, 1-100 unique UUIDs each. A workspace without a binding
-gets every policy of the project; a list that is absent contributes none, so a binding of only
-`clsPolicyUUIDs` refuses every table. The operator writes the binding of a data app's workspace;
-any other governed workspace needs one written by whoever creates it.
+gets every policy of the project (a governed workspace that is not a data app: a data app's
+workspace always has a binding, its `rlsPolicies` list, and an app without the list is not governed at
+all); a list that is absent contributes none, so a binding of only `clsPolicyUUIDs` refuses every
+table. The operator writes the binding of a data app's workspace; any other governed workspace needs
+one written by whoever creates it.
 
 ## Who may do what
 

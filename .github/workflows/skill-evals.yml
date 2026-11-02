@@ -23,6 +23,21 @@ jobs:
         working-directory: evals
         run: uv run --group dev pytest -q
 
+  rls-toolkit-tests:
+    name: "rls-toolkit static checks"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Run the consistency checks of the rls-toolkit skill
+        run: uv run --with pytest --with jsonschema pytest -q plugins/rls-toolkit/tests
+
   tier1-activation:
     name: "Tier 1: skill activation routing"
     runs-on: ubuntu-latest

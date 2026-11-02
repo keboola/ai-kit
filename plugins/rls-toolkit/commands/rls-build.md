@@ -16,16 +16,18 @@ user has seen the summary table and answered "go".
 
 ## 1. Preconditions and one read
 
-Pick the project (argument, only alias, or ask). Set `export KBAGENT_CONVERSATION_ID="$(uuidgen)"` in
-every Bash call and `SCRATCH=$(mktemp -d)`. Run in parallel and keep the results in `$SCRATCH`, then
-reuse them (create versus update, coverage gap, discovery):
+Pick the project (argument, only alias, or ask). The harness keeps no shell state, so set up once and
+print both values: a conversation id (`uuidgen`) and a scratch directory (`mktemp -d`). From here on write
+the literal values into every command: `--conversation-id CONV` on each kbagent call (the same id for the
+whole run) and the scratch path (`<SCRATCH>` below). Run the reads in one call, in parallel, keep the
+results in `<SCRATCH>` and reuse them (create versus update, coverage gap, discovery):
 
 ```bash
-kbagent --json project info --project $P > $SCRATCH/project.json &   # is_master_token must be true
-kbagent --json rls schema --project $P > $SCRATCH/schema.json &      # also the kbagent version probe
-kbagent --json rls list --project $P > $SCRATCH/rls.json &
-kbagent --json cls list --project $P > $SCRATCH/cls.json &
-kbagent --json storage tables --project $P > $SCRATCH/tables.json &
+kbagent --conversation-id CONV --json project info --project $P > <SCRATCH>/project.json &   # is_master_token must be true
+kbagent --conversation-id CONV --json rls schema --project $P > <SCRATCH>/schema.json &      # also the kbagent version probe
+kbagent --conversation-id CONV --json rls list --project $P > <SCRATCH>/rls.json &
+kbagent --conversation-id CONV --json cls list --project $P > <SCRATCH>/cls.json &
+kbagent --conversation-id CONV --json storage tables --project $P > <SCRATCH>/tables.json &
 wait
 ```
 
@@ -37,19 +39,20 @@ Author with `groups` / `subjects` only; kbagent refuses `principal` / `principal
 
 Where to enforce: a data app (`data-app list`), the MCP workspace, another governed workspace. For an app
 run `references/data-app-discovery.md` (reuse one `config detail`). Then run the interview. Write one
-rules file per table into `$SCRATCH` (`rls_<bucket>_<table>.json`, `cls_<bucket>_<table>.json`), never in
+rules file per table into `<SCRATCH>` (`rls_<bucket>_<table>.json`, `cls_<bucket>_<table>.json`), never in
 the user's repository.
 
 ## 3. Dry-run and summary
 
 Run the dry-runs of independent tables in parallel (up to four), same commands as the apply. A table
-that already has a policy in `$SCRATCH/rls.json` (or `cls.json`) is an update and needs its
-`--policy-id` from that file:
+that already has a policy in `<SCRATCH>/rls.json` (or `cls.json`) is an update and needs its
+`--policy-id` from that file. Every apply below has its dry-run here, rls and cls alike:
 
 ```bash
-kbagent --json rls create --project $P --table-id in.c-bucket.table --rules @FILE [--default JSON] --dry-run
-kbagent --json rls update --project $P --policy-id UUID --rules @FILE [--default JSON] --dry-run
-kbagent --json cls create --project $P --table-id in.c-bucket.table --rules @FILE --dry-run
+kbagent --conversation-id CONV --json rls create --project $P --table-id in.c-bucket.table --rules @FILE [--default JSON] --dry-run
+kbagent --conversation-id CONV --json rls update --project $P --policy-id UUID --rules @FILE [--default JSON] --dry-run
+kbagent --conversation-id CONV --json cls create --project $P --table-id in.c-bucket.table --rules @FILE --dry-run
+kbagent --conversation-id CONV --json cls update --project $P --policy-id UUID --rules @FILE --dry-run
 ```
 
 Print one table: table | kind | selector -> condition or columns | default | create, or update. List
@@ -64,14 +67,15 @@ failure stop and report what was written (rerunning is idempotent).
 ## 5. Bind
 
 - **Data app:** write the complete list of RLS UUIDs to `runtime.workspace.rlsPolicies` as described in
-  "Binding" of `references/kbagent.md`, redeploy only after the user agrees. CLS: say it is not applied
-  to the app yet and keep the ids.
+  "Binding" of `references/kbagent.md`, redeploy only after the user agrees. Until the app lists a policy
+  and is redeployed, the policy does nothing for it. CLS: say it is not applied to the app yet and keep
+  the ids.
 - **Governed workspace (MCP, kbagent):** `kbagent rls bind` as in the same section. Confirm the stack id
   with the user: a wrong one writes a binding nothing reads.
 
 ## 6. Close-out
 
-Compute the coverage gap from `$SCRATCH/tables.json` and the policies now present (re-read only
+Compute the coverage gap from `<SCRATCH>/tables.json` and the policies now present (re-read only
 `rls list` and `storage tables`), including any bucket or table created earlier in this conversation, and
 offer policies for them. Give the manual check: sign in to the app as a user of each group (or
 `kbagent workspace query` for a governed workspace) and compare with the summary table.

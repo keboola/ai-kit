@@ -49,7 +49,10 @@ directory (`mktemp -d`), never into the user's repository.
    read (an ordinary reader then sees no rows, an administrator gets an error).
 4. **Administrators are not exempt**: they read as `keboola|<user id>`.
 5. **Several policies on one table combine with AND** (CLS: the intersection of the visible
-   columns), so an added policy can only narrow access.
+   columns), so an added policy can only narrow access among the policies that apply to the
+   workspace. For a data app only the policies listed in its `runtime.workspace.rlsPolicies` apply: a
+   policy that is not listed is ignored, so it narrows nothing until it is bound and the app is
+   redeployed. A governed workspace without any binding gets every policy of the project.
 6. **The policy list is fixed per workspace.** A data app gets a new workspace per deployment, so a
    changed `rlsPolicies` list needs a redeploy. Edits of a policy's content apply to new queries
    within about a minute (the policy cache lives 60 s). A bound policy cannot be deleted until it is
@@ -58,7 +61,8 @@ directory (`mktemp -d`), never into the user's repository.
 ## Data apps
 
 Policies are bound to an app by listing their UUIDs in `runtime.workspace.rlsPolicies`; the operator
-writes the workspace binding, so nobody writes one for an app. CLS is not bindable to an app yet.
+writes the workspace binding, so nobody writes one for an app. An app without the list is not
+governed: RLS is off and it reads every row. CLS is not bindable to an app yet.
 Everything about the app side (preconditions, providers and groups, finding the tables, the list
 itself) is in `references/data-app-discovery.md`.
 

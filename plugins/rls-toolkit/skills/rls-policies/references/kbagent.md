@@ -6,8 +6,12 @@ flags, the identity model and the combination rules live in the `rls-workflow` r
 and doubles as the feature probe: an old kbagent fails with "No such command", so say so and stop.
 These command groups need a kbagent release that contains them.
 
-Every Bash call sets `export KBAGENT_CONVERSATION_ID="$(uuidgen)"` (the harness keeps no shell
-state), as `sl-build` does. Rule files and read results go to `SCRATCH=$(mktemp -d)`.
+One conversation id per run: generate it once (`uuidgen`, print it) and pass the same literal value
+as `--conversation-id CONV` on every kbagent call, or set `KBAGENT_CONVERSATION_ID` in the harness env.
+A new id per call correlates nothing, and an `export ...` in front of a command stops it matching a
+`Bash(kbagent ...)` allow rule. The harness keeps no shell state either: create the scratch directory
+once (`mktemp -d`), print its path and use that literal path (written `<SCRATCH>` below) in every
+later call. Rule files and read results go there.
 
 ## Reads
 
@@ -23,14 +27,16 @@ state), as `sl-build` does. Rule files and read results go to `SCRATCH=$(mktemp 
 
 ## Writes
 
-Per table, one rules file in `$SCRATCH` (`rls_<bucket>_<table>.json`, `cls_<bucket>_<table>.json`):
+Per table, one rules file in `<SCRATCH>` (`rls_<bucket>_<table>.json`, `cls_<bucket>_<table>.json`):
 
 ```bash
 kbagent --json rls create --project P --table-id in.c-bucket.table --rules @FILE [--default JSON] --dry-run
 kbagent --json cls create --project P --table-id in.c-bucket.table --rules @FILE --dry-run
+kbagent --json rls update --project P --policy-id UUID --rules @FILE [--default JSON] --dry-run
+kbagent --json cls update --project P --policy-id UUID --rules @FILE --dry-run
 ```
 
-- `update` and `delete` need `--policy-id`: take it from `$SCRATCH/rls.json` / `cls.json` (the `list`
+- `update` and `delete` need `--policy-id`: take it from `<SCRATCH>/rls.json` / `cls.json` (the `list`
   result). Never delete and create to change a policy: the UUID would change.
 - `update` is a partial update; a `default` cannot be removed with it. `dialect` defaults to the
   project backend; kbagent refuses `principal` / `principals`.
@@ -42,9 +48,9 @@ kbagent --json cls create --project P --table-id in.c-bucket.table --rules @FILE
   objects only and a list REPLACES the existing list (kbagent `deep_merge`):
 
   ```bash
-  printf '{"runtime":{"workspace":{"rlsPolicies":%s}}}' '["UUID-1","UUID-2"]' > "$SCRATCH/bind.json"
+  printf '{"runtime":{"workspace":{"rlsPolicies":%s}}}' '["UUID-1","UUID-2"]' > <SCRATCH>/bind.json
   kbagent --json config update --project P --component-id keboola.data-apps --config-id ID \
-    --configuration @"$SCRATCH/bind.json" --merge --dry-run
+    --configuration @<SCRATCH>/bind.json --merge --dry-run
   ```
 
   Rerun without `--dry-run` after the user agrees and read the config back once. kbagent has no

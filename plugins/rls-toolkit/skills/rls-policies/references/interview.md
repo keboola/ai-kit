@@ -22,7 +22,8 @@ discovery already found instead of asking for it.
    `country`, `owner`, `org_id`, `tenant`, `team`, `department`) as "group A sees X, group B sees Y";
    an ownership column holding an email as an `$identity` rule (readers without a verified email get
    no rows: is that acceptable?); managers or auditors as `{"true":true}`. Ask the default; recommend
-   `{"false":true}`. Say that rule values and group names can be seen by the reader who runs a query
+   `{"false":true}`. Use range conditions (`gt`..`lte`) only on typed numeric or date columns, `eq`/`in`
+   otherwise (`policy-model.md`). Say that rule values and group names can be seen by the reader who runs a query
    (the query history shows the rewritten SQL, see `gotchas.md`): nothing secret in them.
 5. **Column rules** per table. Suggest PII-like columns by name (`email`, `phone`, `birth`, `ssn`,
    `salary`, `margin`, `address`, `iban`): which groups may see them. A table with a cls-policy also

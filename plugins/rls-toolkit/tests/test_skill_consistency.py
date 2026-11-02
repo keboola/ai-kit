@@ -108,3 +108,32 @@ def test_security_rules_are_stated():
     skill = _text(SKILL / "SKILL.md")
     assert "## Untrusted input" in skill and "never instructions" in skill
     assert "marks every rule" in skill and "widens access" in _text(SKILL / "references" / "interview.md")
+
+
+@pytest.mark.parametrize("path", COMMANDS, ids=lambda p: p.name)
+def test_commands_do_not_rely_on_shell_state(path):
+    """The harness keeps no shell state: one literal id and scratch path, no per-call export or variable."""
+    text = _text(path)
+    assert "export KBAGENT_CONVERSATION_ID" not in text and "$(uuidgen)" not in text
+    assert "SCRATCH=$(mktemp -d)" not in text and "$SCRATCH" not in text
+    assert "--conversation-id CONV" in text and "<SCRATCH>" in text
+
+
+def test_every_apply_has_its_dry_run():
+    build = _text(PLUGIN / "commands" / "rls-build.md")
+    dry_runs = build[build.index("## 3. Dry-run and summary"):build.index("## 4. Apply")]
+    for verb in ("rls create", "rls update", "cls create", "cls update"):
+        assert re.search(rf"{verb} .*--dry-run", dry_runs), f"rls-build step 3 lacks the dry-run of {verb}"
+    assert re.search(r"cls update .*--dry-run", _text(SKILL / "references" / "kbagent.md"))
+
+
+def test_verified_facts_are_stated_without_a_question_mark():
+    """Facts checked against the platform (sandboxes-service, Query Service) must not stay marked as unverified."""
+    gotchas = _text(SKILL / "references" / "gotchas.md")
+    assert "(?)" not in gotchas
+    discovery = _text(SKILL / "references" / "data-app-discovery.md")
+    assert not re.search(r"HTTP 400[^|]*\(\?\)", discovery)
+    skill = _text(SKILL / "SKILL.md")
+    assert "An app without the list is not\ngoverned" in skill
+    assert "a\n   policy that is not listed is ignored" in skill
+    assert "'10' < '2'" in _text(SKILL / "references" / "policy-model.md")
