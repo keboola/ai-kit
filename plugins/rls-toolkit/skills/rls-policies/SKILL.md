@@ -5,63 +5,66 @@ description: >-
   row-level security, column-level security, RLS, CLS, rls-policy, cls-policy, policy-binding,
   governed workspace, rlsPolicies, who can see which rows of a table, restrict rows per group,
   hide columns per group, OIDC groups for data access. Covers authoring and binding the policies
-  (interview, discovery, kbagent commands, gotchas). Not for building the app's code
-  (dataapp-development) and not for the semantic layer.
+  (model, interview, data app discovery, gotchas). Tool-neutral: kbagent syntax is in
+  references/kbagent.md. Not for building the app's code (dataapp-development) and not for the
+  semantic layer.
 ---
 
 # RLS / CLS — Reference
 
-Policies are metastore objects authored with `kbagent` (`rls` / `cls` command groups). All command
-flags, the identity model and the rule grammar live in the `rls-workflow` reference of the `kbagent`
-skill; `kbagent --json rls schema|cls schema --project P` is the authoritative live grammar and
-doubles as the feature probe (an old kbagent fails with "No such command": say so and stop).
-Enforcement is Query Service on a **governed workspace**: a data app with RLS on, the Keboola MCP
-server's workspace, or a `kbagent workspace create --governed` workspace. This plugin owns what
-kbagent does not have: the interview, the discovery of what a data app reads, bulk generation and
-the binding to the app. `kbagent rls setup` (terminal only, one simple comparison per selector) is
-the human alternative; this plugin is the agent-driven path. A runtime without kbagent maps the same
-steps to its own tools; the policy JSON is identical.
-
-Use `/rls-show` (read-only overview) and `/rls-build` (guided setup, explicit invocation only);
-everything else is conversational.
+Policies are metastore objects (`rls-policy`, `cls-policy`) that Query Service applies on a
+**governed workspace**: a data app with RLS on, the Keboola MCP server's workspace, or a workspace
+created as governed. This skill owns the model, the rules, the interview, the discovery of what a
+data app reads and the facts about binding. It names no tool: the policy JSON is the same whatever
+writes it. A runtime with its own policy tools uses them. With the `kbagent` CLI,
+`references/kbagent.md` maps every step to commands, and `/rls-show` (read-only overview) and
+`/rls-build` (guided setup, explicit invocation only) run them.
 
 ## Working Directory Context
 
 No script of this plugin depends on the working directory. Generated rule files go to a scratch
-directory (`mktemp -d`), never into the user's repository. kbagent commands run from anywhere.
+directory (`mktemp -d`), never into the user's repository.
 
 ## Prerequisites
 
-A project-admin (master) Storage token for writes; see `references/policy-model.md` for who may do
-what. A data app additionally needs Storage access, SSO on every path and the project feature
-`data-apps-storage-workspace`; the MCP workspace needs the project feature `row-level-security`.
+- Project feature `row-level-security`.
+- Writing a policy needs a project-admin Storage token: a master token of a member with the role
+  admin, productionManager or share. Grants and organization scope need an organization admin
+  (`references/policy-model.md`).
+- A data app additionally needs Storage access (project feature `data-apps-storage-workspace`) and
+  SSO on every path.
 
 ## Rules that decide every conversation
 
-1. **Default deny.** On a governed workspace a table without an rls-policy gives the reader nothing
-   (an administrator is refused, an ordinary reader gets an empty result); a cls-policy alone grants
-   nothing. With RLS on an app, EVERY table the app reads needs an rls-policy.
+1. **Default deny.** On a governed workspace a table without an rls-policy gives the reader no rows:
+   an ordinary reader gets an empty result, an administrator is refused (Query Service v1.23.0 and
+   later; before it both were refused). A cls-policy alone grants nothing, and a cls-policy that does
+   not name the reader refuses the table for everyone. With RLS on an app, EVERY table the app reads
+   needs an rls-policy.
 2. **Selectors.** Rules select readers by IdP `groups` or `subjects` (`<idp>|<sub>`), exactly one per
    rule; `["*"]` is every signed-in reader. Never an email. Groups and `*` are the practical choice
    for apps.
 3. **Always write a `default`** (`{"false":true}` = no rows). Unknown groups never match a group
-   rule; without a default such a reader is refused with an error.
+   rule; a reader that no rule matches gets the `default`, and without one the policy refuses the
+   read (an ordinary reader then sees no rows, an administrator gets an error).
 4. **Administrators are not exempt**: they read as `keboola|<user id>`.
-5. **The policy list is fixed per workspace.** A data app gets a new workspace per deployment, so a
-   changed `rlsPolicies` list needs a redeploy. Edits of a policy's content apply to the next query
-   (cached about a minute). A bound policy cannot be deleted until it is unbound.
+5. **Several policies on one table combine with AND** (CLS: the intersection of the visible
+   columns), so an added policy can only narrow access.
+6. **The policy list is fixed per workspace.** A data app gets a new workspace per deployment, so a
+   changed `rlsPolicies` list needs a redeploy. Edits of a policy's content apply to new queries
+   within about a minute (the policy cache lives 60 s). A bound policy cannot be deleted until it is
+   unbound.
 
 ## Data apps
 
 Policies are bound to an app by listing their UUIDs in `runtime.workspace.rlsPolicies`; the operator
-writes the workspace binding, so you never write one for an app. CLS is not bindable to an app yet.
-Everything about the app side (preconditions, providers and groups, finding the tables, writing the
-list) is in `references/data-app-discovery.md`.
+writes the workspace binding, so nobody writes one for an app. CLS is not bindable to an app yet.
+Everything about the app side (preconditions, providers and groups, finding the tables, the list
+itself) is in `references/data-app-discovery.md`.
 
 ## Interview
 
-`references/interview.md` is the question script; `/rls-build` runs it and then applies. Show what
-discovery found instead of asking for it.
+`references/interview.md` is the question script. Show what discovery found instead of asking for it.
 
 ## Gotchas
 

@@ -10,9 +10,9 @@ argument-hint: "[project-alias] [--app APP_ID]"
 # Build RLS/CLS
 
 Explicit invocation only. The questions are in `skills/rls-policies/references/interview.md`; the model,
-rules and gotchas in the `rls-policies` skill; command flags in the `rls-workflow` reference of the
-kbagent skill. This command owns the mechanics. Never write before the user has seen the summary table
-and answered "go".
+rules and gotchas in the `rls-policies` skill; the kbagent commands behind every step in
+`skills/rls-policies/references/kbagent.md`. This command owns the mechanics. Never write before the
+user has seen the summary table and answered "go".
 
 ## 1. Preconditions and one read
 
@@ -29,8 +29,8 @@ kbagent --json storage tables --project $P > $SCRATCH/tables.json &
 wait
 ```
 
-A failing `rls schema` with "No such command" means the kbagent is too old: update it, stop. A non-master
-token cannot write policies (grants and organization scope need an organization admin).
+A failing `rls schema` with "No such command" means the kbagent has no `rls` commands: update it, stop.
+A non-master token cannot write policies (grants and organization scope need an organization admin).
 Author with `groups` / `subjects` only; kbagent refuses `principal` / `principals`.
 
 ## 2. Target and interview
@@ -42,16 +42,18 @@ the user's repository.
 
 ## 3. Dry-run and summary
 
-Run the dry-runs of independent tables in parallel (up to four), same commands as the apply:
+Run the dry-runs of independent tables in parallel (up to four), same commands as the apply. A table
+that already has a policy in `$SCRATCH/rls.json` (or `cls.json`) is an update and needs its
+`--policy-id` from that file:
 
 ```bash
 kbagent --json rls create --project $P --table-id in.c-bucket.table --rules @FILE [--default JSON] --dry-run
+kbagent --json rls update --project $P --policy-id UUID --rules @FILE [--default JSON] --dry-run
 kbagent --json cls create --project $P --table-id in.c-bucket.table --rules @FILE --dry-run
 ```
 
-Print one table: table | kind | selector -> condition or columns | default | create, or update when
-`$SCRATCH/rls.json` already has a policy for that table. List tables the app reads that have no policy.
-Ask for "go". Apply nothing without it.
+Print one table: table | kind | selector -> condition or columns | default | create, or update. List
+tables the app reads that have no policy. Ask for "go". Apply nothing without it.
 
 ## 4. Apply
 
@@ -62,11 +64,10 @@ failure stop and report what was written (rerunning is idempotent).
 ## 5. Bind
 
 - **Data app:** write the complete list of RLS UUIDs to `runtime.workspace.rlsPolicies` as described in
-  "Writing the binding" of `data-app-discovery.md`, redeploy only after the user agrees. CLS: say it is not
-  applied to the app yet and keep the ids.
-- **Governed workspace (MCP, kbagent):** `kbagent rls bind --project $P --workspace-id WS --rls-policy ID
-  --cls-policy ID --stack-id STACK --dry-run`, then without `--dry-run`. Confirm the stack id with the user:
-  a wrong one writes a binding nothing reads.
+  "Binding" of `references/kbagent.md`, redeploy only after the user agrees. CLS: say it is not applied
+  to the app yet and keep the ids.
+- **Governed workspace (MCP, kbagent):** `kbagent rls bind` as in the same section. Confirm the stack id
+  with the user: a wrong one writes a binding nothing reads.
 
 ## 6. Close-out
 

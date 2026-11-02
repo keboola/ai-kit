@@ -11,24 +11,27 @@ create --governed`).
 /plugin install rls-toolkit
 ```
 
-Install the `kbagent` plugin as well: all reads and writes go through `kbagent rls` / `cls`.
+Install the `kbagent` plugin as well: the commands read and write through `kbagent rls` / `cls`.
 
 ## Commands
 
 | Command | Description |
 |---|---|
-| `/rls-show` | Read-only overview: policies, bindings, governed workspaces, data apps with RLS, tables no policy covers |
+| `/rls-show` | Read-only overview: policies, data apps with RLS on, tables no policy covers |
 | `/rls-build` | Guided setup: find what an app reads, ask who sees what, generate policies in bulk, dry-run, apply on "go", bind to the app |
 
 Everything else is conversational: the `rls-policies` skill auto-loads on "row-level security",
 "hide columns per group", "governed workspace" and similar, and carries the policy model, the
-interview and the gotchas.
+interview and the gotchas. The skill names no tool, so a runtime with its own policy tools can use
+it; the kbagent commands are in `skills/rls-policies/references/kbagent.md` and in the two commands.
 
 ## Requirements
 
-- kbagent with the `rls` / `cls` command groups (a kbagent release; `kbagent rls schema` is the probe).
-  The kbagent plugin is an external marketplace entry pinned by its own release job; this plugin does
-  not bump it.
+- kbagent with the `rls` / `cls` command groups (`kbagent rls schema` is the probe). No kbagent release
+  has them yet (keboola/cli PRs #778, #892, #922, #923); until one is released and pinned in this
+  marketplace the commands stop at the probe. The kbagent plugin is an external marketplace entry
+  pinned by its own release job; this plugin does not bump it.
+- Project feature `row-level-security`; for a data app also `data-apps-storage-workspace`
 - A project-admin Storage token for writes; an organization admin for grants and organization scope
 - For a data app: Storage access on, every path behind SSO (oidc, gitlab, github, jumpcloud)
 
@@ -43,3 +46,5 @@ interview and the gotchas.
 - Never writes before a dry-run summary and an explicit "go".
 - `kbagent rls setup` is kbagent's own terminal-only wizard (one simple comparison per selector); this
   plugin is the agent-driven path with data app discovery and binding.
+- Rule values are escaped literals in the rewritten SQL, and the query history of Query Service still
+  shows that SQL to the reader (a fix is tracked as AJDA-3699): keep nothing secret in rule values.
