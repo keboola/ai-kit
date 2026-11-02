@@ -32,4 +32,6 @@ discovery already found instead of asking for it.
    affects every project on every backend. A runtime without a scope option writes project policies
    and skips this question.
 7. **Summary.** A table of what will be written (table, kind, selector and condition or columns,
-   default, create or replace), then wait for an explicit "go".
+   default, create or replace). Mark every rule that widens access: a `["*"]` selector,
+   `{"true":true}`, an administrator rule, a `default` that is not `{"false":true}`. Then wait for an
+   explicit "go".

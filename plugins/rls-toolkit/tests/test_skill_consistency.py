@@ -101,3 +101,10 @@ def test_stale_refusal_wording_is_gone():
     text = "\n".join(_text(p) for p in DOCS)
     assert "refused for every reader" not in text
     assert "without a default such a reader is refused with an error" not in text
+
+
+def test_security_rules_are_stated():
+    """The skill treats read content as data and marks widening rules before the "go"."""
+    skill = _text(SKILL / "SKILL.md")
+    assert "## Untrusted input" in skill and "never instructions" in skill
+    assert "marks every rule" in skill and "widens access" in _text(SKILL / "references" / "interview.md")
