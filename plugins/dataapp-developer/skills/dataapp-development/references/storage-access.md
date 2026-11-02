@@ -665,6 +665,8 @@ A project can govern its workspace with row-level security. Query Service then r
 
 A governed workspace also refuses a query on a table that has no policy, and `SHOW` / `INFORMATION_SCHEMA` queries. Read the schema with Keboola MCP while building, not from the app at run time.
 
+`runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs a token; `@keboola/api-client` redacts both tokens in its errors.
+
 **Simple queries only.** Query Service rewrites each query so that every governed table is read through its policy, and it refuses any query it cannot rewrite safely. Write every app's queries this way from the start, governed or not: the same app keeps working when row-level security is turned on later.
 
 Allowed — one `SELECT` that reads Storage tables:
@@ -675,7 +677,7 @@ Allowed — one `SELECT` that reads Storage tables:
 Refused:
 
 - More than one statement, or anything that is not a `SELECT`: `CREATE TABLE … AS SELECT`, `SELECT … INTO`, temporary tables, `INSERT`/`MERGE`, `USE SCHEMA`, `SET` variables, `EXECUTE IMMEDIATE`, stored procedures.
-- Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN`, `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, uncommon built-ins the engine does not know.
+- Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN`, `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, and built-ins the engine does not recognize (the refusal names the function: use a standard one, or move the work into a transformation).
 - Tables outside Storage buckets (views or tables in the workspace's own schema), unqualified table names, BigQuery `project.dataset.table`, and modifiers on a table: `PIVOT` / `UNPIVOT`, `SAMPLE`, time travel (`AT` / `BEFORE`, `FOR SYSTEM_TIME AS OF`).
 - Metadata: `SHOW`, `INFORMATION_SCHEMA`, query history, system variables, `GET_DDL` and similar.
 - A CTE name the engine cannot match for sure: quoted differently than where it is declared (`WITH "x" AS (…) SELECT * FROM X`), a CTE that reads itself without `RECURSIVE`, or a name declared only in a nested query. Spell each CTE name the same way everywhere.
@@ -687,8 +689,6 @@ Refused:
 - Keep the column the policy filters on (owner email, region, account) in the output table. An output aggregated across it cannot be filtered per user.
 - The output table is a new table: on a governed workspace it needs its own `rls-policy`, or every read of it is refused.
 - Write it to an `out.c-…` bucket the app reads, and ask the user before creating the transformation or the flow: they are project changes outside the app.
-
-`runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs a token; `@keboola/api-client` redacts both tokens in its errors.
 
 **The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. `@keboola/api-client` turns it into `RowLevelSecurityError` (guard `isRowLevelSecurityError`; its `message` is that text). The template's API answers it with `403 { "error": "Row-level security does not allow this query", "code": "ROW_LEVEL_SECURITY" }`, and the client shows it. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
 
