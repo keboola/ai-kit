@@ -11,7 +11,7 @@
 - Query Service return shape — cells come back as strings (both backends)
 - Input mapping — discouraged for new apps
 - The app user token — always with the Storage token, a credential provider, a rotating Storage token
-- Row-level security — the refusal, per-user caches, background jobs
+- Row-level security — simple queries only, preprocessing in a transformation, the refusal, per-user caches, background jobs
 
 ## Enabling Storage access on a deployed app
 
@@ -308,7 +308,7 @@ SELECT * FROM `out_c_Test_Data___Customers_Products_Orders`.`customers` LIMIT 10
 
 Only the **dataset** (bucket) name is mangled — the **table** name keeps its original form. A table named `cashier-data` stays `cashier-data`; it just needs backticks because of the hyphen.
 
-**Find the exact names without deriving them by hand.** Open the table in **Storage** → **Overview** tab; it shows the **Dataset Name** (the bucket's BigQuery dataset, e.g. `in_c_shared_bucket`) and the **Table Name** to use in your queries. If the app needs to discover names dynamically at runtime, query `INFORMATION_SCHEMA.SCHEMATA` to list the datasets the workspace can see. (`mcp__keboola__get_table`'s `fully_qualified_name`/`fqn` is Snowflake-style — on BigQuery, prefer Storage → Overview or translate by the two rules above.)
+**Find the exact names without deriving them by hand.** Open the table in **Storage** → **Overview** tab; it shows the **Dataset Name** (the bucket's BigQuery dataset, e.g. `in_c_shared_bucket`) and the **Table Name** to use in your queries. If the app needs to discover names dynamically at runtime, query `INFORMATION_SCHEMA.SCHEMATA` to list the datasets the workspace can see (not on a workspace governed by row-level security, which refuses it; see "Row-level security" below). (`mcp__keboola__get_table`'s `fully_qualified_name`/`fqn` is Snowflake-style — on BigQuery, prefer Storage → Overview or translate by the two rules above.)
 
 ### Alternative: Storage API workspace-query endpoint (BigQuery)
 
@@ -664,6 +664,29 @@ A project can govern its workspace with row-level security. Query Service then r
 - Requests the apps proxy does not sign: apps with password login or no login, public paths, drafts and Kai's preview of a draft.
 
 A governed workspace also refuses a query on a table that has no policy, and `SHOW` / `INFORMATION_SCHEMA` queries. Read the schema with Keboola MCP while building, not from the app at run time.
+
+**Simple queries only.** Query Service rewrites each query so that every governed table is read through its policy, and it refuses any query it cannot rewrite safely. Write every app's queries this way from the start, governed or not: the same app keeps working when row-level security is turned on later.
+
+Allowed — one `SELECT` that reads Storage tables:
+
+- `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`, joins, CTEs (`WITH`), subqueries, `UNION`, window functions, common built-in functions (`SUM`, `COALESCE`, `CASE`, `CAST`, date functions).
+- Tables named with their bucket: `"in.c-crm"."orders"` (the Snowflake database prefix is fine), BigQuery `` `in_c_crm`.`orders` ``.
+
+Refused:
+
+- More than one statement, or anything that is not a `SELECT`: `CREATE TABLE … AS SELECT`, `SELECT … INTO`, temporary tables, `INSERT`/`MERGE`, `USE SCHEMA`, `SET` variables, `EXECUTE IMMEDIATE`, stored procedures.
+- Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN`, `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, uncommon built-ins the engine does not know.
+- Tables outside Storage buckets (views or tables in the workspace's own schema), unqualified table names, BigQuery `project.dataset.table`, and modifiers on a table: `PIVOT` / `UNPIVOT`, `SAMPLE`, time travel (`AT` / `BEFORE`, `FOR SYSTEM_TIME AS OF`).
+- Metadata: `SHOW`, `INFORMATION_SCHEMA`, query history, system variables, `GET_DDL` and similar.
+- A CTE name the engine cannot match for sure: quoted differently than where it is declared (`WITH "x" AS (…) SELECT * FROM X`), a CTE that reads itself without `RECURSIVE`, or a name declared only in a nested query. Spell each CTE name the same way everywhere.
+
+**Totals and ranks cover only the user's rows.** Each governed table is filtered before the rest of the query runs, so aggregates and window functions see only the rows the user may see. A rank, a running total or a share of total (`RATIO_TO_REPORT`) is computed over those rows, and two users get different numbers for "rank among all customers". When a figure must cover every row, compute it in a transformation (below) and store it as a column of the output table. Such a column tells each user something about rows they cannot see, so confirm with the user that this is acceptable.
+
+**Preprocess in a transformation, not in the app.** When the data needs work before the app can show it with a simple query — parsing JSON, flattening arrays, a multi-step model, a heavy join every page repeats — do that work in a Keboola transformation (SQL or Python) and let the app read its output table with a plain `SELECT`. Run the transformation in a flow on a schedule that matches how fresh the app must be. Transformations run as jobs, which row-level security does not govern, so they see every row:
+
+- Keep the column the policy filters on (owner email, region, account) in the output table. An output aggregated across it cannot be filtered per user.
+- The output table is a new table: on a governed workspace it needs its own `rls-policy`, or every read of it is refused.
+- Write it to an `out.c-…` bucket the app reads, and ask the user before creating the transformation or the flow: they are project changes outside the app.
 
 `runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs a token; `@keboola/api-client` redacts both tokens in its errors.
 
