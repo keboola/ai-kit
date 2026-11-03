@@ -39,8 +39,8 @@ kbagent --json cls update --project P --policy-id UUID --rules @FILE --dry-run
 
 - `update` and `delete` need `--policy-id`: take it from `<SCRATCH>/rls.json` / `cls.json` (the `list`
   result). Never delete and create to change a policy: the UUID would change.
-- `update` is a partial update; a `default` cannot be removed with it. `dialect` defaults to the
-  project backend; kbagent refuses `principal` / `principals`.
+- `update` is a partial update; a `default` cannot be removed with it. `dialect` is left out of a
+  new policy unless `--dialect` is passed (one that differs from the project backend is refused); kbagent refuses `principal` / `principals`.
 - Rerunning a failed batch is idempotent. Stop at the first failure and report what was written.
 
 ## Binding

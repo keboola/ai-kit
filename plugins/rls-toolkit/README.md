@@ -46,5 +46,6 @@ it; the kbagent commands are in `skills/rls-policies/references/kbagent.md` and 
 - Never writes before a dry-run summary and an explicit "go".
 - `kbagent rls setup` is kbagent's own terminal-only wizard (one simple comparison per selector); this
   plugin is the agent-driven path with data app discovery and binding.
-- Rule values are escaped literals in the rewritten SQL, and the query history of Query Service still
-  shows that SQL to the reader (a fix is tracked as AJDA-3699): keep nothing secret in rule values.
+- On a BigQuery project, Connection accepts governed workspaces and Query Service has a BigQuery engine,
+  but enforcement there has not been verified end to end on a production stack: say so before promising it
+  for a data app.

@@ -23,11 +23,11 @@ discovery already found instead of asking for it.
    an ownership column holding an email as an `$identity` rule (readers without a verified email get
    no rows: is that acceptable?); managers or auditors as `{"true":true}`. Ask the default; recommend
    `{"false":true}`. Use range conditions (`gt`..`lte`) only on typed numeric or date columns, `eq`/`in`
-   otherwise (`policy-model.md`). Say that rule values and group names can be seen by the reader who runs a query
-   (the query history shows the rewritten SQL, see `gotchas.md`): nothing secret in them.
+   otherwise (`policy-model.md`).
 5. **Column rules** per table. Suggest PII-like columns by name (`email`, `phone`, `birth`, `ssn`,
-   `salary`, `margin`, `address`, `iban`): which groups may see them. A table with a cls-policy also
-   needs an rls-policy, and the app does not apply a cls-policy yet.
+   `salary`, `margin`, `address`, `iban`): which groups may see them. A cls-policy alone gives the
+   readers it names all rows of the table: add an rls-policy to limit them, and bind the cls-policy in
+   `runtime.workspace.clsPolicies`.
 6. **Scope**, only when the runtime can set one. `targeted` (this project) unless the user brings up
    grants or organization scope; then say it needs an organization admin and an organization policy
    affects every project on every backend. A runtime without a scope option writes project policies
