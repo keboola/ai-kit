@@ -164,6 +164,8 @@ Commands:
 | Inspect                         | `kbagent data-app detail --project P --app-id N`                                                   |
 | Pre-flight repo before create   | `kbagent data-app validate-repo --git-repo URL --type python-js`                                   |
 | Create new app from git repo    | `kbagent data-app create ...`                                                                      |
+| Create app with a Keboola-managed repo | `kbagent data-app create --project P --name "My App" --slug my-app --type python-js --use-managed-git-repo --no-deploy` |
+| Git credential for a managed repo | `kbagent data-app git-credentials-create --project P --app-id N --type http_token --permissions readWrite` (never print it)|
 | Redeploy latest code            | `kbagent data-app deploy --project P --app-id N --wait`                                            |
 | Wake auto-suspended app         | `kbagent data-app start --app-id N`                                                                |
 | Suspend                         | `kbagent data-app stop --app-id N`                                                                 |
@@ -177,7 +179,7 @@ Typical create flow:
 
 ```bash
 kbagent data-app validate-repo --git-repo URL --git-branch main --type python-js
-kbagent data-app create --project P --git-repo URL --git-branch main --type python-js --name "My App"
+kbagent data-app create --project P --git-repo URL --git-branch main --type python-js --name "My App" --slug my-app
 kbagent data-app deploy --project P --app-id N --wait
 kbagent data-app password --app-id N    # if basic-auth
 ```

@@ -1,6 +1,8 @@
 # Python/JS apps: the prod app and its drafts
 
-**Use this when:** you are about to create, build into, or deploy a **Python/JS** Keboola App through the MCP data-app tools (directly, or via `kbagent --json tool call`).
+**Use this when:** you are about to create, build into, or deploy a **Python/JS** Keboola App through the MCP data-app tools.
+
+**kbagent has no draft command.** `kbagent data-app create` makes a prod app and `kbagent data-app deploy` deploys it. On Path C, say so before you change an app that has users, and ask: change the prod app directly, or use the Keboola MCP server to work on a draft.
 
 Naming the right app in your reply is not the same as passing it in the call. Check the argument, not your intent.
 
