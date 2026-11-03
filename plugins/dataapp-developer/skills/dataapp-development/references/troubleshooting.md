@@ -18,6 +18,7 @@
 - Query Service auth error with narrow-scoped token
 - `Insufficient privileges` on write
 - `Row-level security does not allow this query` (403)
+- A governed app shows no rows for a table
 - 500 after login: `Error while parsing OAuth2 state: invalid length`
 - Reading logs (incl. Streamlit silent exceptions)
 
@@ -119,9 +120,15 @@
 
 ## `Row-level security does not allow this query` (403)
 
-**Cause:** the workspace is governed and Query Service refused the query: no user token (password login, a draft, a query at startup or in a timer), no policy for the user or the table, or a query it cannot rewrite (not a plain `SELECT`, a table function, a write). The precise reason is only in the Query Service log.
+**Cause:** the workspace is governed and Query Service refused the query: no signed-in user (password login, a draft, a query at startup or in a timer, a Storage-token call), a query it cannot rewrite (not a plain `SELECT`, a table function, a write), or an invalid policy. The precise reason is only in the Query Service log.
 
 **Fix:** see [storage-access.md](storage-access.md) §Row-level security — "Who is refused", "Simple queries only", "Writes", "Turning row-level security on". An app built before `@keboola/api-client/sdk/dataAppServer` does not forward the user token at all: SKILL.md rule 19.
+
+## A governed app shows no rows for a table
+
+**Cause:** for a signed-in app user, a table with no policy, or whose policy has no rule or `default` for that user, reads as empty instead of failing. Typical after the app starts reading a new table, such as a transformation's output.
+
+**Fix:** check the table's policies (`GET /api/v1/repository/rls-policy?table=<bucket>.<table>` on Metastore) and that the policy ID is in the app's `runtime.workspace.rlsPolicies`; then redeploy. See [storage-access.md](storage-access.md) §Row-level security, "No rows instead of a refusal".
 
 ## 500 after login: `Error while parsing OAuth2 state: invalid length`
 

@@ -658,12 +658,14 @@ Route code does nothing for it. Keep both `app.use` lines in `server/index.ts`, 
 
 A project can govern its workspace with row-level security. Query Service then returns only the rows the identity of the call may see, and it marks every response with `X-KBC-RLS-Mode: enforce`. The app does not filter rows itself.
 
-**Who is refused.** A governed workspace refuses a call that does not carry a user it has a policy for. That includes every call with only the app's Storage token:
+**Who is refused.** A governed workspace refuses a call that does not carry a signed-in user. That includes every call with only the app's Storage token:
 
 - Code outside a user request: work at startup, a `setInterval`, a scheduled refresh, a background job.
 - Requests the apps proxy does not sign: apps with password login or no login, public paths, drafts and Kai's preview of a draft.
 
-A governed workspace also refuses a query on a table that has no policy, and `SHOW` / `INFORMATION_SCHEMA` queries. Read the schema with Keboola MCP while building, not from the app at run time.
+**No rows instead of a refusal.** For a signed-in app user, a table with no policy, or whose policy has no rule or `default` for that user, reads as empty: the query succeeds and returns 0 rows. The user is not told that a policy hides the rows. So an empty result is often a missing policy (a new output table, a table the app started to read), not missing data; check the table's policies first. An administrator's call (Storage token only) is refused instead.
+
+A governed workspace refuses `SHOW` / `INFORMATION_SCHEMA` queries. Read the schema with Keboola MCP while building, not from the app at run time.
 
 `runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs a token; `@keboola/api-client` redacts both tokens in its errors.
 
@@ -690,12 +692,12 @@ Refused:
 **Preprocess in a transformation, not in the app.** When the data needs work a plain `SELECT` cannot do — flattening a JSON array into rows on Snowflake (`FLATTEN`), several statements, temporary tables — do that work in a Keboola transformation (SQL or Python) and let the app read its output table with a plain `SELECT`. Work a `SELECT` can do (JSON values, CTE models, a heavy join) may stay in the app; move it to the transformation too when every page load would repeat it on a large table. Run the transformation in a flow on a schedule that matches how fresh the app must be. Transformations run as jobs, which row-level security does not govern, so they see every row:
 
 - Keep the column the policy filters on (owner email, region, account) in the output table. An output aggregated across it cannot be filtered per user.
-- The output table is a new table: on a governed workspace it needs its own `rls-policy`, or every read of it is refused.
+- The output table is a new table: on a governed workspace it needs its own `rls-policy`, or it reads as empty for every app user.
 - Its columns are text unless the table is typed, so a number sorts as text (`1, 10, 2`). Cast it in the app's query: `ORDER BY CAST("global_rank" AS INTEGER)`.
 - Write it to an `out.c-…` bucket the app reads, and ask the user before creating the transformation or the flow: they are project changes outside the app.
 - A Snowflake SQL transformation can read the source table by its full name (`"<DATABASE>"."in.c-crm"."orders"`) without an input mapping; each `CREATE TABLE "<name>"` it runs becomes an output table, mapped to the bucket in its output mapping. With kbagent: `kbagent transformation create --name … --sql-file … --created-table …`, then a flow with a schedule (`kbagent flow schedule`).
 
-**The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. `@keboola/api-client` turns it into `RowLevelSecurityError` (guard `isRowLevelSecurityError`; its `message` is that text). The template's API answers it with `403 { "error": "Row-level security does not allow this query", "code": "ROW_LEVEL_SECURITY" }`, and the client shows it. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
+**The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. It comes for a call with no signed-in user, a query that is not a plain `SELECT` on bucket tables, or an invalid policy; a signed-in app user gets no rows instead for a missing policy (see "No rows instead of a refusal"). The precise reason is only in the Query Service log. `@keboola/api-client` turns it into `RowLevelSecurityError` (guard `isRowLevelSecurityError`; its `message` is that text). The template's API answers it with `403 { "error": "Row-level security does not allow this query", "code": "ROW_LEVEL_SECURITY" }`, and the client shows it. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
 
 **Caches must be per user.** A cache in the server is shared by every user of the app. In a governed workspace, one user's rows in a shared cache are a leak to the next user.
 
@@ -723,7 +725,7 @@ On a workspace without row-level security the app answers as before.
             "rules": [{"groups": ["*"], "condition": {"column": "owner_email", "op": "eq", "value": {"$identity": "email"}}}]}}
   ```
 
-- The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables. The config is refused unless the app also has an OAuth/OIDC login on every path, so set both in one config change, then redeploy; the redeploy gives the app a new governed workspace.
+- The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables; a table without one reads as empty. The config is refused unless the app also has an OAuth/OIDC login on every path, so set both in one config change, then redeploy; the redeploy gives the app a new governed workspace.
 - Only the prod app is governed. A draft gets no `rlsPolicies`, so the filtering shows only after promote, with a real login.
 
 **Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
