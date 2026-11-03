@@ -44,7 +44,7 @@ Rules of thumb:
 - Aggregate (`GROUP BY`, `AVG`, `SUM`, `COUNT`, `PERCENTILE_CONT`) in SQL.
 - Rank and window-function in SQL (`ROW_NUMBER`, `LAG`, `LEAD`). Pivot with `GROUP BY` and `CASE` (or in the app), not `PIVOT`, which a governed workspace refuses.
 - Limit result sets to display dimensions (`LIMIT 1000` is a reasonable ceiling for a table view; charts need far fewer points).
-- Keep each query one simple `SELECT` on Storage tables. Preprocessing a simple query cannot do (parsing JSON blobs, `FLATTEN`, a multi-step model) goes into a Keboola transformation whose output table the app reads — not into the app's SQL or Python. A workspace governed by row-level security refuses anything more complex; see [storage-access.md](storage-access.md) §Row-level security, "Simple queries only".
+- Keep each query one simple `SELECT` on Storage tables. JSON values and CTE models are fine in it; work it cannot do (Snowflake `FLATTEN` of a JSON array into rows, several statements, temporary tables) goes into a Keboola transformation whose output table the app reads — not into the app's SQL or Python. A workspace governed by row-level security refuses anything more complex; see [storage-access.md](storage-access.md) §Row-level security, "Simple queries only".
 - If you find yourself loading more than ~50k rows into the app, the query is wrong — push more work down.
 
 ## Sidebar global filters

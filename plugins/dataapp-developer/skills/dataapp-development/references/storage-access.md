@@ -673,20 +673,21 @@ A governed workspace also refuses a query on a table that has no policy, and `SH
 
 Allowed — one `SELECT` that reads Storage tables:
 
-- `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`, joins, CTEs (`WITH`), subqueries, `UNION`, window functions, common built-in functions (`SUM`, `COALESCE`, `CASE`, `CAST`, date functions).
+- `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`, joins, CTEs (`WITH`), subqueries, `UNION`, window functions, common built-in functions (`SUM`, `COALESCE`, `CASE`, `CAST`, date functions), and reading values out of JSON (`PARSE_JSON("payload"):items[0]:product`, `JSON_EXTRACT_PATH_TEXT`, BigQuery `JSON_VALUE`).
+- A multi-step model written as CTEs in one `SELECT` (aggregate, then rank, then filter). BigQuery `CROSS JOIN UNNEST(...)` over an array column.
 - Tables named with their bucket: `"in.c-crm"."orders"` (the Snowflake database prefix is fine), BigQuery `` `in_c_crm`.`orders` ``.
 
 Refused:
 
 - Anything that is not a `SELECT`: `CREATE TABLE … AS SELECT`, `SELECT … INTO`, temporary tables, `USE SCHEMA`, `SET` variables, `EXECUTE IMMEDIATE`, stored procedures, and the writes above.
-- Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN`, `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, and built-ins the engine does not recognize (the refusal names the function: use a standard one, or move the work into a transformation).
+- Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN` (one row into many, on Snowflake), `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, and built-ins the engine does not recognize (the refusal names the function: use a standard one, or move the work into a transformation).
 - Tables outside Storage buckets (views or tables in the workspace's own schema), unqualified table names, BigQuery `project.dataset.table`, and modifiers on a table: `PIVOT` / `UNPIVOT`, `SAMPLE`, time travel (`AT` / `BEFORE`, `FOR SYSTEM_TIME AS OF`).
 - Metadata: `SHOW`, `INFORMATION_SCHEMA`, query history, system variables, `GET_DDL` and similar.
 - A CTE name the engine cannot match for sure: quoted differently than where it is declared (`WITH "x" AS (…) SELECT * FROM X`), a CTE that reads itself without `RECURSIVE`, or a name declared only in a nested query. Spell each CTE name the same way everywhere.
 
 **Totals and ranks cover only the user's rows.** Each governed table is filtered before the rest of the query runs, so aggregates and window functions see only the rows the user may see. A rank, a running total or a share of total (`RATIO_TO_REPORT`) is computed over those rows, and two users get different numbers for "rank among all customers". When a figure must cover every row, compute it in a transformation (below) and store it as a column of the output table. Such a column tells each user something about rows they cannot see, so confirm with the user that this is acceptable.
 
-**Preprocess in a transformation, not in the app.** When the data needs work before the app can show it with a simple query — parsing JSON, flattening arrays, a multi-step model, a heavy join every page repeats — do that work in a Keboola transformation (SQL or Python) and let the app read its output table with a plain `SELECT`. Run the transformation in a flow on a schedule that matches how fresh the app must be. Transformations run as jobs, which row-level security does not govern, so they see every row:
+**Preprocess in a transformation, not in the app.** When the data needs work a plain `SELECT` cannot do — flattening a JSON array into rows on Snowflake (`FLATTEN`), several statements, temporary tables — do that work in a Keboola transformation (SQL or Python) and let the app read its output table with a plain `SELECT`. Work a `SELECT` can do (JSON values, CTE models, a heavy join) may stay in the app; move it to the transformation too when every page load would repeat it on a large table. Run the transformation in a flow on a schedule that matches how fresh the app must be. Transformations run as jobs, which row-level security does not govern, so they see every row:
 
 - Keep the column the policy filters on (owner email, region, account) in the output table. An output aggregated across it cannot be filtered per user.
 - The output table is a new table: on a governed workspace it needs its own `rls-policy`, or every read of it is refused.
