@@ -688,6 +688,7 @@ Refused:
 
 - Keep the column the policy filters on (owner email, region, account) in the output table. An output aggregated across it cannot be filtered per user.
 - The output table is a new table: on a governed workspace it needs its own `rls-policy`, or every read of it is refused.
+- Its columns are text unless the table is typed, so a number sorts as text (`1, 10, 2`). Cast it in the app's query: `ORDER BY CAST("global_rank" AS INTEGER)`.
 - Write it to an `out.c-…` bucket the app reads, and ask the user before creating the transformation or the flow: they are project changes outside the app.
 
 **The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. `@keboola/api-client` turns it into `RowLevelSecurityError` (guard `isRowLevelSecurityError`; its `message` is that text). The template's API answers it with `403 { "error": "Row-level security does not allow this query", "code": "ROW_LEVEL_SECURITY" }`, and the client shows it. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
@@ -705,7 +706,21 @@ Refused:
 3. Key any server cache by `currentUserKey()` and move queries made at startup or in a timer into the request.
 4. Preview on a draft as usual. A draft gets no `rlsPolicies` from prod, so it shows the data but not the filtering; the filtering applies after promote.
 
-On a workspace without row-level security the app answers as before. Turning row-level security on is a config change and a redeploy, which gives the app a new governed workspace; the app needs an OAuth/OIDC login on every path, and a policy on every table it queries.
+On a workspace without row-level security the app answers as before.
+
+**Turning row-level security on.** A project admin writes the policies; the app only names them. Ask the user before you create or change one: a policy decides who sees which rows.
+
+- A policy is an `rls-policy` object in Metastore, one per table: `https://metastore.<stack>` (the Connection URL with `connection.` replaced by `metastore.`), header `X-StorageApi-Token` with a project admin token. `GET /api/v1/repository/rls-policy?table=in.c-crm.orders` shows the policies of a table and the column each one filters on. `POST /api/v1/repository/rls-policy` creates one; the response's `data.id` is its ID. `GET /api/v1/schema/rls-policy/1.2.0` (no token) is the full schema.
+- A rule selects readers by `groups` or `subjects` (`<idp>|<sub>`), never by email; `["*"]` selects every signed-in user. Its condition may compare a column with the reader's email, `{"$identity": "email"}` (only an email the identity provider verified). Example body, "each user sees their own rows":
+
+  ```json
+  {"name": "orders-own-rows", "branch": "main", "schemaVersion": "1.2.0", "scope": "targeted", "targetProjectIds": [<project id>],
+   "data": {"table": "in.c-crm.orders", "dialect": "snowflake",
+            "rules": [{"groups": ["*"], "condition": {"column": "owner_email", "op": "eq", "value": {"$identity": "email"}}}]}}
+  ```
+
+- The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables. The config is refused unless the app also has an OAuth/OIDC login on every path, so set both in one config change, then redeploy; the redeploy gives the app a new governed workspace.
+- Only the prod app is governed. A draft gets no `rlsPolicies`, so the filtering shows only after promote, with a real login.
 
 **Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
 
