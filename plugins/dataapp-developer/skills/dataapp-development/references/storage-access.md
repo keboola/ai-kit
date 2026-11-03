@@ -652,11 +652,11 @@ df = pd.read_csv("/data/in/tables/customers.csv")
 
 Route code does nothing for it. Keep both `app.use` lines in `server/index.ts`, and call `runQuery` from the request handler (directly or through other functions), not from work started outside the request (a timer set at startup, a queue). Never share one in-flight query between requests (for example `pending ??= runQuery(sql)` to merge equal queries): the second user gets the first user's rows.
 
-**Python apps** use `keboola-query-service` 0.4.0 or newer (not released yet; 0.3.0 has none of this): `Client(base_url, auth=...)` takes a credential or a provider, and every method takes a per-call `auth=`. The credentials are `StorageToken(token)` and `AppUserToken(user_token, storage_token=StorageToken(...))`; each token is a value or a callable (for example `lambda: Path(os.environ["STORAGE_API_TOKEN_PATH"]).read_text().strip()`). Pick the credential per request, as the Node provider does, never once for a shared client. A refusal raises `RowLevelSecurityError`.
+**Python apps** use `keboola-query-service` 0.4.0 or newer (0.3.0 has none of this): `Client(base_url, auth=...)` takes a credential or a provider, and every method takes a per-call `auth=`. The credentials are `StorageToken(token)` and `AppUserToken(user_token, storage_token=StorageToken(...))`; each token is a value or a callable (for example `lambda: Path(os.environ["STORAGE_API_TOKEN_PATH"]).read_text().strip()`). Pick the credential per request, as the Node provider does, never once for a shared client. A refusal raises `RowLevelSecurityError`.
 
 ## Row-level security
 
-A project can govern its workspace with row-level security. Query Service then returns only the rows the identity of the call may see, and it marks every response with `X-KBC-RLS-Mode: enforce`. The app does not filter rows itself.
+A project can govern its workspace with row-level security. Query Service then returns only the rows the identity of the call may see. The app does not filter rows itself.
 
 **Who is refused.** A governed workspace refuses a call that does not carry a signed-in user. That includes every call with only the app's Storage token:
 
