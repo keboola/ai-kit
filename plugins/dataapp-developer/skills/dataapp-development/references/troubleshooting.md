@@ -17,6 +17,8 @@
 - `KeyError` on Storage Access env var
 - Query Service auth error with narrow-scoped token
 - `Insufficient privileges` on write
+- `Row-level security does not allow this query` (403)
+- 500 after login: `Error while parsing OAuth2 state: invalid length`
 - Reading logs (incl. Streamlit silent exceptions)
 
 ## "Cannot POST /" / "Method Not Allowed" on startup
@@ -114,6 +116,18 @@
 - **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the workspace gets the new grant.
 - **Local dev:** create a dedicated workspace and grant write access on the same tables. See [storage-access.md](storage-access.md) §`WORKSPACE_ID`.
 - Bucket stage (`in.` vs `out.`) isn't the issue — the workspace grant is.
+
+## `Row-level security does not allow this query` (403)
+
+**Cause:** the workspace is governed and Query Service refused the query: no user token (password login, a draft, a query at startup or in a timer), no policy for the user or the table, or a query it cannot rewrite (not a plain `SELECT`, a table function, a write). The precise reason is only in the Query Service log.
+
+**Fix:** see [storage-access.md](storage-access.md) §Row-level security — "Who is refused", "Simple queries only", "Writes", "Turning row-level security on". An app built before `@keboola/api-client/sdk/dataAppServer` does not forward the user token at all: SKILL.md rule 19.
+
+## 500 after login: `Error while parsing OAuth2 state: invalid length`
+
+**Cause:** the browser reached the login callback (`/_proxy/callback?continue_auth=true`) without a valid OAuth `state`, typically after reloading or going back to the callback page. Not the app's config.
+
+**Fix:** open the app's URL again to start a fresh login. If it fails on a fresh login every time, report it with the exception ID shown on the page.
 
 ## Reading logs
 

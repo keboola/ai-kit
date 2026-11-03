@@ -262,7 +262,7 @@ The SDKs handle the submit-job → poll-status → paginate-results dance intern
 
 Two statement-level rules (verified on BigQuery, apply on both backends):
 - **One SQL command per statement.** Each entry in `statements` must be a single command — a semicolon-joined script in one string is rejected (`ValidationError: Each statement must contain exactly one SQL command`). To run several commands, pass them as separate list items.
-- **Statements in one `execute_query` (Python) / `executeQuery` (JS) call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`).
+- **Statements in one `execute_query` (Python) / `executeQuery` (JS) call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`). A workspace governed by row-level security runs neither: only plain `SELECT`s, see §Row-level security, "Simple queries only".
 
 ### How to know which SQL dialect to emit
 
@@ -374,7 +374,7 @@ A few things worth noting on the BQ path that differ from Query Service:
 
 ## Read-write direct access (Storage Access)
 
-Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state.
+Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state. Not on a workspace governed by row-level security, which refuses every write (§Row-level security, "Writes").
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
@@ -667,7 +667,9 @@ A governed workspace also refuses a query on a table that has no policy, and `SH
 
 `runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs a token; `@keboola/api-client` redacts both tokens in its errors.
 
-**Simple queries only.** Query Service rewrites each query so that every governed table is read through its policy, and it refuses any query it cannot rewrite safely. Write every app's queries this way from the start, governed or not: the same app keeps working when row-level security is turned on later.
+**Simple queries only.** Query Service rewrites each query so that every governed table is read through its policy, and it refuses any query it cannot rewrite safely. Write every app's read queries this way from the start, governed or not: the same app keeps working when row-level security is turned on later.
+
+**Writes.** A governed workspace runs only reads: it refuses every `INSERT`, `UPDATE`, `MERGE` and `DELETE`. Read-write Storage access (above) works only on a workspace without row-level security, so an app that writes back to Storage cannot have row-level security. Tell the user that before you build one for a governed project.
 
 Allowed — one `SELECT` that reads Storage tables:
 
@@ -676,7 +678,7 @@ Allowed — one `SELECT` that reads Storage tables:
 
 Refused:
 
-- More than one statement, or anything that is not a `SELECT`: `CREATE TABLE … AS SELECT`, `SELECT … INTO`, temporary tables, `INSERT`/`MERGE`, `USE SCHEMA`, `SET` variables, `EXECUTE IMMEDIATE`, stored procedures.
+- Anything that is not a `SELECT`: `CREATE TABLE … AS SELECT`, `SELECT … INTO`, temporary tables, `USE SCHEMA`, `SET` variables, `EXECUTE IMMEDIATE`, stored procedures, and the writes above.
 - Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN`, `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, and built-ins the engine does not recognize (the refusal names the function: use a standard one, or move the work into a transformation).
 - Tables outside Storage buckets (views or tables in the workspace's own schema), unqualified table names, BigQuery `project.dataset.table`, and modifiers on a table: `PIVOT` / `UNPIVOT`, `SAMPLE`, time travel (`AT` / `BEFORE`, `FOR SYSTEM_TIME AS OF`).
 - Metadata: `SHOW`, `INFORMATION_SCHEMA`, query history, system variables, `GET_DDL` and similar.
@@ -690,6 +692,7 @@ Refused:
 - The output table is a new table: on a governed workspace it needs its own `rls-policy`, or every read of it is refused.
 - Its columns are text unless the table is typed, so a number sorts as text (`1, 10, 2`). Cast it in the app's query: `ORDER BY CAST("global_rank" AS INTEGER)`.
 - Write it to an `out.c-…` bucket the app reads, and ask the user before creating the transformation or the flow: they are project changes outside the app.
+- A Snowflake SQL transformation can read the source table by its full name (`"<DATABASE>"."in.c-crm"."orders"`) without an input mapping; each `CREATE TABLE "<name>"` it runs becomes an output table, mapped to the bucket in its output mapping. With kbagent: `kbagent transformation create --name … --sql-file … --created-table …`, then a flow with a schedule (`kbagent flow schedule`).
 
 **The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. The text is the same for "no policy for this user" and "access denied"; the precise reason is only in the Query Service log. `@keboola/api-client` turns it into `RowLevelSecurityError` (guard `isRowLevelSecurityError`; its `message` is that text). The template's API answers it with `403 { "error": "Row-level security does not allow this query", "code": "ROW_LEVEL_SECURITY" }`, and the client shows it. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
 
