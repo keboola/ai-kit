@@ -56,7 +56,9 @@ user's repo.
    Details + optional vars in `reference/deploy.md §Secrets`.
 4. **Push to git & deploy** — pick ONE driver (kbagent / keboola-git / hosted
    MCP tools incl. Kai / manual UI). App-level auth = **None**; auto-suspend
-   ≥ 24h. Single deploy pass. See `reference/deploy.md`.
+   ≥ 24h. Single deploy pass. See `reference/deploy.md`. Source already in a
+   private GitHub repo: deploy from it with organization auth, no copy and no
+   PAT (`reference/deploy.md §Existing GitHub repo with organization auth`).
 5. **Verify** — logs first, then `curl /healthz`, the two `.well-known/oauth-*`
    docs, and `401` on `/mcp`. See `reference/deploy.md §Verify`.
 6. **Connect a client** — bearer, claude.ai OAuth-shape, or Kai. See
@@ -73,6 +75,7 @@ user's repo.
 | Which app to deploy into (an empty `configuration_id` creates a second one) | `dataapp-development/references/python-js-prod-and-drafts.md` |
 | Container mechanics (POST /, uv, nginx 8888) | `dataapp-development/references/python-js-apps.md` |
 | Managed-git deploy plumbing | `keboola-git` skill |
+| Deploy from a private GitHub repo without a PAT (organization auth) | `dataapp-development/references/github-organization-auth.md` |
 
 ## Hard rules
 

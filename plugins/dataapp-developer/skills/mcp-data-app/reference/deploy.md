@@ -12,6 +12,8 @@
 | Hosted Keboola MCP tools (Kai, or Claude + hosted MCP) | MCP data-app tools | this file, §MCP-tools driver |
 | Neither | Manual Keboola UI | this file, §Manual UI |
 
+Where the source lives is a separate choice. The drivers below copy it into the app's **Keboola-managed repo**. If the user already keeps it in a private **GitHub repo**, deploy straight from that repo with organization auth instead: no copy and no PAT. See §Existing GitHub repo with organization auth.
+
 ## keboola-git / kbagent driver
 
 Full command reference and repo-provisioning details live in the `keboola-git` skill (also see `deployment-paths.md` Path C). The minimal sequence:
@@ -51,6 +53,35 @@ Same three tools as the kbagent driver, called directly as MCP tools rather than
 - `deploy_data_app(action="deploy", configuration_id=...)`.
 
 These tools are live today.
+
+## Existing GitHub repo with organization auth
+
+Use this when the scaffolded server is already pushed to a GitHub repo (github.com, or a GHE host configured on the stack). The platform reads it through the Keboola organization's GitHub App connection, so nothing is copied into Keboola git and no PAT is stored.
+
+Prerequisites: an organization admin has connected the GitHub organization in Control UI → Organization → GitHub, and the Keboola GitHub App is installed on it. The URL must be `https://`. The app is prod-only, with no dev mode or preview yet. That is fine here, because an MCP server app is deployed rather than iterated on behind a preview.
+
+MCP tools:
+
+```python
+modify_python_js_data_app(
+    name="MCP Data App", description="Hosted MCP server",
+    configuration_id="",            # create; resolve an existing app first (same rule as above)
+    git_repository="https://github.com/<org>/<repo>",
+    git_auth="organization",
+    branch="main",
+)
+deploy_data_app(action="deploy", configuration_id="<cfg>")   # prod mode; mode='dev' is refused
+```
+
+kbagent:
+
+```bash
+kbagent data-app create --project <alias> --git-repo https://github.com/<org>/<repo> \
+  --git-auth organization --git-branch main --type python-js --name "MCP Data App"
+kbagent data-app deploy --project <alias> --app-id <id> --wait
+```
+
+To redeploy after a change, push to that GitHub branch and deploy again. `create_python_js_data_app_git_credential` doesn't apply: the app has no managed repo. Errors and limits: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`. Then continue with Secrets and App-level auth below.
 
 ## Manual UI
 

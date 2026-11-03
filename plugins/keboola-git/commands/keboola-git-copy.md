@@ -35,6 +35,14 @@ that drives it.
 
 ## `to-keboola` (GitHub → Keboola)
 
+0. **Offer not copying first.** When `--source` is a GitHub `https://` URL, tell the user the app can deploy
+   straight from that repo with organization auth instead: no copy, no PAT, no 15MB cap, but prod mode only
+   (no drafts or preview yet). It needs the GitHub organization connected in Control UI → Organization → GitHub
+   and the Keboola GitHub App installed on it. If they choose it, run
+   `kbagent data-app create --project <alias> --git-repo <url> --git-auth organization --git-branch <branch> --type python-js --name <app-name>`
+   (or `kbagent data-app set-git-auth --app-id <id> --git-auth organization` for an existing app on a PAT),
+   then `kbagent data-app deploy --app-id <id> --wait`, and stop here. Details: the `keboola-git` skill,
+   §Source already on GitHub? Continue with step 1 when they want the managed repo.
 1. **Resolve the app. Creating one is the last resort.**
    - If `--config` given: confirm with `get_data_apps` and read its `data_app_id` / `repo_url`.
    - Else run `get_data_apps`. Exactly one python-js prod app means use it, however empty it

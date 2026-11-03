@@ -1,7 +1,7 @@
 ---
 name: keboola-git
 description: >-
-  Use when accessing a Keboola-managed Git (Forgejo) repo for a python-js data app via the kbagent CLI — provisioning the repo, finding its repo_url, minting a git_clone_url / push credential with create_python_js_data_app_git_credential, pushing source to Keboola git, copying source between GitHub and Keboola git, working around the ~15MB / HTTP 413 push cap with build-at-deploy, or deploying a data app from its managed git repo. Triggers: kbagent, Keboola managed git, Forgejo, data app repo, repo_url, git_clone_url, create git credential, push to Keboola git, build-at-deploy, HTTP 413, deploy from git.
+  Use when accessing a Keboola-managed Git (Forgejo) repo for a python-js data app via the kbagent CLI — provisioning the repo, finding its repo_url, minting a git_clone_url / push credential with create_python_js_data_app_git_credential, pushing source to Keboola git, copying source between GitHub and Keboola git, working around the ~15MB / HTTP 413 push cap with build-at-deploy, deploying a data app from its managed git repo, or deciding whether to copy a GitHub repo into Keboola git or deploy straight from GitHub with organization auth (no PAT). Triggers: kbagent, Keboola managed git, Forgejo, data app repo, repo_url, git_clone_url, create git credential, push to Keboola git, build-at-deploy, HTTP 413, deploy from git, organization GitHub auth.
 allowed-tools: ['*']
 ---
 
@@ -14,6 +14,19 @@ Keboola python-js data apps can host their source in a **Keboola-managed Git rep
 **Use this for:** reading or writing a managed Forgejo repo for a python-js data app; moving an app's source between GitHub and Keboola git; pushing source and deploying from the managed repo.
 
 **Not for:** authoring the contents of `keboola-config/` (nginx, supervisord, setup.sh) — that's the `dataapp-developer:dataapp-development` skill, which also covers Streamlit app development. This skill assumes the app source already exists somewhere; it handles the *git plumbing* to get it into Keboola and deployed.
+
+## Source already on GitHub? Consider not copying it
+
+If the app's source is in a GitHub repo (github.com, or a GHE host configured on the stack), the app can deploy **straight from that repo with organization auth**. The platform reads it through the Keboola organization's GitHub App connection, so there is no copy into Keboola git, no PAT and no 15MB push cap. Offer it before copying, and before asking for a PAT or SSH key:
+
+```bash
+kbagent data-app create --project <alias> --git-repo https://github.com/<org>/<repo> \
+  --git-auth organization --git-branch main --type python-js --name "<Display Name>"
+kbagent data-app set-git-auth --project <alias> --app-id <id> --git-auth organization   # switch an existing PAT app
+kbagent data-app deploy --project <alias> --app-id <id> --wait
+```
+
+Through MCP it's `modify_python_js_data_app(git_repository="https://github.com/<org>/<repo>", git_auth="organization", branch="main")`. Prerequisites: an organization admin connects the GitHub organization in Control UI → Organization → GitHub, and the Keboola GitHub App is installed on it. Limits: https URLs only, read-only, prod mode only (no dev mode, preview or drafts yet). The app has no managed repo, so the rest of this skill doesn't apply to it. Copy into Keboola git instead when the user wants drafts and previews, the repo isn't on GitHub, or the organization can't be connected. Details and errors: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`.
 
 ## Working Directory Context
 

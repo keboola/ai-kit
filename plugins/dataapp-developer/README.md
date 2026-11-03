@@ -1,6 +1,6 @@
 # Data App Developer Plugin
 
-Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`, which covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 16 topical references and 5 runnable templates, plus `semantic-layer-usage` for grounding apps and queries in a semantic model without mistaking logical names for physical Storage identifiers.
+Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`, which covers the full lifecycle (Streamlit and Python/JS app types, three client paths, storage access, authentication, styling, caching, dashboarding, Kai integration, dev workflow, troubleshooting) with 17 topical references and 5 runnable templates, plus `semantic-layer-usage` for grounding apps and queries in a semantic model without mistaking logical names for physical Storage identifiers.
 
 ## Available Skills
 
@@ -15,6 +15,7 @@ Toolkit for building and deploying Keboola Apps. Provides `dataapp-development`,
 - Streamlit apps — Code/Git deployment, theming, secrets, AgGrid Enterprise
 - Python/JS apps — `/app` contract, nginx + supervisord, React + Vite + Express default, Python backend overlay when needed
 - Three deployment paths — MCP-only (Claude Desktop), Claude Code + MCP, kbagent CLI (Python/JS is git-backed on all three)
+- GitHub organization auth — deploy from a customer's private GitHub repo through the Keboola organization's GitHub App connection, with no PAT or SSH key (prerequisites, limits, errors; the same connection serves Custom Python and dbt)
 - Storage access — RO workspace (default), RW direct via Query Service, input mapping (legacy), row-level security (the app user token, per-user caches, simple queries with preprocessing in a transformation)
 - Authentication — None / Basic / OIDC / GitHub / GitLab / JumpCloud
 - DuckDB caching for read-only apps (Python and Node patterns)
@@ -79,7 +80,7 @@ plugins/dataapp-developer/
 ├── skills/
 │   ├── dataapp-development/
 │   │   ├── SKILL.md          # router
-│   │   ├── references/       # 16 topical references
+│   │   ├── references/       # 17 topical references
 │   │   └── templates/        # 5 runnable starter templates
 │   ├── mcp-data-app/
 │   │   ├── SKILL.md          # router
@@ -93,7 +94,7 @@ plugins/dataapp-developer/
 
 ## Version
 
-1.12.0
+1.14.0
 
 ## Maintainer
 
