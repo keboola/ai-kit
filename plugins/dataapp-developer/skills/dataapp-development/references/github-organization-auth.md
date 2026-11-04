@@ -29,10 +29,12 @@ At each deploy the platform mints a short-lived, read-only token from oauth-serv
 
 ## Prerequisites
 
-Both are one-time, per Keboola organization. The agent can't do either of them, so tell the user who has to:
+Both are one-time, per Keboola organization, and done in this order. The agent can't do either of them. They need a person who is **both a Keboola organization admin and an owner of the GitHub organization**, so tell the user who that has to be:
 
-1. **An organization admin connects the GitHub organization** in Control UI → Organization → GitHub.
-2. **The Keboola GitHub App is installed on that GitHub organization**, with access to the repo.
+1. **Install the Keboola GitHub App** on the GitHub organization, with access to the repo ("Install GitHub App").
+2. **Connect the GitHub organization** to the Keboola organization ("Connect GitHub organization").
+
+Both buttons are on the organization's GitHub tab: `https://connection.<stack>/control/organizations/<org-id>?tab=github`. Give the user that URL or the docs page (https://help.keboola.com/management/organization/#connect-github). Don't point them to a menu path: most customer admins don't see the link to that page in the menu.
 
 **Confirm both before you create the app.** A missing connection, an App that doesn't cover the repo, or a host the stack has no GitHub App for is only detected when the app deploys, not when it is created. By then the app already exists in the project. So ask the user, or their organization admin, whether the GitHub organization is connected and the App is installed. If they aren't sure and want to try anyway, tell them first that a failed deploy leaves an app they'll have to delete or switch to another auth.
 
@@ -41,8 +43,8 @@ Both are one-time, per Keboola organization. The agent can't do either of them, 
 | Limit | Consequence |
 |---|---|
 | `https://` URL only | `git@github.com:org/repo.git` is refused. Use `https://github.com/org/repo` |
-| github.com, or a GitHub Enterprise host the stack is configured for (`*.ghe.com`) | GitLab, Bitbucket and other hosts still need a PAT or SSH key. The stack checks the host at deploy time |
-| Read-only | The platform clones; it never pushes. The user pushes code with their own git access |
+| github.com or a GitHub Enterprise host the stack is configured for | The MCP accepts only `github.com` and `*.ghe.com`. A GHE Server host on its own domain works through kbagent, not the MCP. GitLab, Bitbucket and other hosts still need a PAT or SSH key. The stack checks the host at deploy time |
+| Read-only | The platform clones; it never pushes. Code reaches the repo through the user's own GitHub access, never through a token in the chat |
 | No dev mode yet | No `deploy_data_app(mode='dev')`, no preview link, no drafts. Deploy in prod mode |
 | No managed repo | `create_python_js_data_app_git_credential` has nothing to mint for this app |
 | Not for an app on a Keboola-managed repo | The managed repo is fixed when the app is created. That app can't be switched to org auth (see below) |
@@ -68,12 +70,12 @@ modify_python_js_data_app(
 deploy_data_app(action="deploy", configuration_id="<id-from-above>")   # prod mode
 ```
 
-The same call with the app's `configuration_id` rebinds an existing prod app, but **only an app that is already on an external repo** (bound with a PAT or SSH key). Its stored credentials are dropped.
+The same call with the app's `configuration_id` rebinds an existing prod app, but **only an app that is already on an external repo** (bound with a PAT or SSH key). Check first: rebind only when `get_data_apps` shows the app with `is_managed_git_repo: false`. Its stored credentials are dropped.
 
-**An app on a Keboola-managed repo can't be rebound.** That covers every app created from the Keboola Apps page. The MCP and kbagent both refuse it. You have two options:
+**An app on a Keboola-managed repo can't be rebound** (`is_managed_git_repo: true`, or not reported). That covers every app created from the Keboola Apps page or by Kai. The MCP and kbagent both refuse it. You have two options:
 
 - **Stay on the managed repo.** Push the code from GitHub into it (the `keboola-git` skill). That keeps drafts and previews.
-- **Create a new app on the GitHub repo**, but only after the user agrees to it. Say in your reply that this makes a second app next to the managed one, and that the managed app stays until they delete it.
+- **Create a new app on the GitHub repo**, but only after the user agrees to it. Say in your reply why: the existing app's managed repo can't be swapped for an external one. Also say that this makes a second app next to the managed one, and that the managed app stays until they delete it.
 
 The "resolve before you create" rules in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) still apply. This is the one case where a create can be the right answer when an app already exists, and it needs the user's yes.
 
@@ -106,7 +108,8 @@ It sets `authType` and removes `username` / `#password` / `#sshKey` in one write
 There is no draft and no preview for an org-auth app yet, so the draft flow in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) does not apply to it:
 
 1. Validate and run the change locally ([dev-workflow.md](dev-workflow.md)).
-2. Push it to the GitHub repo with the user's own git access, on the branch the app serves (or open a PR there and let the user merge it).
+2. Push it to the GitHub repo on the branch the app serves (or open a PR there and let the user merge it), with git access that is already set up locally.
+   **No local git access** (a hosted sandbox such as Kai, or no GitHub credentials configured)? Then don't ask for a token: no plaintext credential may enter the chat or the sandbox. Describe the change, or hand over the changed files, and let the user push it. Redeploy once they say it's pushed.
 3. Redeploy the prod app (`deploy_data_app(action="deploy", ...)` or `kbagent data-app deploy --wait`). The deploy locks the new commit.
 
 Tell the user that the push goes live on the next deploy, with no preview in between.
@@ -118,7 +121,7 @@ These come from the deploy, not from creating or rebinding the app: `deploy_data
 | What the error says | What to tell the user |
 |---|---|
 | No GitHub App is registered for the host (HTTP 412) | The stack has no GitHub App for this host. For a GHE host, the stack has to be configured for it first; until then use a PAT or the managed repo |
-| The organization is not connected, or the App is not installed on the GitHub account | An organization admin connects the GitHub organization in Control UI → Organization → GitHub and installs the Keboola GitHub App on it |
+| The organization is not connected, or the App is not installed on the GitHub account | A Keboola organization admin who owns the GitHub organization installs the Keboola GitHub App, then connects the GitHub organization, on `https://connection.<stack>/control/organizations/<org-id>?tab=github` (see Prerequisites) |
 | URL not https, or not a GitHub host | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
 | Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app git-auth-set` does it in one write) |
 | Rebind or `git-auth-set` refused for a managed repo | Expected: an app on a Keboola-managed repo can't switch. Stay on the managed repo, or create a new app with the user's agreement |
@@ -126,4 +129,4 @@ These come from the deploy, not from creating or rebinding the app: `deploy_data
 
 ## Side note: Custom Python and dbt use the same connection
 
-The same organization connection serves private GitHub repos outside data apps. Custom Python (`kds-team.app-custom-python`) and dbt (`keboola.dbt-transformation`) configurations authorize their repo through `authorization.githubApp`. With the same prerequisites in place, they need no PAT either.
+The same organization connection serves private GitHub repos outside data apps. Custom Python (`kds-team.app-custom-python`) and dbt (`keboola.dbt-transformation`) use it when you set `authType: "organization"` in their git settings: dbt `parameters.git.authType`, and the `authType` field of Custom Python's git settings. In the UI it is shown as **Organization GitHub connection** / **Use the organization's GitHub App**. With the same prerequisites in place, they need no PAT either. Don't write `authorization.githubApp` into a configuration: the platform injects it at run time, and a value written there does nothing.

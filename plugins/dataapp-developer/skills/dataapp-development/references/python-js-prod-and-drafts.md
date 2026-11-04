@@ -250,7 +250,7 @@ Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to step 2 ab
 
 ## Apps on organization auth have no drafts yet
 
-A prod app on the customer's GitHub repo with `git_auth="organization"` has no managed repo, so `create_python_js_data_app_git_credential` has nothing to mint, and dev mode, previews and drafts aren't supported for it yet. Don't create a draft for it. The change loop is: push to the app's branch with the user's own git access, then redeploy prod. Rebinding works only for an app already on an external repo. A prod app on the managed repo can't be rebound, and a new org-auth app next to it is a second app: create it only when the user agrees. Otherwise stay on the managed repo and its drafts. Details: [github-organization-auth.md](github-organization-auth.md).
+A prod app on the customer's GitHub repo with `git_auth="organization"` has no managed repo, so `create_python_js_data_app_git_credential` has nothing to mint, and dev mode, previews and drafts aren't supported for it yet. Don't create a draft for it. The change loop is: push to the app's branch, then redeploy prod. Without local git access (a hosted sandbox such as Kai), never ask for a GitHub token: describe the change, let the user push it, and redeploy after they confirm. Rebinding works only for an app already on an external repo (`get_data_apps`: `is_managed_git_repo: false`). A prod app on the managed repo can't be rebound, and a new org-auth app next to it is a second app: create it only when the user agrees. Otherwise stay on the managed repo and its drafts. Details: [github-organization-auth.md](github-organization-auth.md).
 
 ---
 

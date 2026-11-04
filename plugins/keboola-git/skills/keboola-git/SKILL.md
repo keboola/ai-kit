@@ -17,7 +17,7 @@ Keboola python-js data apps can host their source in a **Keboola-managed Git rep
 
 ## Source already on GitHub? Consider not copying it
 
-If the app's source is in a GitHub repo (github.com, or a GHE host the stack is configured for), the app can deploy **straight from that repo with organization auth**. The platform reads it through the Keboola organization's GitHub App connection, so there is no copy into Keboola git, no PAT and no 15MB push cap. Offer it before copying, and before asking for a PAT or SSH key:
+If the app's source is in a GitHub repo (`github.com`, or a GHE host the stack is configured for; the MCP takes only `*.ghe.com` ones), the app can deploy **straight from that repo with organization auth**. The platform reads it through the Keboola organization's GitHub App connection, so there is no copy into Keboola git, no PAT and no 15MB push cap. Offer it before copying, and before asking for a PAT or SSH key:
 
 ```bash
 # a new app on the GitHub repo -- create deploys it, no separate deploy
@@ -33,7 +33,7 @@ kbagent data-app deploy --project <alias> --app-id <id> --wait
 
 Confirm the prerequisites before creating: a missing connection only shows up at deploy time, after the app exists.
 
-Through MCP it's `modify_python_js_data_app(git_repository="https://github.com/<org>/<repo>", git_auth="organization", branch="main")`. Prerequisites: an organization admin connects the GitHub organization in Control UI → Organization → GitHub, and the Keboola GitHub App is installed on it. Limits: https URLs only, github.com or a GHE host (`*.ghe.com`) the stack is configured for, read-only, prod mode only (no dev mode, preview or drafts yet). The app has no managed repo, so the rest of this skill doesn't apply to it. Copy into Keboola git instead when the user wants drafts and previews, the repo isn't on GitHub, or the organization can't be connected. Details and errors: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`.
+Through MCP it's `modify_python_js_data_app(git_repository="https://github.com/<org>/<repo>", git_auth="organization", branch="main")`. Prerequisites: the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization (https://help.keboola.com/management/organization/#connect-github). Limits: https URLs only, github.com or a GHE host the stack is configured for, read-only, prod mode only (no dev mode, preview or drafts yet). The app has no managed repo, so the rest of this skill doesn't apply to it. Copy into Keboola git instead when the user wants drafts and previews, the repo isn't on GitHub, or the organization can't be connected. Details and errors: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`.
 
 ## Working Directory Context
 

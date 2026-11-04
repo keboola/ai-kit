@@ -37,8 +37,9 @@ that drives it.
 
 0. **Offer not copying first.** When `--source` is a GitHub `https://` URL, tell the user the app can deploy
    straight from that repo with organization auth instead: no copy, no PAT, no 15MB cap, but prod mode only
-   (no drafts or preview yet). It needs the GitHub organization connected in Control UI → Organization → GitHub
-   and the Keboola GitHub App installed on it. Have the user confirm both: a missing connection only fails at
+   (no drafts or preview yet). It needs the Keboola GitHub App installed on the GitHub organization and that
+   organization connected to the Keboola organization, by a Keboola organization admin who owns the GitHub
+   organization (https://help.keboola.com/management/organization/#connect-github). Have the user confirm both: a missing connection only fails at
    deploy, after the app exists. If they choose it:
    - **No app yet** (or the user agrees to a new one): `kbagent data-app create --project <alias> --name <app-name>
      --slug <slug> --git-repo <url> --git-auth organization --git-branch <branch> --type python-js --wait`.
