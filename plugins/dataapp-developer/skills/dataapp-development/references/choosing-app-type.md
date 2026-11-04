@@ -47,7 +47,7 @@ Stack: one Node container — React + Vite + Tailwind client, Express serving it
 | Deploy mode | Code or Git | Git only | Git only |
 | MCP support today | Yes (`modify_streamlit_data_app`) | Yes (`modify_python_js_data_app` + git) | Yes (`modify_python_js_data_app` + git) |
 | Cold-start time | Fast | Fast (build runs once per prod deploy) | Slowest |
-| Row-level security / per-user data | Not supported yet | Yes (the template sends the user token) | With `keboola-query-service` 0.4.0 (not released yet) |
+| Row-level security / per-user data | Not supported yet | Yes (the template sends the user token) | With `keboola-query-service` 0.4.0 or newer |
 
 ## Migration notes
 

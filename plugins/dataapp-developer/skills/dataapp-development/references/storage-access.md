@@ -652,7 +652,51 @@ df = pd.read_csv("/data/in/tables/customers.csv")
 
 Route code does nothing for it. Keep both `app.use` lines in `server/index.ts`, and call `runQuery` from the request handler (directly or through other functions), not from work started outside the request (a timer set at startup, a queue). Never share one in-flight query between requests (for example `pending ??= runQuery(sql)` to merge equal queries): the second user gets the first user's rows.
 
-**Python apps** use `keboola-query-service` 0.4.0 or newer (not released yet; 0.3.0 has none of this): `Client(base_url, auth=...)` takes a credential or a provider, and every method takes a per-call `auth=`. The credentials are `StorageToken(token)` and `AppUserToken(user_token, storage_token=StorageToken(...))`; each token is a value or a callable (for example `lambda: Path(os.environ["STORAGE_API_TOKEN_PATH"]).read_text().strip()`). Pick the credential per request, as the Node provider does, never once for a shared client. A refusal raises `RowLevelSecurityError`.
+**Python apps** use `keboola-query-service` 0.4.0 or newer (0.3.0 has none of this): `Client(base_url, auth=...)` takes a credential or a provider, and every method takes a per-call `auth=`. The credentials are `StorageToken(token)` and `AppUserToken(user_token, storage_token=StorageToken(...))`; each token is a value or a callable (for example `lambda: Path(os.environ["STORAGE_API_TOKEN_PATH"]).read_text().strip()`). Pick the credential per request, as the Node provider does, never once for a shared client. A refusal raises `RowLevelSecurityError`.
+
+A Flask backend, for example; a call outside a request (startup, a timer) gets only the Storage token:
+
+```python
+import os
+from pathlib import Path
+
+from flask import Flask, has_request_context, jsonify, request
+from keboola_query_service import AppUserToken, Client, RowLevelSecurityError, StorageToken
+
+app = Flask(__name__)
+
+
+def read_storage_token() -> str:
+    path = os.environ.get("STORAGE_API_TOKEN_PATH")
+    return Path(path).read_text().strip() if path else os.environ["KBC_TOKEN"]
+
+
+STORAGE_TOKEN = StorageToken(read_storage_token)
+
+
+def credential():
+    user_token = request.headers.get("X-Kbc-App-User-Token") if has_request_context() else None
+    return AppUserToken(user_token, storage_token=STORAGE_TOKEN) if user_token else STORAGE_TOKEN
+
+
+client = Client(base_url=os.environ["QUERY_SERVICE_URL"], auth=credential)
+
+
+@app.get("/api/orders")
+def orders():
+    try:
+        [result] = client.execute_query(
+            branch_id=os.environ["BRANCH_ID"],
+            workspace_id=os.environ["WORKSPACE_ID"],
+            statements=['SELECT "region", COUNT(*) AS "orders" FROM "in.c-crm"."orders" GROUP BY "region"'],
+        )
+    except RowLevelSecurityError:
+        return jsonify(error="Row-level security does not allow this query", code="ROW_LEVEL_SECURITY"), 403
+    names = [column.name for column in result.columns]
+    return jsonify([dict(zip(names, row)) for row in result.data])
+```
+
+Cells arrive as strings, as on every Query Service path; see "Query Service return shape" above.
 
 ## Row-level security
 
