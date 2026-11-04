@@ -10,7 +10,8 @@ A data app config can read its repo through the Keboola organization's GitHub Ap
     "git": {
       "repository": "https://github.com/<org>/<repo>",
       "branch": "main",
-      "authType": "organization"
+      "authType": "organization",
+      "private": true
     }
   }
 }
@@ -24,7 +25,7 @@ At each deploy the platform mints a short-lived, read-only token from oauth-serv
 - Create or switch an app (MCP, kbagent)
 - Changing the code of an org-auth app
 - Errors and what to do
-- Custom Python and dbt use the same connection
+- Side note: Custom Python and dbt use the same connection
 
 ## Prerequisites
 
@@ -33,17 +34,18 @@ Both are one-time, per Keboola organization. The agent can't do either of them, 
 1. **An organization admin connects the GitHub organization** in Control UI → Organization → GitHub.
 2. **The Keboola GitHub App is installed on that GitHub organization**, with access to the repo.
 
-If the user isn't sure whether this was done, try it. The errors below say exactly which part is missing.
+**Confirm both before you create the app.** A missing connection, an App that doesn't cover the repo, or a host the stack has no GitHub App for is only detected when the app deploys, not when it is created. By then the app already exists in the project. So ask the user, or their organization admin, whether the GitHub organization is connected and the App is installed. If they aren't sure and want to try anyway, tell them first that a failed deploy leaves an app they'll have to delete or switch to another auth.
 
 ## Limits
 
 | Limit | Consequence |
 |---|---|
 | `https://` URL only | `git@github.com:org/repo.git` is refused. Use `https://github.com/org/repo` |
-| github.com, or a GitHub Enterprise host configured on the stack | GitLab, Bitbucket and other hosts still need a PAT or SSH key |
+| github.com, or a GitHub Enterprise host the stack is configured for (`*.ghe.com`) | GitLab, Bitbucket and other hosts still need a PAT or SSH key. The stack checks the host at deploy time |
 | Read-only | The platform clones; it never pushes. The user pushes code with their own git access |
 | No dev mode yet | No `deploy_data_app(mode='dev')`, no preview link, no drafts. Deploy in prod mode |
 | No managed repo | `create_python_js_data_app_git_credential` has nothing to mint for this app |
+| Not for an app on a Keboola-managed repo | The managed repo is fixed when the app is created. That app can't be switched to org auth (see below) |
 | Exclusive with credentials | A `git` block with `authType: organization` and a `username` / `#password` / `#sshKey` is rejected |
 
 When one of these rules it out (GitLab repo, the user wants drafts and previews), fall back to the Keboola-managed repo (`keboola-git` skill) or to a PAT or SSH key.
@@ -66,28 +68,38 @@ modify_python_js_data_app(
 deploy_data_app(action="deploy", configuration_id="<id-from-above>")   # prod mode
 ```
 
-The same call with the app's `configuration_id` rebinds an existing prod app to the repo. The "resolve before you create" rules in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) still apply: never create a second app when one exists.
+The same call with the app's `configuration_id` rebinds an existing prod app, but **only an app that is already on an external repo** (bound with a PAT or SSH key). Its stored credentials are dropped.
+
+**An app on a Keboola-managed repo can't be rebound.** That covers every app created from the Keboola Apps page. The MCP and kbagent both refuse it. You have two options:
+
+- **Stay on the managed repo.** Push the code from GitHub into it (the `keboola-git` skill). That keeps drafts and previews.
+- **Create a new app on the GitHub repo**, but only after the user agrees to it. Say in your reply that this makes a second app next to the managed one, and that the managed app stays until they delete it.
+
+The "resolve before you create" rules in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) still apply. This is the one case where a create can be the right answer when an app already exists, and it needs the user's yes.
 
 **kbagent:**
 
 ```bash
-kbagent data-app create --project P --git-repo https://github.com/acme/revenue-dashboard \
-  --git-auth organization --git-branch main --type python-js --name "Revenue Dashboard"
-kbagent data-app deploy --project P --app-id N --wait
+kbagent data-app create --project P --name "Revenue Dashboard" --slug revenue-dashboard \
+  --git-repo https://github.com/acme/revenue-dashboard --git-auth organization --git-branch main \
+  --type python-js --wait
 ```
 
-`--git-auth organization` excludes `--git-public`, `--git-username`, the `--git-pat-*` flags and `--use-managed-git-repo`.
+`create` deploys the app as part of the call, so don't run a separate `data-app deploy` after it. `--slug` is required. `--git-auth organization` excludes `--git-public`, `--git-username`, the `--git-pat-*` flags and `--use-managed-git-repo`.
 
-To switch an existing PAT or SSH-key app to org auth, use:
+To switch an existing app on an external repo (PAT or SSH key) to org auth, use:
 
 ```bash
-kbagent data-app set-git-auth --project P --app-id N --git-auth organization
+kbagent data-app git-auth-set --project P --app-id N --git-auth organization --dry-run   # inspect the write
+kbagent data-app git-auth-set --project P --app-id N --git-auth organization
 kbagent data-app deploy --project P --app-id N --wait
 ```
 
-It sets `authType` and removes `username` / `#password` / `#sshKey` in one write. Don't do this with `kbagent config update --merge`: the merge leaves the old credentials in place, and the platform rejects them combined with `authType`.
+It sets `authType` and removes `username` / `#password` / `#sshKey` in one write. Unlike `create`, it never deploys, so the explicit deploy is needed. An app with an `ssh://` URL also needs `--git-repo https://github.com/<org>/<repo>`. It refuses an app on a Keboola-managed repo (see above). Don't switch with `kbagent config update --merge`: the merge can't delete keys, so the old credentials stay next to `authType`, and the deploy fails.
 
-`kbagent data-app validate-repo` does not use the organization connection. On a private repo it needs the user's own access, or check the repo layout from a local clone.
+`kbagent data-app validate-repo` never uses the organization connection. To validate an org-auth repo with it, use a PAT that can read the repo, or check the layout from a local clone.
+
+**Streamlit:** `modify_streamlit_data_app` has no git mode, so the MCP path can't set up org auth for a Streamlit app. Use kbagent with `--type streamlit` in place of `--type python-js`. Everything else in the create snippet stays the same.
 
 ## Changing the code of an org-auth app
 
@@ -101,14 +113,17 @@ Tell the user that the push goes live on the next deploy, with no preview in bet
 
 ## Errors and what to do
 
+These come from the deploy, not from creating or rebinding the app: `deploy_data_app`, `kbagent data-app create --wait` / `deploy --wait`, or `kbagent data-app runs`.
+
 | What the error says | What to tell the user |
 |---|---|
 | No GitHub App is registered for the host (HTTP 412) | The stack has no GitHub App for this host. For a GHE host, the stack has to be configured for it first; until then use a PAT or the managed repo |
 | The organization is not connected, or the App is not installed on the GitHub account | An organization admin connects the GitHub organization in Control UI → Organization → GitHub and installs the Keboola GitHub App on it |
 | URL not https, or not a GitHub host | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
-| Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app set-git-auth` does it in one write) |
+| Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app git-auth-set` does it in one write) |
+| Rebind or `git-auth-set` refused for a managed repo | Expected: an app on a Keboola-managed repo can't switch. Stay on the managed repo, or create a new app with the user's agreement |
 | `deploy_data_app(mode='dev')` refused | Expected: dev mode isn't supported for org auth yet. Deploy in prod mode |
 
-## Custom Python and dbt use the same connection
+## Side note: Custom Python and dbt use the same connection
 
-The same organization connection serves private GitHub repos outside data apps. Custom Python (`kds-team.app-custom-python`) and dbt (`keboola.dbt-transformation`) configurations authorize their repo through `authorization.githubApp`. With the same prerequisites in place, they need no PAT either. Mention this when the user is about to create a PAT for one of them.
+The same organization connection serves private GitHub repos outside data apps. Custom Python (`kds-team.app-custom-python`) and dbt (`keboola.dbt-transformation`) configurations authorize their repo through `authorization.githubApp`. With the same prerequisites in place, they need no PAT either.

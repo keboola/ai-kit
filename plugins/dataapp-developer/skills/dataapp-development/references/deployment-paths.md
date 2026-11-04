@@ -66,7 +66,7 @@ Available tools:
 - `deploy_data_app(action="stop", configuration_id=...)` — suspends.
 - `get_data_apps([cfg_id])` — returns the latest 20 log lines for debugging, and for a Python/JS prod app its `drafts: [...]`.
 - `modify_python_js_data_app` — creates a Python/JS prod app (with a Keboola-managed git repo), creates a draft off one, or updates an app's metadata. **Read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) before calling it** — the create and draft-create shapes differ by one argument.
-  With `git_repository="https://github.com/<org>/<repo>"` and `git_auth="organization"` it instead creates (or, with a `configuration_id`, rebinds) a prod app on the customer's private GitHub repo, read through the organization's GitHub connection: no managed repo, no PAT, prod mode only. See [github-organization-auth.md](github-organization-auth.md).
+  With `git_repository="https://github.com/<org>/<repo>"` and `git_auth="organization"` it instead creates a prod app on the customer's private GitHub repo, read through the organization's GitHub connection: no managed repo, no PAT, prod mode only. With a `configuration_id` it rebinds an app that is already on an external repo (PAT or SSH key). It refuses an app on a Keboola-managed repo, which covers every app created from the Apps page; there, a new app needs the user's yes. See [github-organization-auth.md](github-organization-auth.md).
 - `create_python_js_data_app_git_credential(configuration_id)` — mints a one-time `git_clone_url` for a prod app's managed repo.
 - `query_data`, `get_table`, `get_project_info` — for validating data before writing code.
 
@@ -193,10 +193,11 @@ kbagent data-app password --app-id N    # if basic-auth
 - **A private GitHub repo: offer organization auth first.** The platform reads the repo through the Keboola organization's GitHub App connection, so no PAT is created or stored:
 
   ```bash
-  kbagent data-app create --project P --git-repo https://github.com/<org>/<repo> --git-auth organization --git-branch main ...
+  kbagent data-app create --project P --name "My App" --slug my-app \
+    --git-repo https://github.com/<org>/<repo> --git-auth organization --git-branch main --type python-js --wait
   ```
 
-  It needs an organization admin to connect the GitHub organization (Control UI → Organization → GitHub) and the Keboola GitHub App installed on it. It takes https GitHub/GHE URLs only, is read-only, and has no dev mode or preview yet. To move an existing PAT app over, use `kbagent data-app set-git-auth --app-id N --git-auth organization`. Prerequisites, limits and errors: [github-organization-auth.md](github-organization-auth.md).
+  It needs an organization admin to connect the GitHub organization (Control UI → Organization → GitHub) and the Keboola GitHub App installed on it. It takes https GitHub/GHE URLs only, is read-only, and has no dev mode or preview yet. `create` deploys as part of the call, so no separate deploy is needed. To move an existing app on an external repo (PAT or SSH key) over, run `kbagent data-app git-auth-set --app-id N --git-auth organization`, then `data-app deploy --wait`. It refuses an app on a Keboola-managed repo. A missing organization connection only fails at deploy, so confirm it before you create. Prerequisites, limits and errors: [github-organization-auth.md](github-organization-auth.md).
 
 - When org auth doesn't fit (GitLab or another host, the organization isn't connected), `--git-pat-env GITHUB_PAT_DATAAPP` is the preferred PAT auth — the plaintext token never appears in argv:
 

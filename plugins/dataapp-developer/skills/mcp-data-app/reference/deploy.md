@@ -56,7 +56,7 @@ These tools are live today.
 
 ## Existing GitHub repo with organization auth
 
-Use this when the scaffolded server is already pushed to a GitHub repo (github.com, or a GHE host configured on the stack). The platform reads it through the Keboola organization's GitHub App connection, so nothing is copied into Keboola git and no PAT is stored.
+Use this when the scaffolded server is already pushed to a GitHub repo (github.com, or a GHE host the stack is configured for). The platform reads it through the Keboola organization's GitHub App connection, so nothing is copied into Keboola git and no PAT is stored.
 
 Prerequisites: an organization admin has connected the GitHub organization in Control UI → Organization → GitHub, and the Keboola GitHub App is installed on it. The URL must be `https://`. The app is prod-only, with no dev mode or preview yet. That is fine here, because an MCP server app is deployed rather than iterated on behind a preview.
 
@@ -76,10 +76,12 @@ deploy_data_app(action="deploy", configuration_id="<cfg>")   # prod mode; mode='
 kbagent:
 
 ```bash
-kbagent data-app create --project <alias> --git-repo https://github.com/<org>/<repo> \
-  --git-auth organization --git-branch main --type python-js --name "MCP Data App"
-kbagent data-app deploy --project <alias> --app-id <id> --wait
+kbagent data-app create --project <alias> --name "MCP Data App" --slug mcp-data-app \
+  --git-repo https://github.com/<org>/<repo> --git-auth organization --git-branch main --type python-js --wait
+# create deploys the app; run `data-app deploy --wait` only for later redeploys
 ```
+
+An existing MCP app on a Keboola-managed repo can't be rebound to the GitHub repo. A new app is a second one, so it needs the user's yes. Confirm the organization connection first, because a missing one only fails at deploy, after the app exists.
 
 To redeploy after a change, push to that GitHub branch and deploy again. `create_python_js_data_app_git_credential` doesn't apply: the app has no managed repo. Errors and limits: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`. Then continue with Secrets and App-level auth below.
 
