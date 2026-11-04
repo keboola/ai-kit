@@ -31,7 +31,7 @@ kbagent data-app deploy --project <alias> --app-id <id> --wait
 
 **An app on a Keboola-managed repo can't switch.** The managed repo is fixed when the app is created, and both `git-auth-set` and the MCP rebind refuse it. Every app created from the Keboola Apps page is one. For such an app, either copy the code into its managed repo (the rest of this skill), or create a new app on the GitHub repo, but only once the user agrees to a second app next to the managed one.
 
-Confirm the prerequisites before creating: a missing connection only shows up at deploy time, after the app exists.
+Confirm the prerequisites before creating: a missing connection only shows up at deploy time. `create --wait` then deletes the new app again (unless `--keep-on-failure`), so the user ends up with nothing deployed.
 
 Through MCP it's `modify_python_js_data_app(git_repository="https://github.com/<org>/<repo>", git_auth="organization", branch="main")`. Prerequisites: the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization (https://help.keboola.com/management/organization/#connect-github). Limits: https URLs only, github.com or a GHE host the stack is configured for, read-only, prod mode only (no dev mode, preview or drafts yet). The app has no managed repo, so the rest of this skill doesn't apply to it. Copy into Keboola git instead when the user wants drafts and previews, the repo isn't on GitHub, or the organization can't be connected. Details and errors: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`.
 

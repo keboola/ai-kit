@@ -40,7 +40,7 @@ that drives it.
    (no drafts or preview yet). It needs the Keboola GitHub App installed on the GitHub organization and that
    organization connected to the Keboola organization, by a Keboola organization admin who owns the GitHub
    organization (https://help.keboola.com/management/organization/#connect-github). Have the user confirm both: a missing connection only fails at
-   deploy, after the app exists. If they choose it:
+   deploy (`create --wait` then deletes the new app unless `--keep-on-failure`). If they choose it:
    - **No app yet** (or the user agrees to a new one): `kbagent data-app create --project <alias> --name <app-name>
      --slug <slug> --git-repo <url> --git-auth organization --git-branch <branch> --type python-js --wait`.
      It deploys as part of the call.

@@ -36,7 +36,10 @@ Both are one-time, per Keboola organization, and done in this order. The agent c
 
 Both buttons are on the organization's GitHub tab: `https://connection.<stack>/control/organizations/<org-id>?tab=github`. Give the user that URL or the docs page (https://help.keboola.com/management/organization/#connect-github). Don't point them to a menu path: most customer admins don't see the link to that page in the menu.
 
-**Confirm both before you create the app.** A missing connection, an App that doesn't cover the repo, or a host the stack has no GitHub App for is only detected when the app deploys, not when it is created. By then the app already exists in the project. So ask the user, or their organization admin, whether the GitHub organization is connected and the App is installed. If they aren't sure and want to try anyway, tell them first that a failed deploy leaves an app they'll have to delete or switch to another auth.
+**Confirm both before you create the app.** A missing connection, an App that doesn't cover the repo, or a host the stack has no GitHub App for is only detected when the app deploys, not when it is created. So ask the user, or their organization admin, whether the GitHub organization is connected and the App is installed. If they aren't sure and want to try anyway, what a failed try leaves behind depends on the path:
+
+- **MCP:** `modify_python_js_data_app` has already created the app when `deploy_data_app` fails. Tell the user first that a failed try leaves an app they'll have to delete or switch to another auth.
+- **kbagent:** `data-app create --wait` deletes the new app when its first deploy fails, unless you pass `--keep-on-failure`. A failed try leaves nothing to clean up.
 
 ## Limits
 
@@ -116,16 +119,19 @@ Tell the user that the push goes live on the next deploy, with no preview in bet
 
 ## Errors and what to do
 
-These come from the deploy, not from creating or rebinding the app: `deploy_data_app`, `kbagent data-app create --wait` / `deploy --wait`, or `kbagent data-app runs`.
+The **When** column says where each error shows up:
 
-| What the error says | What to tell the user |
-|---|---|
-| No GitHub App is registered for the host (HTTP 412) | The stack has no GitHub App for this host. For a GHE host, the stack has to be configured for it first; until then use a PAT or the managed repo |
-| The organization is not connected, or the App is not installed on the GitHub account | A Keboola organization admin who owns the GitHub organization installs the Keboola GitHub App, then connects the GitHub organization, on `https://connection.<stack>/control/organizations/<org-id>?tab=github` (see Prerequisites) |
-| URL not https, or not a GitHub host | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
-| Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app git-auth-set` does it in one write) |
-| Rebind or `git-auth-set` refused for a managed repo | Expected: an app on a Keboola-managed repo can't switch. Stay on the managed repo, or create a new app with the user's agreement |
-| `deploy_data_app(mode='dev')` refused | Expected: dev mode isn't supported for org auth yet. Deploy in prod mode |
+- **Create / rebind:** `modify_python_js_data_app`, `kbagent data-app create` or `git-auth-set`. These refuse the request before anything is written.
+- **Deploy:** `deploy_data_app`, the deploy inside `kbagent data-app create --wait`, `deploy --wait`, or `kbagent data-app runs`.
+
+| When | What the error says | What to tell the user |
+|---|---|---|
+| Deploy | No GitHub App is registered for the host (HTTP 412) | The stack has no GitHub App for this host. For a GHE host, the stack has to be configured for it first; until then use a PAT or the managed repo |
+| Deploy | The organization is not connected, or the App is not installed on the GitHub account | A Keboola organization admin who owns the GitHub organization installs the Keboola GitHub App, then connects the GitHub organization, on `https://connection.<stack>/control/organizations/<org-id>?tab=github` (see Prerequisites) |
+| Create / rebind | URL not `https://HOST/OWNER/REPO`, or (MCP only) a host other than `github.com` / `*.ghe.com`. kbagent doesn't check the host; a host the stack has no GitHub App for fails at deploy (row above) | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
+| Create / rebind | Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app git-auth-set` does it in one write) |
+| Create / rebind | Rebind or `git-auth-set` refused for a managed repo | Expected: an app on a Keboola-managed repo can't switch. Stay on the managed repo, or create a new app with the user's agreement |
+| Deploy | `deploy_data_app(mode='dev')` refused | Expected: dev mode isn't supported for org auth yet. Deploy in prod mode |
 
 ## Side note: Custom Python and dbt use the same connection
 

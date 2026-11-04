@@ -81,7 +81,7 @@ kbagent data-app create --project <alias> --name "MCP Data App" --slug mcp-data-
 # create deploys the app; run `data-app deploy --wait` only for later redeploys
 ```
 
-An existing MCP app on a Keboola-managed repo can't be rebound to the GitHub repo. A new app is a second one, so it needs the user's yes. Confirm the organization connection first, because a missing one only fails at deploy, after the app exists.
+An existing MCP app on a Keboola-managed repo can't be rebound to the GitHub repo. A new app is a second one, so it needs the user's yes. Confirm the organization connection first: a missing one only fails at deploy. On the MCP path the app already exists by then and has to be deleted; kbagent `create --wait` deletes it itself unless `--keep-on-failure` is passed.
 
 To redeploy after a change, push to that GitHub branch and deploy again. `create_python_js_data_app_git_credential` doesn't apply: the app has no managed repo. Errors and limits: `plugins/dataapp-developer/skills/dataapp-development/references/github-organization-auth.md`. Then continue with Secrets and App-level auth below.
 
