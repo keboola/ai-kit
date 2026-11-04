@@ -128,7 +128,7 @@ The **When** column says where each error shows up:
 |---|---|---|
 | Deploy | No GitHub App is registered for the host (HTTP 412) | The stack has no GitHub App for this host. For a GHE host, the stack has to be configured for it first; until then use a PAT or the managed repo |
 | Deploy | The organization is not connected, or the App is not installed on the GitHub account | A Keboola organization admin who owns the GitHub organization installs the Keboola GitHub App, then connects the GitHub organization, on `https://connection.<stack>/control/organizations/<org-id>?tab=github` (see Prerequisites) |
-| Create / rebind | URL not `https://HOST/OWNER/REPO`, or (MCP only) a host other than `github.com` / `*.ghe.com`. kbagent doesn't check the host; a host the stack has no GitHub App for fails at deploy (row above) | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
+| Create / rebind | URL not `https://HOST/OWNER/REPO`, or (MCP only) a host other than `github.com` / `*.ghe.com`. kbagent doesn't check the host; a host the stack has no GitHub App for fails at deploy (the HTTP 412 row) | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
 | Create / rebind | Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app git-auth-set` does it in one write) |
 | Create / rebind | Rebind or `git-auth-set` refused for a managed repo | Expected: an app on a Keboola-managed repo can't switch. Stay on the managed repo, or create a new app with the user's agreement |
 | Deploy | `deploy_data_app(mode='dev')` refused | Expected: dev mode isn't supported for org auth yet. Deploy in prod mode |
