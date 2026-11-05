@@ -1,0 +1,191 @@
+<!doctype html>
+<!-- explainer.html — a words-and-dots explainer for a docs overview page (docs-clip skill).
+     A line draws itself left to right; at each step a numbered dot appears and a caption says
+     what the step does. Then a second slide: a real screenshot and a closing question with a
+     phrase that changes. record-composite.mjs records it:
+       node record-composite.mjs --page explainer.html <image> 1280 800
+     Built for the Getting Started hub, 2026-09-29 (Nikita: "a line with dots, draw each new dot
+     in the pipeline and write what it does"). Every word on screen must be something the page
+     itself says.
+     explainer-short.html is the 10-second cut (Michal Jeřábek, 2026-09-30: "úvodní klip max 10 s"):
+     the four dots carry their titles only, about 1.4 s each, then 2.5 s of the app and one line.
+     That breaks the docs-clip rule of 3 s per caption on purpose; the step texts live in the
+     course line under the clip. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; background: #f8fafc; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #0b2039; }
+  .slide { position: absolute; inset: 0; transition: opacity .6s ease; }
+  .slide.off { opacity: 0; }
+
+  /* slide 1: the line */
+  .title {
+    position: absolute; left: 96px; top: 86px;
+    font-size: 46px; font-weight: 800; letter-spacing: -.015em;
+    opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease;
+  }
+  .title.on { opacity: 1; transform: none; }
+  svg.line { position: absolute; left: 0; top: 0; }
+  .guide { stroke: #d5dee8; stroke-width: 4; stroke-linecap: round; opacity: 0; transition: opacity .5s ease; }
+  .guide.on { opacity: 1; }
+  .seg { stroke: #1f8feb; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.4, 0, .2, 1); }
+  .dot { transform-box: fill-box; transform-origin: center; transform: scale(0); transition: transform .35s cubic-bezier(.34, 1.56, .64, 1); }
+  .dot.on { transform: scale(1); }
+  .dot circle.core { fill: #1f8feb; }
+  .dot text { fill: #fff; font-size: 22px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+  .ring { fill: rgba(31, 143, 235, .18); transform-box: fill-box; transform-origin: center; opacity: 0; transition: opacity .3s ease; }
+  .ring.on { opacity: 1; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+  .cap {
+    position: absolute; top: 456px; width: 262px; margin-left: -131px; text-align: center;
+    opacity: 0; transform: translateY(12px); transition: opacity .45s ease, transform .45s ease;
+  }
+  .cap.on { opacity: 1; transform: none; }
+  .cap .label { font-size: 32px; font-weight: 800; line-height: 1.2; }
+  .cap .desc { margin-top: 12px; font-size: 22px; font-weight: 500; line-height: 1.4; color: #3a5570; }
+  .cap .desc em { font-style: normal; color: #0b2039; }
+  .cap.past .label { color: #3a5570; }
+
+  /* slide 2: the app and the question */
+  .card {
+    position: absolute; left: 56px; top: 132px; width: 712px;
+    border-radius: 16px; overflow: hidden; background: #fff;
+    box-shadow: 0 1px 2px rgba(11, 32, 57, .06), 0 18px 48px rgba(11, 32, 57, .14);
+    opacity: 0; transform: translateY(16px) scale(.98); transition: opacity .6s ease, transform .6s ease;
+  }
+  .card.on { opacity: 1; transform: none; }
+  .card img { display: block; width: 100%; }
+  .card { padding-bottom: 8px; }
+  .ask { position: absolute; left: 808px; top: 300px; width: 420px; }
+  .ask .want, .ask .phrase { font-size: 42px; font-weight: 800; line-height: 1.18; letter-spacing: -.01em; }
+  .ask .want { opacity: 0; transition: opacity .5s ease; }
+  .ask .want.on { opacity: 1; }
+  .ask .phrase-box { position: relative; height: 112px; margin-top: 6px; }
+  .ask .phrase {
+    position: absolute; left: 0; top: 0; right: 0; color: #1f8feb;
+    opacity: 0; transform: translateY(14px); transition: opacity .35s ease, transform .35s ease;
+  }
+  .ask .phrase.on { opacity: 1; transform: none; }
+  .ask .phrase.gone { opacity: 0; transform: translateY(-14px); }
+  .ask .go {
+    margin-top: 0; font-size: 40px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em;
+    opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease;
+  }
+  .ask .go.on { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div class="slide" id="s1">
+  <div class="title" id="title">How Keboola works</div>
+  <svg class="line" width="1280" height="800" viewBox="0 0 1280 800">
+    <line class="guide" id="guide" x1="96" y1="384" x2="1048" y2="384" />
+    <g id="segs"></g>
+    <g id="dots"></g>
+  </svg>
+  <div id="caps"></div>
+</div>
+<div class="slide off" id="s2">
+  <div class="card" id="card"><img id="shot" alt=""></div>
+  <div class="ask">
+    <div class="go" id="go">Go through the guide and try it yourself.</div>
+  </div>
+</div>
+<script>
+// The four steps. Every claim comes from the Getting Started pages. Step 2 describes, without
+// quoting, the one-prompt block on getting-started/ask/ ("The same request, as one prompt"): it
+// ran end to end on the earlier dataset, and its current wording has not been rerun, so the clip
+// says what it asks for rather than showing a prompt in quotes.
+const STEPS = [
+  { label: 'Load your data', desc: '' },
+  { label: 'Ask Kai', desc: '' },
+  { label: 'Kai builds it', desc: '' },
+  { label: 'The app is ready', desc: '' },
+];
+const PHRASES = [];
+const X0 = 96, Y = 384, XS = [232, 504, 776, 1048];
+
+const params = new URLSearchParams(location.search);
+document.getElementById('shot').src = params.get('img') || '';
+
+const NS = 'http://www.w3.org/2000/svg';
+const segs = document.getElementById('segs'), dots = document.getElementById('dots'), caps = document.getElementById('caps');
+const segEls = [], dotEls = [], ringEls = [], capEls = [];
+XS.forEach((x, i) => {
+  const from = i === 0 ? X0 : XS[i - 1];
+  const seg = document.createElementNS(NS, 'line');
+  Object.entries({ x1: from, y1: Y, x2: x, y2: Y, class: 'seg' }).forEach(([k, v]) => seg.setAttribute(k, v));
+  const len = x - from; seg.style.strokeDasharray = len; seg.style.strokeDashoffset = len;
+  segs.appendChild(seg); segEls.push(seg);
+
+  const ring = document.createElementNS(NS, 'circle');
+  Object.entries({ cx: x, cy: Y, r: 36, class: 'ring' }).forEach(([k, v]) => ring.setAttribute(k, v));
+  dots.appendChild(ring); ringEls.push(ring);
+  const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'dot');
+  const c = document.createElementNS(NS, 'circle');
+  Object.entries({ cx: x, cy: Y, r: 22, class: 'core' }).forEach(([k, v]) => c.setAttribute(k, v));
+  const t = document.createElementNS(NS, 'text'); t.setAttribute('x', x); t.setAttribute('y', Y); t.textContent = i + 1;
+  g.append(c, t); dots.appendChild(g); dotEls.push(g);
+
+  const cap = document.createElement('div'); cap.className = 'cap'; cap.style.left = x + 'px';
+  cap.innerHTML = `<div class="label">${STEPS[i].label}</div><div class="desc"></div>`;
+  caps.appendChild(cap); capEls.push(cap);
+});
+const phraseEls = PHRASES.map(p => { const d = document.createElement('div'); d.className = 'phrase'; d.textContent = p; document.getElementById('phrases').appendChild(d); return d; });
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const on = el => el.classList.add('on');
+
+// Type the step 2 prompt: the plain text lands at once, the quote types, the <em> stays.
+async function typeDesc(el, html, total) {
+  const m = html.match(/^(.*?)<em>(.*)<\/em>(.*)$/);
+  if (!m) { el.innerHTML = html; return; }
+  const [, pre, quote, post] = m;
+  el.innerHTML = pre + '<em></em>' + post;
+  const em = el.querySelector('em');
+  const each = total / quote.length;
+  for (let k = 1; k <= quote.length; k++) { em.textContent = quote.slice(0, k); await sleep(each); }
+}
+
+async function step(i) {
+  segEls[i].style.strokeDashoffset = 0;              // the line reaches the new place
+  await sleep(600);
+  if (i > 0) { ringEls[i - 1].classList.remove('on'); capEls[i - 1].classList.add('past'); }
+  on(dotEls[i]); on(ringEls[i]);                    // the dot appears
+  await sleep(150);
+  const desc = capEls[i].querySelector('.desc');
+  // no typing: centred text re-centres on every character and jumps words between lines
+  if (!STEPS[i].type) desc.innerHTML = STEPS[i].desc;
+  on(capEls[i]);                                     // and says what it does
+  if (STEPS[i].type) { await sleep(250); await typeDesc(desc, STEPS[i].desc, 2300); }
+}
+
+window.start = async () => {
+  document.title = 'COMPOSITE-PLAYING';
+  on(document.getElementById('title')); on(document.getElementById('guide'));
+  const at = [300, 1650, 3000, 4350];                  // about 1.35 s per dot
+  const t0 = performance.now();
+  const until = ms => sleep(Math.max(0, ms - (performance.now() - t0)));
+  for (let i = 0; i < 4; i++) { await until(at[i]); await step(i); }
+  await until(5600);
+  ringEls[3].classList.remove('on'); capEls[3].classList.add('past');   // the whole line: the poster frame
+  await until(6100);
+
+  document.getElementById('s1').classList.add('off');        // the line leaves first
+  await until(6550);
+  document.getElementById('s2').classList.remove('off');     // then the app arrives, no overlap
+  await sleep(200);
+  on(document.getElementById('card'));
+  await sleep(250);
+  on(document.getElementById('go'));
+  await until(8850);
+  document.getElementById('s2').classList.add('off');        // fade to the empty first frame,
+  await sleep(650);                                          // so the loop has no jump
+  document.title = 'COMPOSITE-DONE';
+};
+</script>
+</body>
+</html>

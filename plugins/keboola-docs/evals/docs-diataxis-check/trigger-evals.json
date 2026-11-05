@@ -1,0 +1,34 @@
+[
+  {
+    "query": "проверь страницу по диатаксису src/content/docs/data-apps/operate.md",
+    "should_trigger": true
+  },
+  {
+    "query": "is cli/workflows.md one Diátaxis type or a frankenstein page?",
+    "should_trigger": true
+  },
+  {
+    "query": "check the page shape of the new MCP pages before I hand them off",
+    "should_trigger": true
+  },
+  {
+    "query": "does this docs page have a lede, a type marker and a Next footer?",
+    "should_trigger": true
+  },
+  {
+    "query": "check the links and redirects after I moved the storage pages",
+    "should_trigger": false
+  },
+  {
+    "query": "rewrite this paragraph so it sounds less like AI",
+    "should_trigger": false
+  },
+  {
+    "query": "split the MCP section into tutorial, how-to and reference pages",
+    "should_trigger": false
+  },
+  {
+    "query": "lint my Python component code",
+    "should_trigger": false
+  }
+]

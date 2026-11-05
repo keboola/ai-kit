@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "keboola-docs",
+  "displayName": "Keboola docs (help.keboola.com)",
+  "version": "0.7.8",
+  "description": "For contributors to keboola/connection-docs (help.keboola.com): write, update, retire and ship pages by the Diátaxis rules, with a guided page workflow, rule, link and VERIFY checks, UI screenshots and clips (Remotion included), a commit gate and PR labels.",
+  "author": {
+    "name": "Keboola :(){:|:&};: s.r.o.",
+    "email": "support@keboola.com"
+  },
+  "keywords": [
+    "keboola",
+    "docs",
+    "help-keboola-com",
+    "connection-docs",
+    "diataxis",
+    "starlight",
+    "screenshots",
+    "remotion"
+  ],
+  "experimental": {
+    "evals": "evals-behavior"
+  }
+}

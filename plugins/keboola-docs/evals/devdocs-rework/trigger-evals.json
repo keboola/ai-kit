@@ -1,0 +1,34 @@
+[
+  {
+    "query": "rework the extend/ tree that was ported from developers.keboola.com",
+    "should_trigger": true
+  },
+  {
+    "query": "the Generic Extractor reference pages are 1:1 ports with cookbooks inside, fix them",
+    "should_trigger": true
+  },
+  {
+    "query": "these pages have /extend/ redirect_from and broken kramdown anchors",
+    "should_trigger": true
+  },
+  {
+    "query": "rework the storage/api pages migrated from dev docs",
+    "should_trigger": true
+  },
+  {
+    "query": "split the MCP section into Diátaxis pages",
+    "should_trigger": false
+  },
+  {
+    "query": "where in the help IA should the migrated dev docs go?",
+    "should_trigger": false
+  },
+  {
+    "query": "update the developers.keboola.com Jekyll theme",
+    "should_trigger": false
+  },
+  {
+    "query": "write a new tutorial for the CLI",
+    "should_trigger": false
+  }
+]
