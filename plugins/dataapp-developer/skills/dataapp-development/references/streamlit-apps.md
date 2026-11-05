@@ -23,8 +23,9 @@ Keboola supports two ways to ship Streamlit code into a data app slot. The choic
 - There is no file tree. Anything beyond a single `streamlit_app.py` -- multiple pages, helper modules, static assets, custom themes via `.streamlit/config.toml` -- has nowhere to live.
 - Theme overrides have to be smuggled in via `parameters.dataApp.streamlit.config.toml` as a TOML string in the JSON editor (see Theming below).
 
-**Git Repository mode** points the data app at a GitHub repository. The repo can be public or private. For private repos, Keboola accepts either:
+**Git Repository mode** points the data app at a GitHub repository. The repo can be public or private. For private repos, Keboola accepts:
 
+- **Organization auth (offer this first)** — `parameters.dataApp.git.authType: "organization"`. The platform reads the repo through the Keboola organization's GitHub App connection, so no credential is stored. Needs the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)). https GitHub/GHE URLs only, read-only, no dev mode yet. Set it up with `kbagent data-app create --type streamlit --git-auth organization …`; `modify_streamlit_data_app` has no git mode, so the MCP-only path can't. See [github-organization-auth.md](github-organization-auth.md).
 - A GitHub username + Personal Access Token (PAT) pair, or
 - An SSH private key for deploy-key style access.
 

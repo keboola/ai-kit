@@ -252,6 +252,8 @@ For the validate -> build -> verify change loop, see [dev-workflow.md](dev-workf
 
 ## Keboola-hosted dev mode
 
+Dev mode isn't available for an app on organization auth yet ([github-organization-auth.md](github-organization-auth.md)).
+
 When the platform sets `KBC_APP_MODE=dev` on the container, the image hot-reloads off the configured git branch. You don't have to redeploy on every push — the running container polls the branch and pulls changes. To opt in, add:
 
 - `keboola-config/supervisord-dev/<program>.conf` — required for dev mode. Hot-reload variant of your supervisord configs (e.g. `streamlit run app.py --server.runOnSave=true`, or `uvicorn --reload`). Each push replaces the changed files by write-and-rename, so a dev watcher must poll: Vite with `watch.usePolling`, a Node server under `tsx watch` with `CHOKIDAR_USEPOLLING="1"`. After a dependency change the watcher restarts only the program named `app`, so give that name to the one that must reload new packages (in `react-vite-app`, Vite).
@@ -285,7 +287,9 @@ Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh
 
 Python/JS apps deploy from git. The MCP tools do not carry source the way `modify_streamlit_data_app` does; they provision the repo, mint a push credential, and trigger deploys, and you drive `git` yourself.
 
-The repo can be **Keboola-managed** (provisioned with the prod app, the default for anything started from the Apps page) or **customer-provided** (GitHub/GitLab with a PAT or SSH key). Both are supported.
+The repo can be **Keboola-managed** (provisioned with the prod app, the default for anything started from the Apps page) or **customer-provided**. Both are supported.
+
+For a customer-provided private repo on GitHub, offer **organization auth** before a PAT or SSH key: `modify_python_js_data_app(git_repository="https://github.com/<org>/<repo>", git_auth="organization")` or `kbagent data-app create --name … --slug … --git-repo <url> --git-auth organization --wait`. An app already on a Keboola-managed repo (anything started from the Apps page) can't be switched to it. The platform reads the repo through the Keboola organization's GitHub App connection and stores no credential. It needs the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)); it is https GitHub/GHE only, read-only, and has no dev mode, preview or drafts yet. Prerequisites, limits and errors: [github-organization-auth.md](github-organization-auth.md). GitLab and other hosts still use a PAT or SSH key.
 
 For a Keboola-managed repo the app is really two configurations: a **prod** app that owns the repo, and **drafts** that branch off it for iteration. Which one you build into, the full tool sequence, and the one argument that decides whether you create a draft or a stray second app are all in **[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md)**. Read it before the first `modify_python_js_data_app` call.
 

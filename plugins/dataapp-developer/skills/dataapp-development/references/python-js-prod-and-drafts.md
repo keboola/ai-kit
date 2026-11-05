@@ -248,6 +248,10 @@ Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to step 2 ab
 
 `branch` on update repoints an **external-git** app, which means a draft, or an app on a customer-provided repo. It is rejected for the prod app on a Keboola-managed repo, whose branch the platform owns. Redeploy afterwards to serve the new branch.
 
+## Apps on organization auth have no drafts yet
+
+A prod app on the customer's GitHub repo with `git_auth="organization"` has no managed repo, so `create_python_js_data_app_git_credential` has nothing to mint, and dev mode, previews and drafts aren't supported for it yet. Don't create a draft for it. The change loop is: push to the app's branch, then redeploy prod. Without local git access (a hosted sandbox such as Kai), never ask for a GitHub token: describe the change, let the user push it, and redeploy after they confirm. Rebinding works only for an app already on an external repo (`get_data_apps`: `is_managed_git_repo: false`). A prod app on the managed repo can't be rebound, and a new org-auth app next to it is a second app: create it only when the user agrees. Otherwise stay on the managed repo and its drafts. Details: [github-organization-auth.md](github-organization-auth.md).
+
 ---
 
 The invariant at the top of this file exists because of a measured failure: an agent opened on an empty prod app's page resolved that app correctly, said so in its reply, then called `modify_python_js_data_app` with an empty `configuration_id` and no `parent_configuration_id`. The project ended with two apps ([AJDA-3263](https://linear.app/keboola/issue/AJDA-3263/)).

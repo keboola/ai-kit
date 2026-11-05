@@ -74,5 +74,21 @@
   {
     "query": "build this into the app that's already open here instead of making a new one",
     "should_trigger": true
+  },
+  {
+    "query": "deploy my keboola data app from our private company github repo without creating a personal access token",
+    "should_trigger": true
+  },
+  {
+    "query": "we connected our github organization to keboola — point the python/js app at our repo instead of a PAT",
+    "should_trigger": true
+  },
+  {
+    "query": "nasaď datovou appku z našeho privátního GitHub repa přes organizační připojení, bez PAT",
+    "should_trigger": true
+  },
+  {
+    "query": "set up the dbt transformation in keboola to pull models from our private github repo",
+    "should_trigger": false
   }
 ]

@@ -1,6 +1,6 @@
 ---
 name: dataapp-development
-description: Use when building, modifying, deploying, or debugging Keboola Apps (Streamlit or Python/JS). Covers the full lifecycle — choosing app type, the Python/JS prod-app-and-drafts model (never create a second app), configuring keboola-config/, storage access (RO workspace, RW Query Service, input mapping), authentication, DuckDB caching for performance, default Keboola styling, dashboard patterns, optional Kai chat integration, and the three client paths (MCP-only, Claude Code with filesystem, kbagent CLI).
+description: Use when building, modifying, deploying, or debugging Keboola Apps (Streamlit or Python/JS). Covers the full lifecycle — choosing app type, the Python/JS prod-app-and-drafts model (never create a second app), configuring keboola-config/, storage access (RO workspace, RW Query Service, input mapping), authentication, DuckDB caching for performance, default Keboola styling, dashboard patterns, optional Kai chat integration, the three client paths (MCP-only, Claude Code with filesystem, kbagent CLI), and deploying from a private GitHub repo through the organization's GitHub connection instead of a PAT or SSH key.
 ---
 
 # Keboola App Development
@@ -23,6 +23,7 @@ Answer these questions in order. Each answer routes to the right reference.
 | See what an app running in dev mode actually shows | `references/dev-workflow.md` §Verify an app running in dev mode — a preview link opened in your own browser |
 | Read, describe, or push from a clone you did not just make | `references/existing-clone.md` |
 | Deploy or redeploy | `references/deployment-paths.md` |
+| Deploy from a private GitHub repo, or about to ask the user for a PAT or SSH key | `references/github-organization-auth.md` — offer the organization connection first |
 | Debug a deployment or runtime issue | `references/troubleshooting.md` |
 | Migrate an existing app between types | `references/choosing-app-type.md` + `references/streamlit-apps.md` + `references/python-js-apps.md` |
 
@@ -39,7 +40,7 @@ If unsure → `references/choosing-app-type.md`. Short version:
 `references/deployment-paths.md` covers all three:
 
 - **Path A — Claude Desktop / web (MCP-only, no filesystem):** Streamlit via `modify_streamlit_data_app` / `deploy_data_app`; Python/JS via `modify_python_js_data_app` + `create_python_js_data_app_git_credential` + git + `deploy_data_app` (see `references/python-js-prod-and-drafts.md`; needs a git-capable runner).
-- **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to the app's git repo (Keboola-managed or customer-provided), deploy via MCP or kbagent.
+- **Path B — Claude Code / local agent with filesystem + MCP:** Edit files locally, push to the app's git repo (Keboola-managed or customer-provided), deploy via MCP or kbagent. A customer's private GitHub repo connects through organization auth, no PAT (`references/github-organization-auth.md`).
 - **Path C — CLI agent (`kbagent`):** Full lifecycle via `kbagent data-app` command group.
 
 ### 4. Any cross-cutting concerns?

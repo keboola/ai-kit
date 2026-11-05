@@ -50,5 +50,9 @@
   {
     "query": "how can I set up a GitHub integration for all our flows and configurations so we manage them programmatically?",
     "should_trigger": false
+  },
+  {
+    "query": "should I copy my github repo into keboola managed git, or can the data app deploy straight from github through our organization connection?",
+    "should_trigger": true
   }
 ]

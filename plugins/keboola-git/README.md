@@ -19,6 +19,7 @@ Covers:
 - Raw `git clone` / `remote add` / `push keboola HEAD:main` (kbagent has no repo-copy helper).
 - The **15MB / HTTP 413 cap** and the **build-at-deploy** recipe (untrack `frontend/.next`, build in `keboola-config/setup.sh`).
 - Deploy + verify from the logs (`Compiled successfully`, `Completed: setup_sh`, `node-frontend entered RUNNING`) — not an HTTP probe, since `GET /` hits the platform login gate and `POST /` is an nginx health rule.
+- **Or don't copy at all**: a GitHub repo can back the app directly with organization auth (`kbagent data-app create --git-auth organization`). There's no PAT and no 15MB cap, but it's prod-only for now. The skill offers it before copying.
 - A full command catalog and gotchas table in [`skills/keboola-git/references/managed-git.md`](./skills/keboola-git/references/managed-git.md).
 
 ## ⚡ Command
@@ -30,7 +31,7 @@ Bidirectional copy of a data app's source between GitHub and Keboola git.
 /keboola-git-copy to-keboola|to-github --source <repo-url-or-path> --branch <branch> --project <alias> [--config <cfg>] [--app-name <name>]
 ```
 
-- **`to-keboola`** (GitHub → Keboola): resolve/provision the app, mint a credential, clone the source, run the size guard, apply build-at-deploy if a build is committed, push to `main`, then offer to deploy and verify.
+- **`to-keboola`** (GitHub → Keboola): first offer deploying straight from the GitHub repo with organization auth; otherwise resolve/provision the app, mint a credential, clone the source, run the size guard, apply build-at-deploy if a build is committed, push to `main`, then offer to deploy and verify.
 - **`to-github`** (Keboola → GitHub): clone the managed `main` and push to a **user-owned scratch/feature branch only** — confirms before any shared-repo push, never force-pushes.
 
 ## ✅ Prerequisites
