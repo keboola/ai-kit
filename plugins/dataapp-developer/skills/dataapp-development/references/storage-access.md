@@ -700,7 +700,7 @@ Cells arrive as strings, as on every Query Service path; see "Query Service retu
 
 ## Row-level security
 
-A project can govern its workspace with row-level security. Query Service then returns only the rows the identity of the call may see, and it marks every response with `X-KBC-RLS-Mode: enforce`. The app does not filter rows itself.
+A project can govern its workspace with row-level security. Query Service then returns only the rows the identity of the call may see. The app does not filter rows itself.
 
 **Who is refused.** A governed workspace refuses a call that does not carry a signed-in user. That includes every call with only the app's Storage token:
 
