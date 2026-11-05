@@ -70,7 +70,7 @@ Pick the token in this order:
 
 **Never use `KBC_TOKEN` for Kai.** It is the app's own token with no Keboola user behind it, and Kai refuses it with 403 `Storage token has no associated Keboola user`. The reverse holds too: use the Kai token for Kai only — the app's own queries keep `KBC_TOKEN` (see [storage-access.md](storage-access.md)).
 
-**Always send `x-workspace-id`.** With the Kai token it is required: a missing header, or a workspace that is not this app's, is a 403. Pass `WORKSPACE_ID` unchanged: it is the numeric workspace ID. Never strip a `WORKSPACE_` prefix — the number in a `WORKSPACE_<n>` schema name is a different number and can pin the wrong workspace. Kai rejects a non-numeric value with a 400; fix the value at its source (see [troubleshooting.md](troubleshooting.md)).
+**Send `x-workspace-id` on every Kai request** (omit it only outside a Data App, e.g. local dev without a workspace). With the Kai token it is required: a missing header, or a workspace that is not this app's, is a 403. Pass `WORKSPACE_ID` unchanged: it is the numeric workspace ID. Never strip a `WORKSPACE_` prefix — the number in a `WORKSPACE_<n>` schema name is a different number and can pin the wrong workspace. Kai rejects a non-numeric value with a 400; fix the value at its source (see [troubleshooting.md](troubleshooting.md)).
 
 ```python
 import os
@@ -85,7 +85,7 @@ def kai_credentials(get=os.environ.get) -> dict[str, str | None]:
     url = get("KBC_URL")
     if not (token and url):
         raise RuntimeError("Kai needs KBC_URL and KAI_STORAGE_API_TOKEN or STORAGE_API_TOKEN.")
-    return {"storage_api_token": token, "storage_api_url": url, "workspace_id": get("WORKSPACE_ID")}
+    return {"storage_api_token": token, "storage_api_url": url, "workspace_id": get("WORKSPACE_ID") or None}
 ```
 
 ```javascript
@@ -363,7 +363,7 @@ Most tools run without asking. A tool that changes something, or an interactive 
 4. The original stream continues with the tool's output.
 
 Responses to the POST:
-- **404** — the approval is not registered yet; retry for a few seconds.
+- **404** — the approval is not registered yet; retry for a few seconds (this applies to the `tool-approval-request` flow above; see the Python note below).
 - **409** — the decision can no longer apply (already resolved, timed out, chat stopped, Kai restarted); do not retry.
 - A write left undecided is denied after 5 minutes; an interactive question waits indefinitely.
 

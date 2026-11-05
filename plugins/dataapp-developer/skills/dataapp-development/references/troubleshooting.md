@@ -144,7 +144,7 @@
 - 403 `A Data App Kai token requires the x-workspace-id header` — the `x-workspace-id` header is missing.
 - 403 `The pinned workspace does not belong to the Data App of this Kai token` or `… is not available to this Data App Kai token` — `x-workspace-id` is not this app's `WORKSPACE_ID` (often a value copied from local dev).
 - 403 `Project does not have the agent-chat feature enabled` — the project has no Kai.
-- 403 `Kai is not available in a Data App with row-level security yet` — the app's workspace uses row-level security.
+- 403 `Kai is not available in a Data App with row-level security yet` — the app's workspace uses row- or column-level security (any governed workspace).
 - 400 `Invalid x-workspace-id header; expected a positive integer` — `WORKSPACE_ID` is not numeric; see §Non-numeric `WORKSPACE_ID`.
 - 401 `Invalid storage API token` — the Kai token expired (90 days after the deploy) or was revoked.
 
