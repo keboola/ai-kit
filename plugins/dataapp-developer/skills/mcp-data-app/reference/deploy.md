@@ -36,7 +36,20 @@ kbagent --json tool call modify_python_js_data_app --project <alias> \
 kbagent --json tool call create_python_js_data_app_git_credential --project <alias> \
   --input '{"configuration_id":"<prod-cfg>"}'
 # -> git_clone_url = https://kai:<secret>@git.<stack>/keboola/app-<id>.git  (keep in a var)
-git remote add keboola "$URL" && git push keboola HEAD:main
+git remote add keboola "$URL"
+# A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
+# push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
+# then there is nothing to join. More than one commit means `main` already has app code:
+# stop and ask the user instead of pushing over it.
+if git ls-remote --exit-code --heads keboola main >/dev/null; then
+  git fetch keboola main
+  if [ "$(git rev-list --count FETCH_HEAD)" = 1 ]; then
+    git merge --allow-unrelated-histories -X ours --no-edit FETCH_HEAD
+  else
+    echo "STOP: main already has app code"
+  fi
+fi
+git push keboola HEAD:main   # skip when the step above printed STOP
 kbagent --json tool call deploy_data_app --project <alias> \
   --input '{"action":"deploy","configuration_id":"<prod-cfg>"}'
 ```

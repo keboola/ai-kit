@@ -16,7 +16,7 @@ Covers:
 - Provision a managed repo via `modify_python_js_data_app`; find existing ones via `get_data_apps`.
 - An empty `configuration_id` makes a new prod app **and a new repo** every time — resolve the existing app before creating; this skill's flow targets the prod app's `main`.
 - Mint a one-time push credential with `create_python_js_data_app_git_credential` (`git_clone_url` = `https://kai:<secret>@git.<stack>/keboola/app-<id>.git`).
-- Raw `git clone` / `remote add` / `push keboola HEAD:main` (kbagent has no repo-copy helper).
+- Raw `git clone` / `remote add` / `push keboola HEAD:main` (kbagent has no repo-copy helper), after joining the initial commit a new app's repo starts with.
 - The **15MB / HTTP 413 cap** and the **build-at-deploy** recipe (untrack `frontend/.next`, build in `keboola-config/setup.sh`).
 - Deploy + verify from the logs (`Compiled successfully`, `Completed: setup_sh`, `node-frontend entered RUNNING`) — not an HTTP probe, since `GET /` hits the platform login gate and `POST /` is an nginx health rule.
 - **Or don't copy at all**: a GitHub repo can back the app directly with organization auth (`kbagent data-app create --git-auth organization`). There's no PAT and no 15MB cap, but it's prod-only for now. The skill offers it before copying.
@@ -45,7 +45,7 @@ Bidirectional copy of a data app's source between GitHub and Keboola git.
 ## 🔒 Safety
 
 - `git_clone_url` credentials are one-time secrets: held in a shell variable only, never committed or logged; rotate (re-mint) if exposed.
-- Never force-push. the repo's default branch (`main`, when it was pushed first) cannot be deleted; a draft branch can.
+- Never force-push. The repo's default branch (`main`) cannot be deleted; a draft branch can.
 - Reverse copies default to a user-owned scratch repo + feature branch; shared-repo pushes require confirmation.
 
 ## Related

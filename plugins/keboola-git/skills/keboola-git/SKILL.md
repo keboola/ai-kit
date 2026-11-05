@@ -102,9 +102,22 @@ Always mint against the **prod** config. Drafts own no repo of their own.
 mkdir -p ./.keboola-git-work && cd ./.keboola-git-work
 git clone --single-branch --branch <branch> <source-repo> app && cd app
 git remote add keboola "$URL"
-git push keboola HEAD:main
+# A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
+# push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
+# then there is nothing to join. More than one commit means `main` already has app code:
+# stop and ask the user instead of pushing over it.
+if git ls-remote --exit-code --heads keboola main >/dev/null; then
+  git fetch keboola main
+  if [ "$(git rev-list --count FETCH_HEAD)" = 1 ]; then
+    git merge --allow-unrelated-histories -X ours --no-edit FETCH_HEAD
+  else
+    echo "STOP: main already has app code"
+  fi
+fi
+git push keboola HEAD:main   # skip when the step above printed STOP
 ```
-- **The repo's default branch cannot be deleted**; any other branch can. The first branch pushed to an empty repo becomes the default, so push `main` first.
+- **A new app's repo is not empty**: it starts with one initial commit on `main`, so join it (above) before the first push, or the push is rejected. Never force-push past it.
+- **The repo's default branch cannot be deleted**; any other branch can. On a new app's repo the default is `main`. On an older, empty repo the first branch pushed becomes the default, so push `main` first.
 - Never force-push a shared/managed branch — the server does not block it.
 - Reusing a clone? Check it before you read or push from it: the existing-clone reference of the `dataapp-developer:dataapp-development` skill.
 
@@ -155,6 +168,7 @@ Forgejo rejects pushes over **~15MB** with **HTTP 413**. A single file over the 
      are never reachable —
      ```bash
      git checkout --orphan clean-main && git add -A && git commit -m "Source-only (build at deploy)"
+     # join the repo's initial commit first (§3), then:
      git push keboola clean-main:main
      ```
    - **History must be preserved:** purge the blob with `git filter-repo` (or BFG), then push.

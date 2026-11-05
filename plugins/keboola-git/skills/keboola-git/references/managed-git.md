@@ -85,8 +85,22 @@ git clone --single-branch --branch <branch> <source-repo> app && cd app
 
 URL='https://kai:<secret>@git.<stack>/keboola/app-<id>.git'   # from step "mint credential"
 git remote add keboola "$URL"
-git push keboola HEAD:main
+# A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
+# push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
+# then there is nothing to join. More than one commit means `main` already has app code:
+# stop and ask the user instead of pushing over it.
+if git ls-remote --exit-code --heads keboola main >/dev/null; then
+  git fetch keboola main
+  if [ "$(git rev-list --count FETCH_HEAD)" = 1 ]; then
+    git merge --allow-unrelated-histories -X ours --no-edit FETCH_HEAD
+  else
+    echo "STOP: main already has app code"
+  fi
+fi
+git push keboola HEAD:main   # skip when the step above printed STOP
 ```
+
+Never force-push to skip the join: `main` is the prod branch.
 
 Reverse direction (Keboola → GitHub scratch):
 ```bash
@@ -145,7 +159,8 @@ both over-cap *and* the wrong architecture for the Linux deploy runtime.
    ```
    If anything prints, the over-cap blob is in history. Remedies:
    - **Fresh managed repo (common):** push one clean commit so old blobs aren't reachable —
-     `git checkout --orphan clean-main && git add -A && git commit -m "Source-only" && git push keboola clean-main:main`.
+     `git checkout --orphan clean-main && git add -A && git commit -m "Source-only"`, then run the
+     join step from the clone / push pattern above and `git push keboola clean-main:main`.
    - **Preserve history:** purge the blob with `git filter-repo` (or BFG), then push.
 
 If a push still returns 413, re-run **both** guards (working tree *and* history) and **report the
@@ -163,7 +178,8 @@ object storage, etc.). You cannot split it.
 | Static assets 404 after deploy / blank page | `cp` destination didn't match where `next build` put `server.js` | Destination mirrors the Next.js workspace root — `find .next/standalone -name server.js` and copy `static`/`public` alongside it |
 | Committed `frontend/.next` ~55MB | Build artifacts checked into the repo | `git rm -r --cached`, gitignore, build in `setup.sh` |
 | 15.3MB `sharp` binary | macOS-built native dep, wrong arch for Linux | Don't track it; `npm ci` in container reinstalls the correct Linux binary |
-| `git push keboola :main` fails | The repo refuses deleting its default branch | Expected: the default branch stays — `main` when it was pushed first to the empty repo. Any other branch deletes normally (`git push keboola --delete <branch>`) |
+| First push to `main` rejected (`fetch first` / non-fast-forward) | A new app's repo starts with one initial commit on `main`, which your history does not contain | Run the join step from the clone / push pattern, then push again. Never force-push |
+| `git push keboola :main` fails | The repo refuses deleting its default branch | Expected: `main` is the default branch and stays. Any other branch deletes normally (`git push keboola --delete <branch>`) |
 | Force-push to a shared branch | Not blocked by the server — it overwrites others' commits | Never force-push managed/shared branches |
 | Credential leaked into a commit or log | `git_clone_url` echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
 | `logs` / `password` command errors on auth | Manage token not in env | Add `--allow-env-manage-token` and ensure the manage token is exported |

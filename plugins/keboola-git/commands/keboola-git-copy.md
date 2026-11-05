@@ -78,7 +78,11 @@ that drives it.
    sends all reachable history, the `find` guard only sees the working tree. Check:
    `git rev-list --objects HEAD | git cat-file --batch-check='%(objecttype) %(objectsize) %(rest)' | awk '$1=="blob" && $2>15000000'`.
    If non-empty: push an `--orphan` clean commit (fresh managed repo) or `git filter-repo`/BFG (preserve history).
-6. **Push:** `git remote add keboola "$URL" && git push keboola HEAD:main` (or `clean-main:main` if you orphaned).
+6. **Push:** `git remote add keboola "$URL"`, join the repo's initial commit (the join step in
+   `skills/keboola-git/references/managed-git.md`, clone / push pattern), then
+   `git push keboola HEAD:main` (or `clean-main:main` if you orphaned).
+   - A new app's repo starts with one commit on `main`; without the join the push is rejected
+     as non-fast-forward. Never force-push past it.
    - On `HTTP 413`, re-run **both** guards and **report the offending file** — it can't be split; ask the user how to externalize it.
 7. **Offer to deploy + verify:** `deploy_data_app`, then tail logs (`setup_sh` ~2min) and confirm
    from the logs — `✓ Compiled successfully`, `Completed: setup_sh` (static `cp` worked), and
