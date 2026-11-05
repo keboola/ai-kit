@@ -126,9 +126,9 @@ Either way the URL carries a one-time secret: hold it in a shell variable, never
 
 ### 4. Push the source to the draft branch
 
-`$URL` below is the `git_clone_url` from step 2 (or step 3). Which command starts the branch depends on whether the repo has any commits yet.
+`$URL` below is the `git_clone_url` from step 2 (or step 3). Which command starts the branch depends on whether the repo has any commits yet. A new app's repo starts with one initial commit on `main`, so after `git clone` check `git rev-parse --verify origin/main`: if it exists, use the second block, even for an app nobody has built yet.
 
-**Fresh prod app from the Apps page, repo still empty, no `origin/main`:**
+**Older prod app whose repo is still empty, no `origin/main`:**
 
 ```bash
 git clone "$URL" app && cd app
@@ -143,7 +143,7 @@ git push origin add-recent-jobs
 
 The empty `main` carries no app code, so it breaks no rule about pushing to `main`. Skip it and the draft branch becomes the repo's default: the repo then refuses to delete it after publishing (§7), and your token cannot change the default.
 
-**Prod app that has been built before:**
+**Repo with an `origin/main` (a new app's repo, or an app built before):**
 
 ```bash
 git clone "$URL" app && cd app
