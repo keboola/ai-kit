@@ -58,6 +58,13 @@
       "category": "development"
     },
     {
+      "name": "rls-toolkit",
+      "description": "Row- and column-level security toolkit for Keboola — guided setup of rls/cls policies in bulk for the tables a data app reads, per IdP group, with binding to the app. Companion to the kbagent plugin (rls / cls commands).",
+      "version": "1.0.0",
+      "source": "./plugins/rls-toolkit",
+      "category": "development"
+    },
+    {
       "name": "sl-toolkit",
       "description": "Semantic layer toolkit for Keboola — inspect, validate, and build models via the metastore API. CRUD operations handled conversationally via the semantic-layer skill. (Renamed from sl-builder in v3.0.0.)",
       "version": "3.0.0",

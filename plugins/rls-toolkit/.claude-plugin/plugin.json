@@ -1,0 +1,9 @@
+{
+  "name": "rls-toolkit",
+  "version": "1.0.0",
+  "description": "Row- and column-level security for Keboola — set up rls-policy / cls-policy objects in bulk for the tables a data app reads, per IdP group, and bind them to the app. Guided interview (/rls-build), read-only overview (/rls-show), plus the rls-policies reference skill. Needs the kbagent plugin.",
+  "author": {
+    "name": "Keboola s.r.o.",
+    "email": "support@keboola.com"
+  }
+}
