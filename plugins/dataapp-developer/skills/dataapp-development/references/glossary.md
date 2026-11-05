@@ -33,7 +33,7 @@ curl -LsSf https://raw.githubusercontent.com/keboola/cli/main/install.sh | sh
 Configure a project:
 
 ```bash
-kbagent project add --project <alias> --url <KBC_URL> --token <KBC_TOKEN>
+kbagent project add --alias <alias> --url <KBC_URL> --token <KBC_TOKEN>
 kbagent doctor          # sanity check
 kbagent project list
 ```

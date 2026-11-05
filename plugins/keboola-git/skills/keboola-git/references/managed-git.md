@@ -7,10 +7,9 @@ All commands assume:
 ```bash
 export KBAGENT_CONVERSATION_ID=$(uuidgen)   # once per shell session
 # <alias>  = the kbagent project alias (e.g. e2e-1143)
-# <cfg>    = configuration_id of the prod data-app config
-# <id>     = data_app_id
+# <id>     = app_id of the data app
 ```
-Always pass `--json` to `tool call` so output is parseable.
+Pass `--json` when you parse the output. It is under `.data`.
 
 ---
 
@@ -19,58 +18,63 @@ Always pass `--json` to `tool call` so output is parseable.
 ### Provision / find the repo
 
 ```bash
-# List existing data apps (find configuration_id, data_app_id, repo_url)
-kbagent --json tool call get_data_apps --project <alias> --input '{}'
+# List existing data apps (find app_id)
+kbagent --json data-app list --project <alias>
 
-# Create a prod app + its managed repo -- ONLY when get_data_apps returned no python-js app.
-# An empty configuration_id creates every time; to branch off an existing app instead, see
-# the drafts flow referenced below.
-kbagent --json tool call modify_python_js_data_app --project <alias> \
-  --input '{"name":"<Display Name>","slug":"<slug>","description":"<desc>"}'
+# Drafts are listed too: a draft's git-repo shows is_managed_git_repo: false and the URL
+# of its prod app's repo. The prod app on a managed repo shows true.
+
+# Create an app + its managed repo -- ONLY when the project has no python-js app on a managed repo.
+# It does not deploy: the repo has no app code yet.
+kbagent --json data-app create --project <alias> --name "<Display Name>" --slug <slug> \
+  --description "<desc>" --type python-js --use-managed-git-repo
+
+# The repo's clone URL (https://git.<stack>/keboola/app-<id>.git)
+kbagent --json data-app git-repo --project <alias> --app-id <id>
 ```
-**Returns:** `configuration_id`, `data_app_id`, `repo_url`
-(`https://git.<stack>/keboola/app-<data_app_id>.git`).
+**Returns:** `create` -> `app_id`; `git-repo` -> `https_url`, `ssh_url`, `is_managed_git_repo`.
 
-Prod-and-drafts model: the **prod** config owns the only repo, and each draft runs one branch
-of it. There is not a separate repo per draft. An empty `configuration_id`
-**creates a prod app and a repo every time**, and the repo can
-never be attached to an existing app afterwards. When your context already names the app
-(the page you were opened on, an id in the request) use it directly; otherwise check
-`get_data_apps` first. Full rules:
+Prod-and-drafts model: the **prod** app owns the only repo, and each draft runs one branch
+of it. There is not a separate repo per draft. kbagent has no draft command, and every
+`data-app create` **creates an app and a repo**. The repo can never be attached to an
+existing app afterwards. When your context already names the app (the page you were opened
+on, an id in the request) use it directly; otherwise check `data-app list` first. Full rules:
 `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 
 ### Mint a push credential (one-time secret)
 
 ```bash
-kbagent --json tool call create_python_js_data_app_git_credential --project <alias> \
-  --input '{"configuration_id":"<cfg>"}'
+TOKEN=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
+  --type http_token --permissions readWrite --name push --yes | jq -r '.data.credential.secret')
+HTTPS_URL=$(kbagent --json data-app git-repo --project <alias> --app-id <id> | jq -r '.data.https_url')
+URL="https://kai:${TOKEN}@${HTTPS_URL#https://}"
 ```
-**Returns:** `git_clone_url` = `https://kai:<secret>@git.<stack>/keboola/app-<id>.git`.
 
-- Secret is shown **once**. Mint a fresh credential anytime; rotation invalidates old ones.
+- Needs an **admin** Storage token (403 otherwise). A non-managed repo (`--git-repo <url>`) gets 409.
+- Secret is shown **once**. Mint a fresh credential anytime; `data-app git-credentials` lists them without secrets.
 - Hold it in a shell variable only — never commit, echo to a file, or log it.
 
 ### Deploy
 
 ```bash
-kbagent --json tool call deploy_data_app --project <alias> \
-  --input '{"action":"deploy","configuration_id":"<cfg>"}'
+kbagent data-app deploy --project <alias> --app-id <id> --git-branch main --wait
 ```
+`--git-branch main` matters only while the app has no git block in its configuration (its first deploy).
 
-### Logs / password / secrets (need a manage token in env)
+### Logs / password / secrets
 
 ```bash
 # Build + runtime logs (~90s build for npm ci + next build)
-kbagent --allow-env-manage-token data-app logs --project <alias> --app-id <id> --lines 200
+kbagent data-app logs --project <alias> --app-id <id> --lines 200
 
-# App password (for authenticated probes)
-kbagent --json --allow-env-manage-token data-app password --project <alias> --app-id <id>
+# App password (for authenticated probes) -- copies it, never prints it
+kbagent data-app password --project <alias> --app-id <id> --copy
 
 # Set an env secret, then redeploy
-kbagent --allow-env-manage-token data-app secrets-set --project <alias> --app-id <id> '#KEY=VAL'
+kbagent data-app secrets-set --project <alias> --app-id <id> --secret '#KEY=VAL'
 
 # Delete the app (teardown — confirm first)
-kbagent --json --allow-env-manage-token data-app delete --project <alias> --app-id <id>
+kbagent data-app delete --project <alias> --app-id <id>
 ```
 
 ---
@@ -83,7 +87,7 @@ kbagent has **no repo-copy helper**. Drive git yourself from a scratch dir under
 mkdir -p ./.keboola-git-work && cd ./.keboola-git-work
 git clone --single-branch --branch <branch> <source-repo> app && cd app
 
-URL='https://kai:<secret>@git.<stack>/keboola/app-<id>.git'   # from step "mint credential"
+# $URL from "Mint a push credential" above
 git remote add keboola "$URL"
 # A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
 # push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
@@ -181,10 +185,9 @@ object storage, etc.). You cannot split it.
 | First push to `main` rejected (`fetch first` / non-fast-forward) | A new app's repo starts with one initial commit on `main`, which your history does not contain | Run the join step from the clone / push pattern, then push again. Never force-push |
 | `git push keboola :main` fails | The repo refuses deleting its default branch | Expected: `main` is the default branch and stays. Any other branch deletes normally (`git push keboola --delete <branch>`) |
 | Force-push to a shared branch | Not blocked by the server — it overwrites others' commits | Never force-push managed/shared branches |
-| Credential leaked into a commit or log | `git_clone_url` echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
-| `logs` / `password` command errors on auth | Manage token not in env | Add `--allow-env-manage-token` and ensure the manage token is exported |
+| Credential leaked into a commit or log | `$URL` or the token echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
+| `git-credentials-create` returns 403 | The project's token is not an admin Storage token | Register the project with an admin token |
 | Deploy succeeds but `python-api` crash-loops on `404 Not Found` at startup | Backend's startup data load hits Storage tables that don't exist in an empty project | **Expected** out-of-scope data error — the app is running and looking for data; not a git/deploy failure. Verify the *frontend* separately (`node-frontend` RUNNING). |
 | `GET /` returns a login page (`<title>Login</title>`, no `_next/static`) | Keboola platform auth gate sits *in front of* the container — it returns 200 regardless of app state | Not a frontend signal. Confirm serving via logs (`node-frontend entered RUNNING`, `Ready in`); to test the app UI, authenticate with the app password first |
 | `POST /` returns 200 but app may not be up | nginx `location = /` returns 200 for POST unconditionally (platform health rule) | Don't use POST `/` as a serving check; rely on `node-frontend entered RUNNING` in the logs |
 | Frontend genuinely not serving | `next build` failed, static `cp` path wrong, or server crashed | Check logs for `Compiled successfully`, `Completed: setup_sh`, and `node-frontend` spawn/RUNNING vs `exited`/`backoff` |
-| kbagent tool call hangs / no output | `KBAGENT_CONVERSATION_ID` unset or `--json` omitted | Export the conversation id; always pass `--json` |

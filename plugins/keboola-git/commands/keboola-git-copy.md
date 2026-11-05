@@ -6,7 +6,7 @@ allowed-tools:
   - Read
   - Edit
   - Write
-argument-hint: "to-keboola|to-github --source <repo-url-or-path> --branch <branch> --project <alias> [--config <cfg>] [--app-name <name>]"
+argument-hint: "to-keboola|to-github --source <repo-url-or-path> --branch <branch> --project <alias> [--app-id <id>] [--app-name <name>]"
 ---
 
 # Copy a Data App Repo: GitHub ↔ Keboola Git
@@ -22,14 +22,14 @@ that drives it.
 - `--source` — source repo URL or local path (for `to-keboola`), or the GitHub scratch repo URL (for `to-github`).
 - `--branch` — source branch to clone (`to-keboola`) or destination scratch/feature branch (`to-github`).
 - `--project` — kbagent project alias.
-- `--config` — `configuration_id` of an existing app (optional; provision a new one if absent).
+- `--app-id` — `app_id` of an existing app (optional; provision a new one if absent).
 - `--app-name` — display name when provisioning a new app (`to-keboola` only).
 
 ## Setup (both directions)
 
 1. Ensure prerequisites: `kbagent --version`, project registered, `export KBAGENT_CONVERSATION_ID=$(uuidgen)`.
 2. Do all git work under `./.keboola-git-work/` in the user's CWD; ensure `.keboola-git-work/` is gitignored.
-3. Always pass `--json` to kbagent `tool call`. Keep any `git_clone_url` in a shell variable only — never commit or log it.
+3. Pass `--json` to kbagent when you parse its output (it is under `.data`). Keep the push credential and `$URL` in shell variables only — never commit or log them.
 
 ---
 
@@ -46,26 +46,28 @@ that drives it.
      It deploys as part of the call.
    - **An existing app on an external repo (PAT / SSH key):** `kbagent data-app git-auth-set --project <alias>
      --app-id <id> --git-auth organization`, then `kbagent data-app deploy --project <alias> --app-id <id> --wait`.
-   - **An existing app on a Keboola-managed repo** (`--config` given, or one found in step 1) can't switch.
+   - **An existing app on a Keboola-managed repo** (`--app-id` given, or one found in step 1) can't switch.
      Creating a new app means a second app next to it, so only do that with the user's yes. Otherwise continue
      with step 1.
 
    Stop here once the org-auth app deploys. Details: the `keboola-git` skill, §Source already on GitHub?
    Continue with step 1 when they want the managed repo.
 1. **Resolve the app. Creating one is the last resort.**
-   - If `--config` given: confirm with `get_data_apps` and read its `data_app_id` / `repo_url`.
-   - Else run `get_data_apps`. Exactly one python-js prod app means use it, however empty it
-     looks. Several means ask the user which.
-   - Only when the project has **no** python-js app at all: create the prod app with
-     `modify_python_js_data_app` (use `--app-name`), and say so in your reply first. An empty
-     `configuration_id` creates an app **and a managed repo that can never be attached to an
+   - If `--app-id` given: confirm it with `kbagent --json data-app list --project <alias>`.
+   - Else run `data-app list`. It also shows drafts, so check each python-js app with
+     `data-app git-repo`: the prod app on a managed repo has `is_managed_git_repo: true`, a draft
+     has `false`. Exactly one such prod app means use it, however empty it looks. Several means
+     ask the user which.
+   - Only when the project has **no** python-js app on a managed repo: create it with
+     `data-app create --type python-js --use-managed-git-repo` (use `--app-name`), and say so in
+     your reply first. It creates an app **and a managed repo that can never be attached to an
      existing app afterwards**.
-   - Capture `configuration_id`, `data_app_id`, `repo_url`.
+   - Capture `app_id`.
    - This command copies onto the prod app's `main`. To stage changes on a branch behind a
      preview instead, use the drafts flow in
      `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`
      rather than this command.
-2. **Mint a push credential** with `create_python_js_data_app_git_credential` → `git_clone_url` into `$URL`.
+2. **Mint a push credential** with `data-app git-credentials-create` and build `$URL` from `data-app git-repo` (the `keboola-git` skill, §2).
 3. **Clone the source** (single-branch) into `./.keboola-git-work/app`.
 4. **Size guard (working tree):** `find . -size +15M -not -path '*/.git/*'`.
    - If a committed build is found (e.g. `frontend/.next`), apply **source-only + build-at-deploy**:
@@ -84,7 +86,7 @@ that drives it.
    - A new app's repo starts with one commit on `main`; without the join the push is rejected
      as non-fast-forward. Never force-push past it.
    - On `HTTP 413`, re-run **both** guards and **report the offending file** — it can't be split; ask the user how to externalize it.
-7. **Offer to deploy + verify:** `deploy_data_app`, then tail logs (`setup_sh` ~2min) and confirm
+7. **Offer to deploy + verify:** `kbagent data-app deploy --project <alias> --app-id <id> --git-branch main --wait`, then tail logs (`data-app logs`) (`setup_sh` ~2min) and confirm
    from the logs — `✓ Compiled successfully`, `Completed: setup_sh` (static `cp` worked), and
    `success: node-frontend entered RUNNING` + `Ready in`. Don't trust an HTTP probe: unauthenticated
    `GET /` returns the platform login gate (200), and `POST /` 200 is just the nginx health rule.
@@ -92,8 +94,8 @@ that drives it.
 
 ## `to-github` (Keboola → GitHub)
 
-1. **Resolve the managed repo:** `get_data_apps` (or use `--config`) → `repo_url`, `data_app_id`.
-2. **Mint a credential** → `$URL`; **clone** managed `main` into `./.keboola-git-work/app`.
+1. **Resolve the app:** `data-app list` (or use `--app-id`) → `app_id`.
+2. **Mint a credential** → `$URL` (readOnly is enough here); **clone** managed `main` into `./.keboola-git-work/app`.
 3. **Add the GitHub remote:** `git remote add github <--source scratch repo url>`.
 4. **Push to the user-specified scratch/feature branch only:**
    `git push github main:<--branch>`.
@@ -105,5 +107,5 @@ that drives it.
 
 - Never write to a shared/production GitHub repo without explicit confirmation; default to a user-owned scratch repo + feature branch.
 - Never force-push. The managed repo refuses deleting its default branch — `main`, because this command pushes it first.
-- Treat any `git_clone_url` / credential as a one-time secret: shell var only, rotate if exposed.
+- Treat the push credential and `$URL` as one-time secrets: shell var only, rotate if exposed.
 - Backend *data* errors after a successful deploy (missing Storage tables) are expected in empty projects and are not copy/deploy failures.
