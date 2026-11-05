@@ -26,7 +26,6 @@ Gaps that force the skill to recommend kbagent or filesystem paths for things MC
 
 Smaller gaps; kbagent already covers most of the data-app lifecycle.
 
-- **`kbagent data-app logs`** — referenced as a follow-up in `references/troubleshooting.md`. Without it, log reading falls through to the UI link surfaced by `data-app deploy --wait`.
 - **Direct-grant workspace creation.** Once the platform answer on AI-3219 #1 is in, kbagent likely needs an affordance for the local-dev branched-workspace flow.
 
 ## Skill content — deferred or placeholder

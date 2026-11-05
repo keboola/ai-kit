@@ -142,7 +142,7 @@ Three options:
 
 - **MCP `mcp__keboola__get_data_apps(configuration_ids=[cfg_id])`** — latest 20 log lines via `deployment_info.logs`. Preferred from an agent / Claude Code session.
 - **Keboola UI Terminal Log tab** — near-real-time `stdout`/`stderr`. "Download Logs" gives the full file. Logs are deleted when the app stops.
-- **kbagent CLI** — a `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+- **kbagent CLI** — `kbagent data-app logs --project P --app-id N --lines 300` (or `--since <ISO time>`). The app must be running or recently stopped. A failed startup that left no container logs shows up in `kbagent data-app runs --project P --app-id N` (`failure_reason`, `startup_logs`).
 
 ### Streamlit-specific footgun: silent exceptions
 
