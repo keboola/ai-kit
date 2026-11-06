@@ -166,7 +166,7 @@ Branch off `origin/main` explicitly. A bare `git checkout <branch>` can land you
 The branch needs `keboola-config/supervisord-dev/` before you create the draft: without it the draft never starts and stays `pending`. Every template ships it ([python-js-apps.md](python-js-apps.md) §Keboola-hosted dev mode), but an app built before, or outside a template, may not have it. Check the clone:
 
 1. `keboola-config/supervisord-dev/` exists: nothing to do.
-2. Only `keboola-config/supervisord/` exists: copy it to `supervisord-dev/`, give its programs hot reload (`uvicorn --reload`, `streamlit run --server.runOnSave=true`, Vite with polling), commit and push it with your change. It reaches `main` when the draft is published.
+2. Only `keboola-config/supervisord/` exists: copy it to `supervisord-dev/`, give its programs hot reload (`uvicorn --reload`, `streamlit run --server.runOnSave=true`, Vite with polling), commit and push it before you create the draft: a running draft keeps the commands it started with. A plain copy starts the draft but serves no push until it is restarted. It reaches `main` when the draft is published.
 3. Neither exists: write `supervisord-dev/` from the matching template.
 
 Pushes over ~15MB fail with HTTP 413. That, the build-at-deploy recipe, and the log signals that prove a deploy worked are in the `keboola-git` skill.
