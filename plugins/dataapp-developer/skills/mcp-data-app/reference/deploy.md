@@ -60,7 +60,7 @@ Note: "push source only" — the app carries no build artifact, so the keboola-g
 
 Same three tools as the kbagent driver, called directly as MCP tools rather than via `kbagent … tool call`:
 
-- `modify_python_js_data_app(...)` → returns `configuration_id`, `data_app_id`, `repo_url`. With an empty `configuration_id` and no `parent_configuration_id` it **creates a new prod app and a new repo** every time. Pass `parent_configuration_id` to get a draft of an existing app instead. Full rules: `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
+- `modify_python_js_data_app(...)` → returns `configuration_id`, `data_app_id`, `repo_url`. With an empty `configuration_id` it **creates a new prod app and a new repo** every time. A draft of an existing app comes from `create_python_js_data_app_draft` instead. Full rules: `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 - `create_python_js_data_app_git_credential(configuration_id)` → returns `git_clone_url` (contains a one-time secret; keep in a variable, never commit/echo).
 - `git push` the scaffolded tree to that URL (a git-capable runner is still required).
 - `deploy_data_app(action="deploy", configuration_id=...)`.

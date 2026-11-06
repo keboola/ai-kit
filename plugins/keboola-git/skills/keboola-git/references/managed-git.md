@@ -31,9 +31,9 @@ kbagent --json tool call modify_python_js_data_app --project <alias> \
 **Returns:** `configuration_id`, `data_app_id`, `repo_url`
 (`https://git.<stack>/keboola/app-<data_app_id>.git`).
 
-Prod-and-drafts model: the **prod** config owns the only repo, and drafts branch off it.
-There is not a separate repo per draft. An empty `configuration_id` with no
-`parent_configuration_id` **creates a prod app and a repo every time**, and the repo can
+Prod-and-drafts model: the **prod** config owns the only repo, and each draft runs one branch
+of it. There is not a separate repo per draft. An empty `configuration_id`
+**creates a prod app and a repo every time**, and the repo can
 never be attached to an existing app afterwards. When your context already names the app
 (the page you were opened on, an id in the request) use it directly; otherwise check
 `get_data_apps` first. Full rules:

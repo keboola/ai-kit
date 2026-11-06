@@ -59,10 +59,9 @@ than a passing mention:
   here. If the app must be limited to particular tables, that is input mapping or a
   purpose-scoped workspace, not `storage_access` — see §Input mapping and §WORKSPACE_ID.
 
-**A draft and its prod app each need their own.** They are two separate Storage
-configurations, and a git merge moves source code, not config — so Storage access enabled on a
-draft does not reach the app you promote to. See
-[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6.
+**Set it on the prod app, before the draft.** A draft copies the prod config when it is created,
+and a git merge moves source code, not config. See
+[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §2.
 
 Underneath, this sets `runtime.workspace.enabled`, or on projects without the
 `data-apps-storage-workspace` feature falls back to a deprecated
@@ -378,9 +377,8 @@ Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQu
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
-Writable tables live in the app's own `storage` block, so like `storage_access` they do **not**
-travel between a draft and its prod app in either direction — see
-[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6. Forgetting them on prod fails
+Writable tables live in the prod app's `storage` block, set like `storage_access` before the draft
+is created — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §2. Forgetting them on prod fails
 differently from forgetting Storage access: reads keep working and only the writes fail, because
 the workspace has no grant on the destination table.
 

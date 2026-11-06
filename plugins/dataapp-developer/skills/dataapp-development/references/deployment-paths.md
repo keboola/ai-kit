@@ -64,8 +64,9 @@ Available tools:
 - `modify_streamlit_data_app` — creates or updates the source code IN the data app configuration (no separate git repo).
 - `deploy_data_app(action="deploy", configuration_id=...)` — deploys or restarts the app.
 - `deploy_data_app(action="stop", configuration_id=...)` — suspends.
-- `get_data_apps([cfg_id])` — returns the latest 20 log lines for debugging, and for a Python/JS prod app its `drafts: [...]`.
-- `modify_python_js_data_app` — creates a Python/JS prod app (with a Keboola-managed git repo), creates a draft off one, or updates an app's metadata. **Read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) before calling it** — the create and draft-create shapes differ by one argument.
+- `get_data_apps([cfg_id])` — returns the latest 20 log lines for debugging, and for a Python/JS prod app its `drafts: [...]` and `legacy_drafts: [...]`.
+- `modify_python_js_data_app` — creates a Python/JS prod app (with a Keboola-managed git repo) or updates an app's metadata and config. **Read [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) before calling it** — an empty `configuration_id` creates a second app.
+- `create_python_js_data_app_draft`, `delete_python_js_data_app_draft`, `get_data_app_preview_link` — a draft of a Python/JS prod app on a pushed branch, its removal, and a link to look at it.
   With `git_repository="https://github.com/<org>/<repo>"` and `git_auth="organization"` it instead creates a prod app on the customer's private GitHub repo, read through the organization's GitHub connection: no managed repo, no PAT, prod mode only. With a `configuration_id` it rebinds an app that is already on an external repo: rebind only when `get_data_apps` shows `is_managed_git_repo: false`. It refuses an app on a Keboola-managed repo, which covers every app created from the Apps page or by Kai. There, a new app needs the user's yes, and your reply has to say why. See [github-organization-auth.md](github-organization-auth.md).
 - `create_python_js_data_app_git_credential(configuration_id)` — mints a one-time `git_clone_url` for a prod app's managed repo.
 - `query_data`, `get_table`, `get_project_info` — for validating data before writing code.
@@ -129,7 +130,7 @@ For **Streamlit** apps:
 For **Python/JS** apps:
 
 - Must use git (no Code mode for this type). Work happens on a **draft** branched off the prod app's repo, never on a second app — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md).
-- Edit locally, push to the repo (Keboola-managed or customer-provided), then `deploy_data_app` via MCP or `kbagent data-app deploy`. Both MCP and kbagent drive the same tools here.
+- Edit locally, push to the draft branch (the draft serves it in seconds), then publish: merge into `main` and `deploy_data_app` via MCP or `kbagent data-app deploy`. Both MCP and kbagent drive the same tools here.
 - A customer-provided private GitHub repo: connect it with organization auth before asking for a PAT or SSH key — [github-organization-auth.md](github-organization-auth.md). Such an app has no drafts yet: push to its branch, then deploy prod.
 
 Best fit for:
