@@ -20,6 +20,7 @@
 - `Row-level security does not allow this query` (403)
 - A governed app shows no rows for a table
 - 500 after login: `Error while parsing OAuth2 state: invalid length`
+- Kai chat returns 400 / 401 / 403
 - Reading logs (incl. Streamlit silent exceptions)
 
 ## "Cannot POST /" / "Method Not Allowed" on startup
@@ -135,6 +136,19 @@
 **Cause:** the browser reached the login callback (`/_proxy/callback?continue_auth=true`) without a valid OAuth `state`, typically after reloading or going back to the callback page. Not the app's config.
 
 **Fix:** open the app's URL again to start a fresh login. If it fails on a fresh login every time, report it with the exception ID shown on the page.
+
+## Kai chat returns 400 / 401 / 403
+
+**Cause:** The Kai request carries the wrong token or workspace, or the project or app is not set up for Kai. The error message names which:
+- 403 `Storage token has no associated Keboola user` — the app sent `KBC_TOKEN`, the app's own token with no user behind it.
+- 403 `A Data App Kai token requires the x-workspace-id header` — the `x-workspace-id` header is missing.
+- 403 `The pinned workspace does not belong to the Data App of this Kai token` or `… is not available to this Data App Kai token` — `x-workspace-id` is not this app's `WORKSPACE_ID` (often a value copied from local dev).
+- 403 `Project does not have the agent-chat feature enabled` — the project has no Kai.
+- 403 `Kai is not available in a Data App with row-level security yet` — the app's workspace uses row- or column-level security (any governed workspace).
+- 400 `Invalid x-workspace-id header; expected a positive integer` — `WORKSPACE_ID` is not numeric; see §Non-numeric `WORKSPACE_ID`.
+- 401 `Invalid storage API token` — the Kai token expired (90 days after the deploy) or was revoked.
+
+**Fix:** Send `KAI_STORAGE_API_TOKEN` (with `runtime.kai.enabled`) and `x-workspace-id: $WORKSPACE_ID` on every Kai request; redeploy the app for a fresh token. See [kai-integration.md](kai-integration.md) §Token and headers.
 
 ## Reading logs
 
