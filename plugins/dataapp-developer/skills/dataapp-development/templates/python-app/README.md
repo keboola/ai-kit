@@ -13,6 +13,10 @@ Open http://localhost:5000.
 
 Where to find each value: see `references/storage-access.md` §Getting the env vars for local development.
 
+## Dev mode
+
+A draft runs `keboola-config/setup-dev.sh` and `keboola-config/supervisord-dev/`: Flask's reloader restarts the app when a push changes a file. Prod runs `setup.sh` and `supervisord/`.
+
 ## Deployment
 
 Push this directory to a Git repo, then create a Python/JS App in Keboola pointing at the repo. Add any required env vars (`KBC_URL`, `KBC_TOKEN`, etc.) as `dataApp.secrets` (prefix each key with `#`).
