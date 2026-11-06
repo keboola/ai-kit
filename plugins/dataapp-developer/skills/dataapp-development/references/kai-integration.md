@@ -6,7 +6,7 @@
 - When to add Kai
 - Turn Kai on for the app (`runtime.kai.enabled`)
 - Token and headers
-- What Kai can reach in the app (strict mode)
+- What Kai can reach in the app
 - Library
 - Service discovery
 - Pattern A — Streamlit embed
@@ -28,7 +28,7 @@ Skip Kai when:
 
 ## Turn Kai on for the app (`runtime.kai.enabled`)
 
-Kai in an app is a platform feature, switched on in the app's configuration:
+Kai in an app is a platform feature. In the Keboola UI it is the **Kai in the app** switch in the Data App's settings: it shows only in a project with the `data-apps-kai` feature and can be turned on only while **Storage access** is on. The switch writes this to the app's configuration, which is what to set when you configure the app through the API or MCP:
 
 ```json
 {
@@ -46,7 +46,7 @@ Requirements — the deploy is refused without them, except the last one, which 
 - A project member deploys it, with a role that can create Storage API tokens.
 - The project has Kai (`agent-chat` feature); otherwise every Kai request is a 403.
 
-On each new deployment by a user, the platform:
+Turning Kai on does not change a running app: **deploy the app again** after turning it on. On each new deployment by a user, the platform:
 1. Creates a Storage API token for Kai, carrying the deploying user. It expires after 90 days, so an app not redeployed for that long loses Kai.
 2. Puts it into the app as the env var `KAI_STORAGE_API_TOKEN`. Do not add a secret of that name yourself.
 3. Sets `KAI_ENABLED=1`.
@@ -65,34 +65,38 @@ Every Kai request sends three headers:
 
 Pick the token in this order:
 1. `KAI_STORAGE_API_TOKEN` is set → use it.
-2. `KAI_ENABLED=1` but no `KAI_STORAGE_API_TOKEN` → Kai is unavailable in this run (the app was started without a user). Say so in the UI and keep the rest of the app working; do **not** fall back to another token. A new deployment by a user restores it.
-3. No `KAI_ENABLED` (an app without `runtime.kai`, or local dev) → `STORAGE_API_TOKEN`, a secret holding a project member's personal token. Kai then acts with that member's full access.
+2. `KAI_ENABLED` set (the platform sets `1`; any value except `""`, `0`, `false`, `no` and `off` counts) but no `KAI_STORAGE_API_TOKEN` → Kai is unavailable in this run (the app was started without a user). Say so in the UI and keep the rest of the app working; do **not** fall back to another token. A new deployment by a user restores it.
+3. `KAI_ENABLED` unset or off (an app without `runtime.kai`, or local dev) → `STORAGE_API_TOKEN`, a secret holding a project member's personal token. Kai then acts with that member's full access.
 
 **Never use `KBC_TOKEN` for Kai.** It is the app's own token with no Keboola user behind it, and Kai refuses it with 403 `Storage token has no associated Keboola user`. The reverse holds too: use the Kai token for Kai only — the app's own queries keep `KBC_TOKEN` (see [storage-access.md](storage-access.md)).
 
 **Send `x-workspace-id` on every Kai request** (omit it only outside a Data App, e.g. local dev without a workspace). With the Kai token it is required: a missing header, or a workspace that is not this app's, is a 403. Pass `WORKSPACE_ID` unchanged: it is the numeric workspace ID. Never strip a `WORKSPACE_` prefix — the number in a `WORKSPACE_<n>` schema name is a different number and can pin the wrong workspace. Kai rejects a non-numeric value with a 400; fix the value at its source (see [troubleshooting.md](troubleshooting.md)).
 
+In Python, kai-client's `resolve_storage_api_token()` applies this order and raises `KaiConfigurationError` in case 2:
+
 ```python
 import os
+from kai_client import resolve_storage_api_token
 
-def kai_credentials(get=os.environ.get) -> dict[str, str | None]:
+def kai_credentials(environ=os.environ) -> dict[str, str | None]:
     """Keyword arguments for KaiClient.from_storage_api; raises when Kai is off in this run."""
-    token = get("KAI_STORAGE_API_TOKEN")
-    if not token:
-        if get("KAI_ENABLED") == "1":
-            raise RuntimeError("Kai is not available in this run of the app.")
-        token = get("STORAGE_API_TOKEN")
-    url = get("KBC_URL")
+    token = resolve_storage_api_token(environ=environ)  # KaiConfigurationError: Kai is off in this run
+    url = environ.get("KBC_URL")
     if not (token and url):
         raise RuntimeError("Kai needs KBC_URL and KAI_STORAGE_API_TOKEN or STORAGE_API_TOKEN.")
-    return {"storage_api_token": token, "storage_api_url": url, "workspace_id": get("WORKSPACE_ID") or None}
+    return {"storage_api_token": token, "storage_api_url": url, "workspace_id": environ.get("WORKSPACE_ID") or None}
 ```
 
 ```javascript
+function isKaiEnabled() {
+  const value = (process.env.KAI_ENABLED || '').trim().toLowerCase();
+  return !['', '0', 'false', 'no', 'off'].includes(value);
+}
+
 function kaiCredentials() {
   let token = process.env.KAI_STORAGE_API_TOKEN;
   if (!token) {
-    if (process.env.KAI_ENABLED === '1') throw new Error('Kai is not available in this run of the app.');
+    if (isKaiEnabled()) throw new Error('Kai is not available in this run of the app.');
     token = process.env.STORAGE_API_TOKEN;
   }
   const url = process.env.KBC_URL;
@@ -111,14 +115,16 @@ function kaiHeaders({ token, url, workspaceId }) {
 
 Keep the token on the app's backend; it never reaches the browser.
 
-## What Kai can reach in the app (strict mode)
+## What Kai can reach in the app
+
+The Kai token is read-only in both modes: it has `read` on buckets only, with no right to manage buckets and no access to components. Kai cannot create or change buckets, tables, configurations or jobs with it. The grants are fixed when the app is deployed: a bucket created later gets no grant until the app is deployed again.
 
 What Kai reaches depends on the app's input mapping:
 
 - **Direct-grant input mapping** (`storage.input.read_only_storage_access: false`) — Kai runs in strict mode:
-  - It sees only the buckets of the tables in the app's input and output mapping, and queries only the tables mapped into the workspace. An app with no mapping gives Kai no data at all.
-  - It only reads: `query_data` runs read-only SQL, and Kai cannot create or change configurations, jobs, flows or Storage.
-- **Read-only Storage access** (the default) — Kai's queries run in the app's workspace, which reads the whole project's Storage, and Kai keeps its full toolset: its token can create and change buckets and tables, and its write tools ask for approval (see §Tool approval). Strict mode is the only way to keep Kai read-only.
+  - It sees only the buckets of the tables named by `source` in the input mapping and `destination` in the output mapping that exist at deploy time, and queries only the tables mapped into the workspace. A table mapped with `source_search` and file input never get a grant. An app with no mapping gives Kai no data at all.
+  - It gets only read tools: `query_data` (read-only SQL), `get_buckets`, `get_tables`, `get_project_info` and `docs_query`.
+- **Read-only Storage access** (the default) — Kai's token reads every bucket that exists in the app's branch at deploy time, and its queries run in the app's workspace, which reads the whole project's Storage (also a bucket created after the deploy, which Kai's token does not list). Kai is still offered its write tools, which ask for approval (see §Tool approval), but Storage refuses them. Use strict mode to keep Kai to the app's own data and to the read tools.
 
 In both cases Kai works as the deploying user, in a separate identity per app. Its chats are kept apart from that user's own Kai chats and do not show in the Keboola UI, but **every visitor of the app shares that identity**:
 - Keep each visitor's chat id in their own session, and do not offer a chat-history list — it would show every visitor's conversations.
@@ -129,7 +135,11 @@ In both cases Kai works as the deploying user, in a separate identity per app. I
 
 `kai-client` — Python async client with SSE streaming, session management, tool-approval flow, and a `kai` CLI.
 
-It needs **kai-client 0.13.0 or later**: that is the release that targets `kai-agent` by default and accepts `workspace_id`. Older releases (0.12.0 is the newest on PyPI as of 2026-10) talk to the legacy `kai-assistant` backend and fail with `TypeError` on `workspace_id`. Until 0.13.0 is on PyPI, install it from GitHub: `uv add "kai-client @ git+https://github.com/keboola/kai-client"`.
+It needs **kai-client 0.14.0 or later**, which this reference describes:
+- 0.13.0 targets `kai-agent` by default and accepts `workspace_id`. Older releases talk to the legacy `kai-assistant` backend and fail with `TypeError` on `workspace_id`.
+- 0.14.0 adds `resolve_storage_api_token()` and `KaiConfigurationError`, reads kai-agent's error text, and asks for `tool-approval-request` events (see §Tool approval).
+
+If 0.14.0 is not on PyPI yet, install its tag from GitHub: `uv add "kai-client @ git+https://github.com/keboola/kai-client@v0.14.0"`.
 
 JS apps don't need a separate JS package — they proxy HTTP requests to the same `/api/chat` endpoint Kai exposes and stream the SSE response straight back to the browser.
 
@@ -167,11 +177,20 @@ Cache the discovered URL after the first lookup — it doesn't change for the li
 import asyncio
 import os
 import streamlit as st
-from kai_client import KaiClient
+from kai_client import KaiClient, KaiConfigurationError
 
-def get(key):
-    """Env var in Keboola, `.streamlit/secrets.toml` locally."""
-    return os.environ.get(key) or st.secrets.get(key)
+def app_env() -> dict:
+    """Env vars in Keboola; locally, top-level values from `.streamlit/secrets.toml` fill the gaps."""
+    try:
+        secrets = {k: str(v) for k, v in st.secrets.items() if isinstance(v, (str, int, float, bool))}
+    except FileNotFoundError:  # no secrets.toml
+        secrets = {}
+    return {**secrets, **os.environ}
+
+try:
+    KAI_CREDENTIALS = kai_credentials(app_env())
+except (KaiConfigurationError, RuntimeError):
+    KAI_CREDENTIALS = None  # Kai is off in this run; the rest of the app keeps working
 
 # Session state — one chat per Streamlit session
 if "messages" not in st.session_state:
@@ -180,15 +199,17 @@ if "chat_id" not in st.session_state:
     st.session_state.chat_id = KaiClient.new_chat_id()
 
 async def stream_response(chat_id, prompt):
-    client = await KaiClient.from_storage_api(**kai_credentials(get))
+    client = await KaiClient.from_storage_api(**KAI_CREDENTIALS)
     async with client:
         async for event in client.send_message(chat_id, prompt):
             if event.type == "text":
                 yield event.text
             elif event.type == "tool-call" and event.state == "started":
                 yield f"\n[Calling tool: {event.tool_name}]\n"
+            elif event.type == "tool-approval-request":
+                yield "\n[Kai is waiting for an approval this app cannot give.]\n"
             elif event.type == "error":
-                yield "\n[Kai could not finish this answer.]\n"
+                yield f"\n[Kai could not finish this answer: {event.message}]\n"
 
 def iterate_sync(agen):
     """Bridge an async generator to the sync iterator `st.write_stream` expects."""
@@ -206,7 +227,8 @@ def iterate_sync(agen):
 Event types to handle:
 - `text` — stream chunk; append to the active assistant message.
 - `tool-call` — informational; one event per state (`started`, `input-available`, `output-available`) of the same `tool_call_id`, so show the tool name once.
-- `error` — the turn is over. kai-agent sends the text as `errorText`, which kai-client up to 0.13.0 does not read (`event.message` is then `"Unknown error"`), so show your own message.
+- `tool-approval-request` — a tool waits for a decision and the stream stays open until it gets one (see §Tool approval for timeouts). Streamlit cannot ask in the middle of a streamed answer: use strict mode, where Kai has no write tools.
+- `error` — the turn is over; `event.message` holds kai-agent's `errorText` (kai-client 0.14.0 and later; older releases give `"Unknown error"`).
 - `finish` — also emitted after each step of a multi-step answer, so do not stop on it: the loop ends when Kai closes the stream.
 
 Streamlit-specific gotchas:
@@ -215,7 +237,7 @@ Streamlit-specific gotchas:
 - The async client must not leak its event loop across reruns. Run each answer on its own loop (as `iterate_sync` does), or use `nest_asyncio` if you need to share a loop with other async code in the same script.
 - Streaming output: use `st.write_stream(...)` (Streamlit >=1.31) to render text chunks as they arrive. It takes a sync iterator, hence `iterate_sync`.
 - Render the chat with `st.chat_message("user" | "assistant")` and capture input with `st.chat_input(...)`. Append each completed message to `st.session_state.messages` so the history re-renders on subsequent runs.
-- When Kai is unavailable, `kai_credentials` raises: catch it and show `st.info(...)` instead of the chat input.
+- When Kai is unavailable, `kai_credentials` raises (`KaiConfigurationError` or `RuntimeError`): catch it once at the top of the script and show `st.info(...)` instead of the chat input.
 
 Minimal render loop sketch:
 
@@ -224,7 +246,9 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-if prompt := st.chat_input("Ask about your project data"):
+if KAI_CREDENTIALS is None:
+    st.info("Kai is not available in this run of the app.")
+elif prompt := st.chat_input("Ask about your project data"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -363,11 +387,11 @@ Most tools run without asking. A tool that changes something, or an interactive 
 4. The original stream continues with the tool's output.
 
 Responses to the POST:
-- **404** — the approval is not registered yet; retry for a few seconds (this applies to the `tool-approval-request` flow above; see the Python note below).
+- **404** — the approval is not registered yet; retry for a few seconds. Answer only a tool announced by `tool-approval-request`: for any other tool the 404 does not go away.
 - **409** — the decision can no longer apply (already resolved, timed out, chat stopped, Kai restarted); do not retry.
 - A write left undecided is denied after 5 minutes; an interactive question waits indefinitely.
 
-Python: kai-client does not send `supportsApprovalRequestedEvent`, so it does not say which tool waits. Every tool passes through a `tool-call` event with `state == "input-available"`, and `client.submit_approval(chat_id=..., tool_use_id=event.tool_call_id, approved=...)` answers one. For a tool that does not wait, that call ends in a 404 that retrying does not fix. Streamlit cannot wait for a click in the middle of a streamed answer, so a Streamlit app should use strict mode, where Kai has no write tools.
+Python: from 0.14.0, kai-client's `send_message()` sends `supportsApprovalRequestedEvent: true`, so a waiting tool is announced by an event with `event.type == "tool-approval-request"`. Answer that event with `client.submit_approval(chat_id=..., tool_use_id=event.tool_call_id, approved=...)`, not every `tool-call` with `state == "input-available"`: every tool passes through that state, and answering one that does not wait ends in a 404. Streamlit cannot wait for a click in the middle of a streamed answer, so a Streamlit app should use strict mode, where Kai has no write tools.
 
 ## Pre-built skills
 
