@@ -2,7 +2,7 @@
 
 The default stack for a Keboola Python/JS app — **React 19 + Vite + Tailwind 4 + TanStack Query** on the client, **Express 5** on the server, one Node container. Everything the browser loads is bundled at build time; nothing comes from a CDN at runtime.
 
-Copy the whole directory into the app's repo root as its first commit, then replace `src/App.tsx` and add routes to `server/index.ts`. The first `deploy_data_app(mode='dev')` comes up green before any custom code exists.
+Copy the whole directory into the app's repo root as its first commit, then replace `src/App.tsx` and add routes to `server/index.ts`. A draft on that commit comes up green before any custom code exists.
 
 ## Layout
 
@@ -30,7 +30,7 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 
 ## Dev and prod
 
-`deploy_data_app(mode='dev')` selects `setup-dev.sh` + `supervisord-dev/`; a plain deploy selects `setup.sh` + `supervisord/`.
+A draft runs `setup-dev.sh` + `supervisord-dev/`; a prod deploy runs `setup.sh` + `supervisord/`.
 
 | | Dev | Prod |
 |---|---|---|
