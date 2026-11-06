@@ -124,6 +124,7 @@ What Kai reaches depends on the app's input mapping:
 - **Direct-grant input mapping** (`storage.input.read_only_storage_access: false`) — Kai runs in strict mode:
   - It sees only the buckets of the tables named by `source` in the input mapping and `destination` in the output mapping that exist at deploy time, and queries only the tables mapped into the workspace. A table mapped with `source_search` and file input never get a grant. An app with no mapping gives Kai no data at all.
   - It gets only read tools: `query_data` (read-only SQL), `get_buckets`, `get_tables`, `get_project_info` and `docs_query`.
+  - Kai can still ask the user a question (`AskUserQuestion`), which waits for a decision like a write (see §Tool approval).
 - **Read-only Storage access** (the default) — Kai's token reads every bucket that exists in the app's branch at deploy time, and its queries run in the app's workspace, which reads the whole project's Storage (also a bucket created after the deploy, which Kai's token does not list). Kai is still offered its write tools, which ask for approval (see §Tool approval), but Storage refuses them. Use strict mode to keep Kai to the app's own data and to the read tools.
 
 In both cases Kai works as the deploying user, in a separate identity per app. Its chats are kept apart from that user's own Kai chats and do not show in the Keboola UI, but **every visitor of the app shares that identity**:
@@ -177,7 +178,7 @@ Cache the discovered URL after the first lookup — it doesn't change for the li
 import asyncio
 import os
 import streamlit as st
-from kai_client import KaiClient, KaiConfigurationError
+from kai_client import KaiClient, KaiConfigurationError, KaiError, KaiNotFoundError
 
 def app_env() -> dict:
     """Env vars in Keboola; locally, top-level values from `.streamlit/secrets.toml` fill the gaps."""
@@ -198,6 +199,15 @@ if "messages" not in st.session_state:
 if "chat_id" not in st.session_state:
     st.session_state.chat_id = KaiClient.new_chat_id()
 
+DENY_REASON = "This app cannot show approvals or questions to the user. Continue without them."
+
+async def deny_approval(client, chat_id, tool_call_id):
+    """Deny a waiting tool so the turn ends; retry once on 404 (see §Tool approval)."""
+    try:
+        await client.submit_approval(chat_id=chat_id, tool_use_id=tool_call_id, approved=False, reason=DENY_REASON)
+    except KaiNotFoundError:
+        await client.submit_approval(chat_id=chat_id, tool_use_id=tool_call_id, approved=False, reason=DENY_REASON)
+
 async def stream_response(chat_id, prompt):
     client = await KaiClient.from_storage_api(**KAI_CREDENTIALS)
     async with client:
@@ -207,7 +217,11 @@ async def stream_response(chat_id, prompt):
             elif event.type == "tool-call" and event.state == "started":
                 yield f"\n[Calling tool: {event.tool_name}]\n"
             elif event.type == "tool-approval-request":
-                yield "\n[Kai is waiting for an approval this app cannot give.]\n"
+                try:
+                    await deny_approval(client, chat_id, event.tool_call_id)
+                    yield "\n[Kai asked for an approval or an answer; this app declined it.]\n"
+                except KaiError as e:
+                    yield f"\n[Could not decline Kai's request: {e.message}]\n"
             elif event.type == "error":
                 yield f"\n[Kai could not finish this answer: {event.message}]\n"
 
@@ -227,7 +241,7 @@ def iterate_sync(agen):
 Event types to handle:
 - `text` — stream chunk; append to the active assistant message.
 - `tool-call` — informational; one event per state (`started`, `input-available`, `output-available`) of the same `tool_call_id`, so show the tool name once.
-- `tool-approval-request` — a tool waits for a decision and the stream stays open until it gets one (see §Tool approval for timeouts). Streamlit cannot ask in the middle of a streamed answer: use strict mode, where Kai has no write tools.
+- `tool-approval-request` — a tool (a write, or an interactive question such as `AskUserQuestion`) waits for a decision and the stream stays open until it gets one. Streamlit cannot ask in the middle of a streamed answer, so a Streamlit app denies every request and Kai continues without that tool. Strict mode does not remove interactive questions, so deny in strict mode too.
 - `error` — the turn is over; `event.message` holds kai-agent's `errorText` (kai-client 0.14.0 and later; older releases give `"Unknown error"`).
 - `finish` — also emitted after each step of a multi-step answer, so do not stop on it: the loop ends when Kai closes the stream.
 
@@ -387,11 +401,11 @@ Most tools run without asking. A tool that changes something, or an interactive 
 4. The original stream continues with the tool's output.
 
 Responses to the POST:
-- **404** — the approval is not registered yet; retry for a few seconds. Answer only a tool announced by `tool-approval-request`: for any other tool the 404 does not go away.
+- **404** — the approval is not registered yet. kai-agent already waits 10 s for it before answering, so retry once. Answer only a tool announced by `tool-approval-request`: for any other tool the 404 does not go away.
 - **409** — the decision can no longer apply (already resolved, timed out, chat stopped, Kai restarted); do not retry.
 - A write left undecided is denied after 5 minutes; an interactive question waits indefinitely.
 
-Python: from 0.14.0, kai-client's `send_message()` sends `supportsApprovalRequestedEvent: true`, so a waiting tool is announced by an event with `event.type == "tool-approval-request"`. Answer that event with `client.submit_approval(chat_id=..., tool_use_id=event.tool_call_id, approved=...)`, not every `tool-call` with `state == "input-available"`: every tool passes through that state, and answering one that does not wait ends in a 404. Streamlit cannot wait for a click in the middle of a streamed answer, so a Streamlit app should use strict mode, where Kai has no write tools.
+Python: from 0.14.0, kai-client's `send_message()` sends `supportsApprovalRequestedEvent: true`, so a waiting tool is announced by an event with `event.type == "tool-approval-request"`. Answer that event with `client.submit_approval(chat_id=..., tool_use_id=event.tool_call_id, approved=...)`, not every `tool-call` with `state == "input-available"`: every tool passes through that state, and answering one that does not wait ends in a 404. Streamlit cannot wait for a click in the middle of a streamed answer, so a Streamlit app denies every request with `approved=False` (Pattern A): an undenied interactive question would hold the stream open indefinitely, also in strict mode.
 
 ## Pre-built skills
 
