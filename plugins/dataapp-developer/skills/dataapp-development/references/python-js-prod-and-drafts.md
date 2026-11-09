@@ -74,7 +74,7 @@ To continue `DRAFT_ID`:
 
 A legacy draft is a configuration of its own, pinned to a branch of the prod app's repo. Its code lives on that branch, so a draft on the same branch carries on where it left off.
 
-1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
+1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Mint a push credential on `PROD` for `$URL` (step 3 below), then check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
 2. **Compare its config with the prod app's.** The new draft takes the **prod** config, so anything set on the legacy draft alone is lost: Storage access, writable `storage` tables, secrets, authentication, image. Storage access the app needs can go onto the prod config (§2). For anything else, tell the user what changes and ask before you put it on prod.
 3. **Create the draft on that branch:** `create_python_js_data_app_draft(configuration_id=PROD, git_branch=<branch>)` (step 5).
 4. **Delete the legacy draft:** `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch.
@@ -193,8 +193,10 @@ Push to the branch and the draft serves it in about 5 seconds: no deploy, no new
 Ship only when the user asks to publish: the draft is how they review the change.
 
 ```bash
-git checkout main && git merge --no-edit <branch> && git push origin main
+git fetch origin && git checkout -B main origin/main && git merge --no-edit <branch> && git push origin main
 ```
+
+The clone was branched off `origin/main`, so its local `main` may be missing or behind: check it out from `origin/main` before the merge.
 
 ```python
 deploy_data_app(action="deploy", configuration_id=PROD)
