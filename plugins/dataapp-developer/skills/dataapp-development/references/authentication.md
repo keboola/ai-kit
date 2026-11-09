@@ -101,7 +101,8 @@ accidental OIDC -> basic-auth regressions.
 A draft copies the prod app's config, authentication included, when it is created. It has no
 authentication of its own to change. `"no-auth"` goes on the prod app only when the user has
 explicitly asked to make the app public; a draft created after that is public at its own URL too,
-with the same Storage access.
+with the same Storage access. Before you create a draft of a `no-auth` app, tell the user its draft
+will be public too and create it only on their yes.
 
 Never change `authentication_type` to get a preview to load. The preview link from
 `get_data_app_preview_link` opens a draft whatever its auth (see `keboola/ui`

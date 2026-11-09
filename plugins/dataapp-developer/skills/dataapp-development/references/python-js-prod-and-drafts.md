@@ -47,7 +47,7 @@ An empty prod app and a fully built one take the same path from here.
 
 ## Continue its draft, or start one?
 
-A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. Take the first case that applies:
+A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. `drafts: null` or `legacy_drafts_unavailable > 0` means the list is incomplete, not empty: call it again before you conclude there are none. Take the first case that applies:
 
 1. **The request names a draft** — continue that one.
 2. **No `drafts`, but `legacy_drafts`** — convert the legacy draft (§Converting a legacy draft), then continue it.
@@ -196,7 +196,7 @@ Ship only when the user asks to publish: the draft is how they review the change
 git fetch origin && git checkout -B main origin/main && git merge --no-edit origin/<branch> && git push origin main
 ```
 
-Merge `origin/<branch>`, the commits the draft served, not your local branch: in a clone you reuse, the draft may have been pushed from elsewhere. The local `main` may be missing or behind too, hence `checkout -B main origin/main`.
+Merge `origin/<branch>`, the commits the draft served, not your local branch: in a clone you reuse, the draft may have been pushed from elsewhere. The local `main` may be missing or behind too, hence `checkout -B main origin/main`. A merge conflict or a rejected push stops the chain: resolve it, and do not deploy or clean up (§8) until `origin/main` holds the branch head.
 
 ```python
 deploy_data_app(action="deploy", configuration_id=PROD)
@@ -210,7 +210,7 @@ Otherwise the draft stays on the app as one more to choose from, still running. 
 
 1. **Confirm prod is healthy** — `get_data_apps(configuration_ids=[PROD])` reports it running. If it does not, read the terminal log in that detail, fix, and redeploy. Until prod is green the draft is your fallback.
 2. **Delete the draft** — `delete_python_js_data_app_draft(configuration_id=PROD, draft_id=DRAFT_ID)`. It stops the draft and never touches the branch.
-3. **Delete the branch** — `git push origin --delete <branch>`. The repo refuses deleting only its default branch, which is `main` when step 4 pushed it first.
+3. **Delete the branch** — `git push origin --delete <branch>`, unless another entry in `drafts` or `legacy_drafts` still has that `git_branch`: then keep it. The repo refuses deleting only its default branch, which is `main` when step 4 pushed it first.
 
 The push credential from step 3 stays valid. The MCP tools cannot revoke it: tell the user it can be revoked under the app's Git settings in Keboola if they want it gone.
 
