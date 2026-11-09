@@ -47,7 +47,7 @@ An empty prod app and a fully built one take the same path from here.
 
 ## Continue its draft, or start one?
 
-A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. `drafts: null` or `legacy_drafts_unavailable > 0` means the list is incomplete, not empty: call it again before you conclude there are none. Take the first case that applies:
+A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. `drafts_unavailable: true` or `legacy_drafts_unavailable > 0` means the list is incomplete, not empty: call it again before you conclude there are none. Take the first case that applies:
 
 1. **The request names a draft** — continue that one.
 2. **No `drafts`, but `legacy_drafts`** — convert the legacy draft (§Converting a legacy draft), then continue it.
