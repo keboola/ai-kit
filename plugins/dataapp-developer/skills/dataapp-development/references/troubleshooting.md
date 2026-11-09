@@ -60,7 +60,7 @@
 
 **Cause:** almost always no `keboola-config/supervisord-dev/` on the draft's branch. The container exits at boot with `Dev mode requires keboola-config/supervisord-dev/ in the app repo` and restarts in a loop.
 
-**Fix:** copy `keboola-config/supervisord-dev/` (and `setup-dev.sh`) from the app's template onto the branch and push. Still `pending` ~2 minutes later: delete the draft and create it again on the same branch. Every template ships both ([python-js-apps.md](python-js-apps.md) §Keboola-hosted dev mode).
+**Fix:** add `keboola-config/supervisord-dev/` as [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §4 says, and push. Still `pending` ~2 minutes later: delete the draft and create it again on the same branch.
 
 ## Port mismatch local vs Keboola
 
