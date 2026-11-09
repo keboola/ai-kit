@@ -30,7 +30,7 @@ The create is effectively irreversible: the managed repo can only be attached wh
 - A draft starts in dev mode by itself. A push to its branch reaches it in about 5 seconds, with no deploy.
 - A draft takes the prod app's **config** as a snapshot when it is created: Storage access, the `storage` mapping, authentication, image. A later change to the prod config does not reach a running draft; delete the draft and create it again on the same branch.
 - A draft falls asleep after 15 minutes without requests and wakes on the next one. `run_state: stopped` is its normal resting state.
-- Publishing does not remove a draft. You delete it yourself (§7).
+- Publishing does not remove a draft. You delete it yourself (§8).
 - `get_data_apps(configuration_ids=[PROD])` returns the app's `drafts: [...]` (`draft_id`, `git_branch`, `url`, `run_state`, `created_at`). A draft has no name or description, so its **branch name is its label**: pick one that says what the change is (`add-recent-jobs`, not `draft-1`).
 - The same call returns `legacy_drafts: [...]`: drafts from before, each a separate configuration. Never build on one; convert it (§Converting a legacy draft).
 
@@ -77,7 +77,7 @@ A legacy draft is a configuration of its own, pinned to a branch of the prod app
 1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Mint a push credential on `PROD` for `$URL` (step 3 below), then check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
 2. **Compare its config with the prod app's.** The new draft takes the **prod** config, so anything set on the legacy draft alone is lost: Storage access, writable `storage` tables, secrets, authentication, image. Storage access the app needs can go onto the prod config (§2). For anything else, tell the user what changes and ask before you put it on prod.
 3. **Create the draft on that branch:** `create_python_js_data_app_draft(configuration_id=PROD, git_branch=<branch>)` (step 5).
-4. **Delete the legacy draft:** `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch.
+4. **Delete the legacy draft** only when step 2 found nothing that is lost, or the user agreed to lose it: `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch, and cannot be undone: secrets on it cannot be recovered. Otherwise keep it and work on the new draft; say the old one stays.
 5. Tell the user in one line that the draft moved, and that its preview now has a new URL.
 
 ## Building into an existing prod app
@@ -149,7 +149,7 @@ git add -A && git commit -m "Initial app"
 git push origin add-recent-jobs
 ```
 
-The empty `main` carries no app code, so it breaks no rule about pushing to `main`. Skip it and the draft branch becomes the repo's default: the repo then refuses to delete it after publishing (§7), and your token cannot change the default.
+The empty `main` carries no app code, so it breaks no rule about pushing to `main`. Skip it and the draft branch becomes the repo's default: the repo then refuses to delete it after publishing (§8), and your token cannot change the default.
 
 **Repo with an `origin/main` (a new app's repo, or an app built before):**
 
@@ -193,10 +193,10 @@ Push to the branch and the draft serves it in about 5 seconds: no deploy, no new
 Ship only when the user asks to publish: the draft is how they review the change.
 
 ```bash
-git fetch origin && git checkout -B main origin/main && git merge --no-edit <branch> && git push origin main
+git fetch origin && git checkout -B main origin/main && git merge --no-edit origin/<branch> && git push origin main
 ```
 
-The clone was branched off `origin/main`, so its local `main` may be missing or behind: check it out from `origin/main` before the merge.
+Merge `origin/<branch>`, the commits the draft served, not your local branch: in a clone you reuse, the draft may have been pushed from elsewhere. The local `main` may be missing or behind too, hence `checkout -B main origin/main`.
 
 ```python
 deploy_data_app(action="deploy", configuration_id=PROD)
