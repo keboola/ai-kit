@@ -77,7 +77,7 @@ A legacy draft is a configuration of its own, pinned to a branch of the prod app
 
 1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Mint a push credential on `PROD` for `$URL` (§3), then check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
 2. **Compare its config with the prod app's.** The new draft takes the **prod** config, so anything set on the legacy draft alone is lost: Storage access, writable `storage` tables, secrets, authentication, image. Storage access the app needs can go onto the prod config (§2). For anything else, tell the user what changes and ask before you put it on prod.
-3. **Prepare the branch, then create the draft on it.** Clone it and give it `keboola-config/supervisord-dev/` if it lacks one (§4, the checklist at its end): a legacy draft's branch often predates it. Then create the draft as in §5, its `no-auth` check included, and wait until it reports `run_state: running` in `get_data_apps(configuration_ids=[PROD])`. A 409 "has no App resource yet" means the prod app was never deployed, and only a deploy gives it one: keep working on the legacy draft and say so; convert it after the first publish.
+3. **Prepare the branch, then create the draft on it.** Clone it and give it `keboola-config/supervisord-dev/` if it lacks one (§4, the checklist at its end): a legacy draft's branch often predates it. Then create the draft as in §5, its `no-auth` check included, and wait until it reports `run_state: running` in `get_data_apps(configuration_ids=[PROD])`. On a 409 "has no App resource yet", see §5.
 4. **Delete the legacy draft** only when step 2 found nothing that is lost, or the user agreed to lose it: `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch, and cannot be undone: secrets on it cannot be recovered. Otherwise keep it and work on the new draft; say the old one stays.
 5. Tell the user in one line that the draft moved, and that its preview now has a new URL.
 
@@ -182,6 +182,7 @@ create_python_js_data_app_draft(configuration_id=PROD, git_branch="add-recent-jo
 
 Returns `draft_id`, `url` and `run_state`. The tool waits for the `url`, a few seconds; the draft reports `run_state: running` 40–125 seconds after the create.
 
+- 409 "has no App resource yet": an app that predates drafts. Deploy the prod app once (`deploy_data_app` without `mode`): it serves `main` as it is, so none of your work goes live. Tell the user it now runs, then create the draft again.
 - **Never retry it blind.** Every call makes another running draft, even on the same branch. When the call fails or times out, `get_data_apps(configuration_ids=[PROD])` first: a draft on your branch already there is yours.
 - "Branch does not exist": the push in §4 did not happen or went to another name.
 - `run_state` still `pending` after ~2 minutes: [troubleshooting.md](troubleshooting.md) §Draft stays `pending`.
@@ -230,7 +231,7 @@ modify_python_js_data_app(
 )
 ```
 
-Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to step 2 above: the app you just made is the prod app, and the work still happens on a draft.
+Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to §2–§5 above: the app you just made is the prod app, and the work still happens on a draft.
 
 `slug` is optional and derived from `name` when omitted, so pass one only when the URL matters to the user. An explicit slug is a DNS label: lowercase letters, digits and inner hyphens, at most 50 characters to fit the UI's URL-prefix limit (the tool accepts 63, the deploy does not).
 
