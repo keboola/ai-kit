@@ -41,18 +41,24 @@ existing app afterwards. When your context already names the app (the page you w
 on, an id in the request) use it directly; otherwise check `data-app list` first. Full rules:
 `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 
-### Mint a push credential (one-time secret)
+### Mint a push credential and add the remote (one-time secret)
+
+Run it as **one shell command, from inside the clone you push from**. A new shell does not
+have `$TOKEN`, so later commands reach the repo through the `keboola` remote.
 
 ```bash
-TOKEN=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
-  --type http_token --permissions readWrite --name push --yes | jq -r '.data.credential.secret')
-HTTPS_URL=$(kbagent --json data-app git-repo --project <alias> --app-id <id> | jq -r '.data.https_url')
-URL="https://kai:${TOKEN}@${HTTPS_URL#https://}"
+CRED=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
+  --type http_token --permissions readWrite --name push --yes)
+TOKEN=$(jq -er '.data.credential.secret' <<<"$CRED") || { jq -c '.error' <<<"$CRED" >&2; exit 1; }
+REPO=$(kbagent --json data-app git-repo --project <alias> --app-id <id>)
+HTTPS_URL=$(jq -er '.data.https_url' <<<"$REPO") || { jq -c '.error' <<<"$REPO" >&2; exit 1; }
+git remote add keboola "https://kai:${TOKEN}@${HTTPS_URL#https://}"
 ```
 
 - Needs an **admin** Storage token (403 otherwise). A non-managed repo (`--git-repo <url>`) gets 409.
 - Secret is shown **once**. Mint a fresh credential anytime; `data-app git-credentials` lists them without secrets.
-- Hold it in a shell variable only — never commit, echo to a file, or log it.
+- Never commit, echo or log it. The remote URL in `.git/config` holds it: don't print it (`git remote -v`), and `git remote remove keboola` when done.
+- A failed call stops with kbagent's error on stderr. The error has no secret in it.
 
 ### Deploy
 
@@ -74,7 +80,7 @@ kbagent data-app password --project <alias> --app-id <id> --copy
 kbagent data-app secrets-set --project <alias> --app-id <id> --secret '#KEY=VAL'
 
 # Delete the app (teardown — confirm first)
-kbagent data-app delete --project <alias> --app-id <id>
+kbagent data-app delete --project <alias> --app-id <id> --yes
 ```
 
 ---
@@ -85,10 +91,12 @@ kbagent has **no repo-copy helper**. Drive git yourself from a scratch dir under
 
 ```bash
 mkdir -p ./.keboola-git-work && cd ./.keboola-git-work
-git clone --single-branch --branch <branch> <source-repo> app && cd app
-
-# $URL from "Mint a push credential" above
-git remote add keboola "$URL"
+git clone --single-branch --branch <branch> <source-repo> app
+```
+Run the "Mint a push credential and add the remote" block from inside `./.keboola-git-work/app`,
+then join and push:
+```bash
+cd ./.keboola-git-work/app
 # A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
 # push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
 # then there is nothing to join. More than one commit means `main` already has app code:
@@ -106,9 +114,14 @@ git push keboola HEAD:main   # skip when the step above printed STOP
 
 Never force-push to skip the join: `main` is the prod branch.
 
-Reverse direction (Keboola → GitHub scratch):
+Reverse direction (Keboola → GitHub scratch). Mint and clone in one shell command: use the
+mint block with a `readOnly` credential and this line in place of its last one.
 ```bash
-git clone --single-branch --branch main "$URL" app && cd app
+git clone --single-branch --branch main "https://kai:${TOKEN}@${HTTPS_URL#https://}" app
+```
+Then:
+```bash
+cd app
 git remote add github <scratch-repo-url>
 git push github main:<scratch-branch>     # never a shared branch; never --force
 ```
@@ -185,8 +198,9 @@ object storage, etc.). You cannot split it.
 | First push to `main` rejected (`fetch first` / non-fast-forward) | A new app's repo starts with one initial commit on `main`, which your history does not contain | Run the join step from the clone / push pattern, then push again. Never force-push |
 | `git push keboola :main` fails | The repo refuses deleting its default branch | Expected: `main` is the default branch and stays. Any other branch deletes normally (`git push keboola --delete <branch>`) |
 | Force-push to a shared branch | Not blocked by the server — it overwrites others' commits | Never force-push managed/shared branches |
-| Credential leaked into a commit or log | `$URL` or the token echoed to a file | Rotate immediately (mint a new credential), scrub history; keep the URL in a shell var only |
+| Credential leaked into a commit or log | The token or the remote URL echoed to a file | Rotate immediately (mint a new credential), scrub history; never print the URL or the remote |
 | `git-credentials-create` returns 403 | The project's token is not an admin Storage token | Register the project with an admin token |
+| `git-credentials-create` returns 409 | The app is on an external repo (`--git-repo <url>`), not a managed one | Push to that repo directly; credentials exist only for managed repos |
 | Deploy succeeds but `python-api` crash-loops on `404 Not Found` at startup | Backend's startup data load hits Storage tables that don't exist in an empty project | **Expected** out-of-scope data error — the app is running and looking for data; not a git/deploy failure. Verify the *frontend* separately (`node-frontend` RUNNING). |
 | `GET /` returns a login page (`<title>Login</title>`, no `_next/static`) | Keboola platform auth gate sits *in front of* the container — it returns 200 regardless of app state | Not a frontend signal. Confirm serving via logs (`node-frontend entered RUNNING`, `Ready in`); to test the app UI, authenticate with the app password first |
 | `POST /` returns 200 but app may not be up | nginx `location = /` returns 200 for POST unconditionally (platform health rule) | Don't use POST `/` as a serving check; rely on `node-frontend entered RUNNING` in the logs |

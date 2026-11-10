@@ -29,7 +29,8 @@ that drives it.
 
 1. Ensure prerequisites: `kbagent --version`, project registered, `export KBAGENT_CONVERSATION_ID=$(uuidgen)`.
 2. Do all git work under `./.keboola-git-work/` in the user's CWD; ensure `.keboola-git-work/` is gitignored.
-3. Pass `--json` to kbagent when you parse its output (it is under `.data`). Keep the push credential and `$URL` in shell variables only — never commit or log them.
+3. Pass `--json` to kbagent when you parse its output (it is under `.data`). Never print, commit or log the push credential.
+4. Each command you run starts a new shell, so a shell variable does not reach the next step. Mint the credential and use it (`git remote add` / `git clone`) in **one** command; later steps use the `keboola` remote by name.
 
 ---
 
@@ -67,8 +68,10 @@ that drives it.
      preview instead, use the drafts flow in
      `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`
      rather than this command.
-2. **Mint a push credential** with `data-app git-credentials-create` and build `$URL` from `data-app git-repo` (the `keboola-git` skill, §2).
-3. **Clone the source** (single-branch) into `./.keboola-git-work/app`.
+2. **Clone the source** (single-branch) into `./.keboola-git-work/app`.
+3. **Mint a push credential and add the `keboola` remote, in one command**, from inside the clone:
+   the block in the `keboola-git` skill, §2. It stops with kbagent's error when the call fails
+   (403: not an admin token, 409: not a managed repo).
 4. **Size guard (working tree):** `find . -size +15M -not -path '*/.git/*'`.
    - If a committed build is found (e.g. `frontend/.next`), apply **source-only + build-at-deploy**:
      untrack + gitignore the build dir and `node_modules/`; set `keboola-config/setup.sh` to
@@ -80,7 +83,7 @@ that drives it.
    sends all reachable history, the `find` guard only sees the working tree. Check:
    `git rev-list --objects HEAD | git cat-file --batch-check='%(objecttype) %(objectsize) %(rest)' | awk '$1=="blob" && $2>15000000'`.
    If non-empty: push an `--orphan` clean commit (fresh managed repo) or `git filter-repo`/BFG (preserve history).
-6. **Push:** `git remote add keboola "$URL"`, join the repo's initial commit (the join step in
+6. **Push:** join the repo's initial commit (the join step in
    `skills/keboola-git/references/managed-git.md`, clone / push pattern), then
    `git push keboola HEAD:main` (or `clean-main:main` if you orphaned).
    - A new app's repo starts with one commit on `main`; without the join the push is rejected
@@ -95,7 +98,8 @@ that drives it.
 ## `to-github` (Keboola → GitHub)
 
 1. **Resolve the app:** `data-app list` (or use `--app-id`) → `app_id`.
-2. **Mint a credential** → `$URL` (readOnly is enough here); **clone** managed `main` into `./.keboola-git-work/app`.
+2. **Mint a credential and clone, in one command** (readOnly is enough here): the block in the `keboola-git` skill, §2,
+   with its last line replaced by the `git clone` of managed `main` into `./.keboola-git-work/app`.
 3. **Add the GitHub remote:** `git remote add github <--source scratch repo url>`.
 4. **Push to the user-specified scratch/feature branch only:**
    `git push github main:<--branch>`.
@@ -107,5 +111,5 @@ that drives it.
 
 - Never write to a shared/production GitHub repo without explicit confirmation; default to a user-owned scratch repo + feature branch.
 - Never force-push. The managed repo refuses deleting its default branch — `main`, because this command pushes it first.
-- Treat the push credential and `$URL` as one-time secrets: shell var only, rotate if exposed.
+- Treat the push credential as a one-time secret: never print it (that includes `git remote -v`), `git remote remove keboola` when done, rotate if exposed.
 - Backend *data* errors after a successful deploy (missing Storage tables) are expected in empty projects and are not copy/deploy failures.

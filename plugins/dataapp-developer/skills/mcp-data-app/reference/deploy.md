@@ -39,12 +39,14 @@ kbagent --json data-app create --project <alias> --name "MCP Data App" --slug mc
 #    -> data.app_id is <id>. The repo starts empty of app code, so create does not deploy.
 
 # 3. Mint a push credential (needs an admin Storage token), push the source to main, deploy.
-#    The secret is shown once: keep it in a variable, never print it.
-TOKEN=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
-  --type http_token --permissions readWrite --name push --yes | jq -r '.data.credential.secret')
-HTTPS_URL=$(kbagent --json data-app git-repo --project <alias> --app-id <id> | jq -r '.data.https_url')
-URL="https://kai:${TOKEN}@${HTTPS_URL#https://}"
-git remote add keboola "$URL"
+#    The secret is shown once: never print it. Run step 3 as ONE shell command: a new shell
+#    has no $TOKEN. A failed kbagent call stops here and prints its error (no secret in it).
+CRED=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
+  --type http_token --permissions readWrite --name push --yes)
+TOKEN=$(jq -er '.data.credential.secret' <<<"$CRED") || { jq -c '.error' <<<"$CRED" >&2; exit 1; }
+REPO=$(kbagent --json data-app git-repo --project <alias> --app-id <id>)
+HTTPS_URL=$(jq -er '.data.https_url' <<<"$REPO") || { jq -c '.error' <<<"$REPO" >&2; exit 1; }
+git remote add keboola "https://kai:${TOKEN}@${HTTPS_URL#https://}"
 # A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
 # push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
 # then there is nothing to join. More than one commit means `main` already has app code:

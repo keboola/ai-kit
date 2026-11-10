@@ -84,27 +84,39 @@ changes on a branch behind a preview instead, the MCP draft flow
 (`create_python_js_data_app_draft` on a pushed branch) is in
 `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 
-## 2. Mint a push credential (one-time secret)
+## 2. Mint a push credential and add the remote (one-time secret)
+
+Run this **as one shell command, from inside the clone you push from** (for a copy: clone the
+source first, §3). Each command you run starts a new shell, so `$TOKEN` is gone after this one.
+The `keboola` remote is what carries the credential to the later steps.
 
 ```bash
-TOKEN=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
-  --type http_token --permissions readWrite --name push --yes | jq -r '.data.credential.secret')
-HTTPS_URL=$(kbagent --json data-app git-repo --project <alias> --app-id <id> | jq -r '.data.https_url')
-URL="https://kai:${TOKEN}@${HTTPS_URL#https://}"
+CRED=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
+  --type http_token --permissions readWrite --name push --yes)
+TOKEN=$(jq -er '.data.credential.secret' <<<"$CRED") || { jq -c '.error' <<<"$CRED" >&2; exit 1; }
+REPO=$(kbagent --json data-app git-repo --project <alias> --app-id <id>)
+HTTPS_URL=$(jq -er '.data.https_url' <<<"$REPO") || { jq -c '.error' <<<"$REPO" >&2; exit 1; }
+git remote add keboola "https://kai:${TOKEN}@${HTTPS_URL#https://}"
 ```
 `HTTPS_URL` is `https://git.<stack>/keboola/app-<id>.git`. The token works as the password with any username.
 Always mint against the **prod** app. A draft runs a branch of the prod app's repo and owns none.
 
 - The secret is **shown once**. Mint a fresh one anytime: `data-app git-credentials` lists the existing ones (never their secrets).
-- **Keep it in a shell variable only.** Never commit it, never `echo` it into a file, never paste it into a log or message. Pipe the command output straight into `jq`, as above, so the secret never reaches your context.
+- **Never print it.** Never commit it, never `echo` it into a file, never paste it into a log or message. Read it with `jq` from a variable, as above, so the secret never reaches your context.
+- The remote URL in the scratch clone's `.git/config` holds the secret. Don't print it (`git remote -v`, `git config --get remote.keboola.url`), and run `git remote remove keboola` when you are done.
+- **A failed call stops here with kbagent's error** (403: not an admin token, 409: not a managed repo, not found: wrong app id). The error has no secret in it, so it is safe to read.
+- To clone the managed repo instead (Keboola → GitHub), replace the last line with `git clone --single-branch --branch main "https://kai:${TOKEN}@${HTTPS_URL#https://}" app`.
 - It only works for a **managed** repo. An app created with `--git-repo <url>` gets 409.
 
 ## 3. Clone / push pattern (raw git)
 
 ```bash
 mkdir -p ./.keboola-git-work && cd ./.keboola-git-work
-git clone --single-branch --branch <branch> <source-repo> app && cd app
-git remote add keboola "$URL"
+git clone --single-branch --branch <branch> <source-repo> app
+```
+Add the `keboola` remote (§2) from inside `./.keboola-git-work/app`, then join and push:
+```bash
+cd ./.keboola-git-work/app
 # A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
 # push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
 # then there is nothing to join. More than one commit means `main` already has app code:

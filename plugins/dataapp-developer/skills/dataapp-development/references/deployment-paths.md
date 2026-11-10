@@ -168,7 +168,7 @@ Commands:
 | Pre-flight repo before create   | `kbagent data-app validate-repo --git-repo URL --type python-js`                                   |
 | Create new app from git repo    | `kbagent data-app create ...`                                                                      |
 | Create app with a Keboola-managed repo | `kbagent data-app create --project P --name "My App" --slug my-app --type python-js --use-managed-git-repo --no-deploy` |
-| Git credential for a managed repo | `kbagent data-app git-credentials-create --project P --app-id N --type http_token --permissions readWrite` (never print it)|
+| Git credential for a managed repo | `kbagent data-app git-credentials-create --project P --app-id N --type http_token --permissions readWrite --yes` (never print it)|
 | Redeploy latest code            | `kbagent data-app deploy --project P --app-id N --wait`                                            |
 | Wake auto-suspended app         | `kbagent data-app start --app-id N`                                                                |
 | Suspend                         | `kbagent data-app stop --app-id N`                                                                 |
@@ -176,7 +176,7 @@ Commands:
 | Set / rotate secrets            | `kbagent data-app secrets-set --app-id N --secret '#KEY=VAL'` then `data-app deploy --wait`        |
 | List secrets (metadata only)    | `kbagent data-app secrets-list --app-id N`                                                         |
 | Remove a secret                 | `kbagent data-app secrets-remove --app-id N --key '#KEY' --yes`                                    |
-| Delete app                      | `kbagent data-app delete --app-id N`                                                               |
+| Delete app                      | `kbagent data-app delete --app-id N --yes`                                                         |
 
 Typical create flow:
 
