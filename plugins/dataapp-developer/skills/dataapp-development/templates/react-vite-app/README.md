@@ -38,7 +38,7 @@ A draft runs `setup-dev.sh` + `supervisord-dev/`; a prod deploy runs `setup.sh` 
 | `:3100` | Express under `tsx watch` | — |
 | Build | none | `vite build` |
 
-In dev, push and watch: client edits hot-reload, server edits restart Express in about a second (the client retries meanwhile), a `package.json` change re-installs. Call `deploy_data_app` again only to switch branch or revive a stopped container.
+In dev, push and watch: client edits hot-reload, server edits restart Express in about a second (the client retries meanwhile), a `package.json` change re-installs. A draft needs no deploy: an asleep one wakes on the next request, and another branch needs a draft of its own. `deploy_data_app` publishes the prod app only.
 
 ## Picking a part in the preview
 

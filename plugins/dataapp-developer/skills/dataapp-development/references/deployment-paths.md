@@ -144,9 +144,9 @@ Best fit for:
 
 1. Validate data with `query_data` / `get_table` (MCP).
 2. Edit code locally with Read/Edit/Write.
-3. Push to git (Python/JS) or paste via `modify_streamlit_data_app` (Streamlit Code mode).
-4. `deploy_data_app(action="deploy", ...)` via MCP, or `kbagent data-app deploy --wait` if Path C.
-5. Open the running app in your browser, take a screenshot, iterate.
+3. Push to the draft branch (Python/JS) or paste via `modify_streamlit_data_app` (Streamlit Code mode).
+4. Streamlit: `deploy_data_app(action="deploy", ...)` via MCP, or `kbagent data-app deploy --wait` if Path C. Python/JS: no deploy; the draft serves the push.
+5. Look at it, take a screenshot, iterate: the running app (Streamlit), or the draft's preview link from `get_data_app_preview_link(configuration_id=PROD, draft_id=DRAFT_ID)` (Python/JS). Deploy a Python/JS app only to publish.
 
 ## Path C — CLI agent (kbagent)
 
