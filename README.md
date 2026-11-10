@@ -138,11 +138,11 @@ Access Keboola-managed Git (Forgejo) repos for python-js data apps via the `kbag
 
 **Location**: [`./plugins/rls-toolkit`](./plugins/rls-toolkit)
 
-Row- and column-level security for Keboola — set up `rls-policy` / `cls-policy` objects in bulk for the tables a data app reads, per IdP group, and bind them to the app. Companion to the `kbagent` plugin.
+Row- and column-level security for Keboola — set up `rls-policy` / `cls-policy` objects in bulk for the tables a data app reads, per IdP group or IdP attribute, and bind them to the app. Companion to the `kbagent` plugin.
 
 **Features:**
 - ⚡ **Commands**: `/rls-show` (read-only overview), `/rls-build` (guided setup)
-- 🗣️ **Interview**: asks where policies are enforced, which IdP and groups, which tables, rows and/or columns, defaults and administrators
+- 🗣️ **Interview**: asks where policies are enforced, which IdP and groups or attributes, which tables, rows and/or columns, defaults and administrators
 - 🔎 **Discovery**: reads the data app configuration for providers, SSO and candidate tables; suggests rules from column names and sampled values
 - 🔒 **Default deny aware**: every table a governed app reads needs a policy; the close-out lists tables that still have none
 - ✅ **Safe writes**: dry-run summary and an explicit "go" before anything is written; updates instead of delete + create
