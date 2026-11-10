@@ -1,7 +1,8 @@
 # rls-toolkit Plugin
 
 Row- and column-level security for Keboola: set up `rls-policy` / `cls-policy` objects in bulk for
-the tables a data app reads, per IdP group, and bind them to the app. Query Service enforces them on
+the tables a data app reads, per IdP group or IdP attribute (a claim such as `department`), and bind them to
+the app. Query Service enforces them on
 governed workspaces (data apps with RLS on, the Keboola MCP server's workspace, `kbagent workspace
 create --governed`).
 
@@ -42,7 +43,9 @@ it; the kbagent commands are in `skills/rls-policies/references/kbagent.md` and 
   tables, and proposes rules from column names and sampled values.
 - Binds to a data app by writing the policy UUIDs to `runtime.workspace.rlsPolicies` and, for column
   policies, `runtime.workspace.clsPolicies` (independent of each other); a changed list needs a redeploy.
-- Cannot list the groups of an identity provider (Keboola does not manage membership): it asks.
+- Cannot list the groups or claims of an identity provider (Keboola does not manage membership): it asks.
+- Rules by IdP attribute (`attributes` with `issuers`, schema 1.3.0) need the claim in the OIDC provider's
+  `attribute_claims` of the app and in the ID token; see `skills/rls-policies/references/policy-model.md`.
 - Never writes before a dry-run summary and an explicit "go".
 - `kbagent rls setup` is kbagent's own terminal-only wizard (one simple comparison per selector); this
   plugin is the agent-driven path with data app discovery and binding.

@@ -19,6 +19,11 @@ Show what you found. Never change an app's authentication silently.
 - apps-proxy forwards a signed token with `sub`, `idp` (issuer), `groups` when the IdP sends them,
   and `email` only when verified (?). Keboola cannot list an IdP's groups: ask the user for the exact
   strings, case-sensitive. Entra ID sends group object ids unless the tenant is set up for names (?).
+- Attributes (?): a claim of the ID token becomes available to `attributes` rules only when the oidc
+  provider lists it in `attribute_claims` (up to 100 names, in `authorization.app_proxy.auth_providers[]`)
+  and the user signed in after it was added; the app is then redeployed or restarted and the session
+  is shorter (8 hours by default) so a changed attribute applies sooner. Show the user the
+  provider's issuer URL (`issuer_url`) for the rule's `issuers`.
 - GitLab `groups` and `allowedRoles` only gate login; they are not policy rules.
 - GitHub: no groups, no email; `sub` is the login, which can change hands. Use `["*"]` or a few named
   `subjects` and say so.

@@ -13,6 +13,10 @@ discovery already found instead of asking for it.
 2. **Who are the readers?**
    - OIDC/JumpCloud: "Which group strings does your IdP send for the users of this app?" Offer `["*"]`
      for everyone signed in. Case-sensitive; Entra sends ids unless configured.
+   - The IdP sends an attribute (`department`, `country`, a custom claim) and no group: an `attributes`
+     rule (schema 1.3.0) with the claim, its values and the provider's issuer URL. Ask which claim; the
+     user adds it to the app's `attribute_claims`, redeploys and signs in once (`policy-model.md`). The
+     attribute must be one the IdP admin controls, not an editable profile field.
    - GitHub or no groups: only `["*"]` or a few named `subjects` (`<idp>|<login>`); logins can change hands.
    - Administrators: do they need access? A `keboola|<user id>` subject or a group.
 3. **Which tables?** The candidate list; the user removes and adds. Per table: restrict rows,

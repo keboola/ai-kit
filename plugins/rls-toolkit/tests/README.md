@@ -6,6 +6,7 @@ evals under `evals/` run in the Tier 0 and Tier 1 jobs.
 
 Run: `uv run --with pytest --with jsonschema pytest -q plugins/rls-toolkit/tests` (the schema test is
 skipped without `jsonschema`). `schemas/` holds the metastore schemas `rls-policy` and `cls-policy`
-1.2.0 with every `description` and `x-metastore` entry removed: only the validation keywords are kept, so
-the examples of the references are checked against the real grammar. Refresh them when a newer schema
-version becomes the default.
+1.2.0 and 1.3.0 (the `attributes` selector) with every `description` and `x-metastore` entry removed: only
+the validation keywords are kept, so the examples of the references are checked against the real grammar
+(a policy with an `attributes` rule against 1.3.0, the others against 1.2.0). Refresh them when a newer
+schema version becomes the default.
