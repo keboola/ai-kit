@@ -7,7 +7,14 @@ Usage:
 
     init()
     refresh(run_snowflake)  # pass your workspace-query callable
-    rows = query("SELECT name, value FROM items WHERE value > 100")
+    if enabled():
+        rows = query("SELECT name, value FROM items WHERE value > 100")
+    else:
+        ...  # a governed workspace: query the workspace per request, as the user
+
+A workspace governed by row-level security refuses the refresh, which runs without a
+user. The cache then turns itself off for the life of the process, so one shared
+table never holds rows of a governed workspace.
 """
 from __future__ import annotations
 
@@ -17,6 +24,7 @@ from typing import Callable, Iterable
 
 import duckdb
 import pandas as pd
+from keboola_query_service import RowLevelSecurityError
 
 _con = duckdb.connect(":memory:")
 _lock = threading.Lock()
@@ -24,6 +32,7 @@ _last_refresh: float | None = None
 _row_count = 0
 _last_error: str | None = None
 _refreshing = False
+_governed = False
 
 # EDIT THIS: pull SQL against your Keboola workspace.
 # Snowflake quoting shown. On a BigQuery project use backticks and the mangled
@@ -55,43 +64,62 @@ def refresh(run_snowflake: Callable[[str], Iterable[dict]], *, force: bool = Fal
 
     `run_snowflake(sql)` must return an iterable of dicts.
     """
-    global _last_refresh, _row_count, _last_error, _refreshing
+    global _last_refresh, _row_count, _last_error, _refreshing, _governed
 
     with _lock:
-        if _refreshing and not force:
+        if _governed or (_refreshing and not force):
             return
         _refreshing = True
 
     try:
         t0 = time.time()
-        rows = list(run_snowflake(SNOWFLAKE_PULL_SQL))
+        try:
+            rows = list(run_snowflake(SNOWFLAKE_PULL_SQL))
+        except RowLevelSecurityError as e:
+            _governed = True
+            _con.execute("DELETE FROM items")
+            _row_count = 0
+            _last_error = str(e)
+            print("[duck] row-level security refused the refresh; the cache is off")
+            return
+        except Exception as e:
+            _last_error = str(e)
+            raise
         df = pd.DataFrame(rows)
 
-        _con.execute("BEGIN")
-        _con.execute("DELETE FROM items")
-        if not df.empty:
-            _con.register("incoming", df)
-            _con.execute(
-                "INSERT INTO items SELECT id, name, TRY_CAST(value AS DOUBLE) FROM incoming"
-            )
-            _con.unregister("incoming")
-        _con.execute("COMMIT")
+        try:
+            _con.execute("BEGIN")
+            _con.execute("DELETE FROM items")
+            if not df.empty:
+                _con.register("incoming", df)
+                _con.execute(
+                    "INSERT INTO items SELECT id, name, TRY_CAST(value AS DOUBLE) FROM incoming"
+                )
+                _con.unregister("incoming")
+            _con.execute("COMMIT")
+        except Exception as e:
+            _con.execute("ROLLBACK")
+            _last_error = str(e)
+            raise
 
         _row_count = int(_con.execute("SELECT COUNT(*) FROM items").fetchone()[0])
         _last_refresh = time.time()
         _last_error = None
         print(f"[duck] refreshed {_row_count} rows in {time.time() - t0:.1f}s")
-    except Exception as e:
-        _con.execute("ROLLBACK")
-        _last_error = str(e)
-        raise
     finally:
         with _lock:
             _refreshing = False
 
 
+def enabled() -> bool:
+    """False once row-level security refused a refresh: the workspace is governed."""
+    return not _governed
+
+
 def query(sql: str) -> pd.DataFrame:
     """Run a SQL query against the cached DuckDB and return a DataFrame."""
+    if _governed:
+        raise RuntimeError("The cache is off: row-level security governs the workspace.")
     return _con.execute(sql).df()
 
 
@@ -101,4 +129,5 @@ def status() -> dict:
         "row_count": _row_count,
         "last_error": _last_error,
         "refreshing": _refreshing,
+        "governed": _governed,
     }
