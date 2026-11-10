@@ -50,16 +50,16 @@ An empty prod app and a fully built one take the same path from here.
 A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. `drafts_unavailable: true` or `legacy_drafts_unavailable > 0` means the list is incomplete, not empty: call it again before you conclude there are none. Count drafts of both kinds, and take the first case that applies:
 
 1. **The request names a draft** — continue that one.
-2. **No drafts** — start one (steps 2–5 below).
+2. **No drafts** — start one (§2–§5 below).
 3. **Exactly one** — continue it, unless the user asks for a separate change beside it.
 4. **Several** — ask the user which to continue, or whether to start a new one, naming each by its `git_branch`.
 
-A legacy draft is converted (§Converting a legacy draft) before you continue it.
+A legacy draft is converted (§Converting a legacy draft) before you continue it. One whose `git_branch` already has an entry in `drafts` is converted already: count the pair once and continue the entry in `drafts`.
 
 To continue `DRAFT_ID`:
 
 1. Its branch is the `git_branch` of its entry in `drafts`. Never derive it from the draft's URL: the hostname is not the branch.
-2. `create_python_js_data_app_git_credential(configuration_id=PROD)` for a clone URL (step 3 below).
+2. `create_python_js_data_app_git_credential(configuration_id=PROD)` for a clone URL (§3).
 3. Check the branch out and merge `main` into it, so the draft builds on what is live. Resolve a conflict before going on:
 
    ```bash
@@ -69,15 +69,15 @@ To continue `DRAFT_ID`:
    git push origin <branch>
    ```
 
-4. Edit, commit, and `git push origin <branch>`. The draft picks it up (step 6). Not the commands in step 4: they start a new branch off `main` and would drop the draft's commits. Reusing a clone you already have? Check it first: [existing-clone.md](existing-clone.md).
+4. Edit, commit, and `git push origin <branch>`. The draft picks it up (§6). Not the commands in §4: they start a new branch off `main` and would drop the draft's commits. Reusing a clone you already have? Check it first: [existing-clone.md](existing-clone.md).
 
 ## Converting a legacy draft
 
 A legacy draft is a configuration of its own, pinned to a branch of the prod app's repo. Its code lives on that branch, so a draft on the same branch carries on where it left off.
 
-1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Mint a push credential on `PROD` for `$URL` (step 3 below), then check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
+1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Mint a push credential on `PROD` for `$URL` (§3), then check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
 2. **Compare its config with the prod app's.** The new draft takes the **prod** config, so anything set on the legacy draft alone is lost: Storage access, writable `storage` tables, secrets, authentication, image. Storage access the app needs can go onto the prod config (§2). For anything else, tell the user what changes and ask before you put it on prod.
-3. **Prepare the branch, then create the draft on it.** Clone it and give it `keboola-config/supervisord-dev/` if it lacks one (step 4, the checklist at its end): a legacy draft's branch often predates it. Then `create_python_js_data_app_draft(configuration_id=PROD, git_branch=<branch>)` (step 5), and wait until it reports `run_state: running` in `get_data_apps(configuration_ids=[PROD])`.
+3. **Prepare the branch, then create the draft on it.** Clone it and give it `keboola-config/supervisord-dev/` if it lacks one (§4, the checklist at its end): a legacy draft's branch often predates it. Then create the draft as in §5, its `no-auth` check included, and wait until it reports `run_state: running` in `get_data_apps(configuration_ids=[PROD])`.
 4. **Delete the legacy draft** only when step 2 found nothing that is lost, or the user agreed to lose it: `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch, and cannot be undone: secrets on it cannot be recovered. Otherwise keep it and work on the new draft; say the old one stays.
 5. Tell the user in one line that the draft moved, and that its preview now has a new URL.
 
@@ -122,7 +122,7 @@ modify_python_js_data_app(
 ```
 
 - A changed prod config reaches users at the next prod deploy, not before. It reaches the draft only when the draft is created again.
-- Need a config change once the draft runs? Change `PROD`, then `delete_python_js_data_app_draft(configuration_id=PROD, draft_id=DRAFT_ID)` and `create_python_js_data_app_draft` on the same branch. The code is on the branch; nothing is lost but the URL.
+- Need a config change once the draft runs? Change `PROD`, then `delete_python_js_data_app_draft(configuration_id=PROD, draft_id=DRAFT_ID)` and create it again on the same branch (§5). The code is on the branch; nothing is lost but the URL.
 - `storage` **replaces** the whole block on update: send the complete mapping, not a delta.
 
 ### 3. Mint a push credential
@@ -174,6 +174,8 @@ Pushes over ~15MB fail with HTTP 413. That, the build-at-deploy recipe, and the 
 
 ### 5. Create the draft
 
+A prod app with `authentication_type: "no-auth"` gets a public draft, with the prod app's Storage access. Tell the user so and create it only on their yes ([authentication.md](authentication.md) §Python/JS).
+
 ```python
 create_python_js_data_app_draft(configuration_id=PROD, git_branch="add-recent-jobs")
 ```
@@ -181,7 +183,7 @@ create_python_js_data_app_draft(configuration_id=PROD, git_branch="add-recent-jo
 Returns `draft_id`, `url` and `run_state`. The tool waits for the `url`, a few seconds; the draft reports `run_state: running` 40–125 seconds after the create.
 
 - **Never retry it blind.** Every call makes another running draft, even on the same branch. When the call fails or times out, `get_data_apps(configuration_ids=[PROD])` first: a draft on your branch already there is yours.
-- "Branch does not exist": the push in step 4 did not happen or went to another name.
+- "Branch does not exist": the push in §4 did not happen or went to another name.
 - `run_state` still `pending` after ~2 minutes: [troubleshooting.md](troubleshooting.md) §Draft stays `pending`.
 - Never change `authentication_type` to get a draft to load: the preview link opens it whatever its auth ([authentication.md](authentication.md) §Python/JS).
 
@@ -211,9 +213,9 @@ Otherwise the draft stays on the app as one more to choose from, still running. 
 
 1. **Confirm prod is healthy** — `get_data_apps(configuration_ids=[PROD])` reports it running. If it does not, read the terminal log in that detail, fix, and redeploy. Until prod is green the draft is your fallback.
 2. **Delete the draft** — `delete_python_js_data_app_draft(configuration_id=PROD, draft_id=DRAFT_ID)`. It stops the draft and never touches the branch.
-3. **Delete the branch** — `git push origin --delete <branch>`, unless another entry in `drafts` or `legacy_drafts` still has that `git_branch`: then keep it. The repo refuses deleting only its default branch, which is `main` when step 4 pushed it first.
+3. **Delete the branch** — `git push origin --delete <branch>`, unless another entry in `drafts` or `legacy_drafts` still has that `git_branch`: then keep it. The repo refuses deleting only its default branch, which is `main` when §4 pushed it first.
 
-The push credential from step 3 stays valid. The MCP tools cannot revoke it: tell the user it can be revoked under the app's Git settings in Keboola if they want it gone.
+The push credential from §3 stays valid. The MCP tools cannot revoke it: tell the user it can be revoked under the app's Git settings in Keboola if they want it gone.
 
 ## Creating a prod app (only when `get_data_apps` returns none)
 

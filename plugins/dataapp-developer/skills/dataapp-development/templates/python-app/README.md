@@ -15,7 +15,7 @@ Where to find each value: see `references/storage-access.md` §Getting the env v
 
 ## Dev mode
 
-A draft runs `keboola-config/setup-dev.sh` and `keboola-config/supervisord-dev/`: Flask's reloader restarts the app when a push changes a file. Prod runs `setup.sh` and `supervisord/`.
+A draft runs `keboola-config/supervisord-dev/`: Flask's reloader restarts the app when a push changes a file. Prod runs `supervisord/`. Both install with `setup.sh`.
 
 ## Deployment
 
