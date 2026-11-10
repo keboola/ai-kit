@@ -62,8 +62,10 @@ serve 1.1.0). Compact reminder, for generating rules:
 
 - `attributes` maps a claim name to its accepted values: a reader matches when it has, for EVERY claim,
   one of the listed values (values of one claim are alternatives, claims are all required). Exact,
-  case-sensitive; at most 16 claims, 32 values per claim, 256 characters per value; no wildcard; a claim
-  named like a claim of the token itself (`sub`, `email`, `groups`, `iss`, ...) is refused.
+  case-sensitive; at most 16 claims, 32 values per claim, 1024 characters per value; no wildcard; a claim
+  named like a claim of the token itself (`sub`, `email`, `groups`, `iss`, ...) is refused. Keep the
+  values short: the claims reach Query Service in a token of at most 8 KB shared with the groups, so a
+  claim that does not fit is dropped for that reader and a rule on it never matches them.
 - `issuers` is required with `attributes` and not allowed with another selector: the issuer URLs of the
   identity providers the rule trusts (1-16). An attribute is only as trustworthy as the provider that
   asserts it, and the owner of a data app chooses the provider.
