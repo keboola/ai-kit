@@ -8,6 +8,7 @@
 - WebSocket fails / Streamlit blank page
 - Streaming responses arrive all at once
 - App won't start / restart loop
+- Draft stays `pending`
 - Port mismatch local vs Keboola
 - Exit code 153
 - Dev API picks up only the first push
@@ -52,6 +53,14 @@
 **Cause:** Any of: relative paths in supervisord configs, missing `uv run` prefix for Python, non-executable `setup.sh`, `[program:nginx]` declared (the base image owns nginx).
 
 **Fix:** Absolute `/app/...` paths, `command=uv run python /app/app.py`, `chmod +x keboola-config/setup.sh` (commit the executable bit), and remove any `[program:nginx]` block. See [python-js-apps.md](python-js-apps.md) §Supervisord.
+
+## Draft stays `pending`
+
+**Symptom:** `get_data_apps(configuration_ids=[PROD])` still shows the draft `pending` (or `starting`) more than ~2 minutes after the create. The API never reports `failed` for it.
+
+**Cause:** almost always no `keboola-config/supervisord-dev/` on the draft's branch. The container exits at boot with `Dev mode requires keboola-config/supervisord-dev/ in the app repo` and restarts in a loop.
+
+**Fix:** add `keboola-config/supervisord-dev/` as [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §4 says, and push. Still `pending` ~2 minutes later: delete the draft and create it again on the same branch.
 
 ## Port mismatch local vs Keboola
 

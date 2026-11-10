@@ -78,7 +78,7 @@ prod app is a stray repo. Look before you create, and when your context already 
 (the page you were opened on, an id in the request) just use that id.
 
 This skill's flow below targets the prod app's `main`. To stage changes on a branch behind a
-preview instead, the draft flow (`parent_configuration_id`, `deploy_data_app` in dev mode)
+preview instead, the draft flow (`create_python_js_data_app_draft` on a pushed branch)
 is in `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 
 ## 2. Mint a push credential (one-time secret)
@@ -88,7 +88,7 @@ kbagent --json tool call create_python_js_data_app_git_credential --project <ali
   --input '{"configuration_id":"<cfg>"}'
 ```
 Returns `git_clone_url` = `https://kai:<secret>@git.<stack>/keboola/app-<data_app_id>.git`.
-Always mint against the **prod** config. Drafts own no repo of their own.
+Always mint against the **prod** config. A draft runs a branch of the prod app's repo and owns none.
 
 - The secret is **shown once**. Mint a fresh one anytime — they're cheap and revocable-by-rotation.
 - **Keep it in a shell variable only.** Never commit it, never `echo` it into a file, never paste it into a log or message. Read it into a var and reference `"$URL"`:

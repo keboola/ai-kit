@@ -106,26 +106,28 @@ After making changes, verify visually with whatever browser you have: a browser 
 
 If you have no browser (e.g. Claude Desktop without a browser tool), call out explicitly that visual verification was skipped, and ask the user to verify the change manually before committing.
 
-### Verify an app running in dev mode
+### Verify a draft
 
-A Python/JS draft deployed with `deploy_data_app(mode="dev")` still sits behind its login. Only a Python/JS draft reaches dev mode: a Streamlit app has no managed repo, and its image does not run dev mode. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
+A Python/JS draft sits behind the app's login. When your tool list has `get_data_app_preview_link`, look at it yourself instead of guessing from the code or the log:
 
 ```text
 1. Mint a link:
-   get_data_app_preview_link(configuration_id=APP)
+   get_data_app_preview_link(configuration_id=PROD, draft_id=DRAFT_ID)
    → url (works for 60 seconds), link_expires_at
 
 2. Open it at once in your browser, the same one as in §Verify: navigate to the url.
-   The link signs the browser in and redirects to the app.
+   The link signs the browser in on the draft's own host and redirects to the app.
 
 3. Check it like a local app: screenshot, click through the change, read console errors.
-   Later checks of the same app reuse the browser session; no new link.
+   Later checks of the same draft reuse the browser session; no new link.
 ```
 
-- **No URL yet:** right after a dev deploy the app may still be starting, and the tool answers "has no URL yet". Wait until `get_data_apps` reports it running, then mint again.
+- **No URL yet:** right after the create the draft may have no URL, and the tool answers "has no URL yet". Wait a few seconds, then mint again.
+- **Not running yet:** a fresh draft takes 40–125 seconds to `run_state: running`. A sleeping draft (`stopped`) wakes on the request the link makes.
+- **A push needs no new link.** The draft serves a push in about 5 seconds; reload the page.
 - **The session ends without notice.** If the app shows its login page ("This app is password protected") or says the preview link is invalid or expired, call `get_data_app_preview_link` again and open the new `url`. Never type a password or any credential into the page, and never ask the user for one.
 - **The link is a key.** Never show the `url` to the user, and never put it into a file, a commit, or any command other than the one that opens the browser. `curl` or an HTTP client cannot use it; only a browser turns it into a session.
-- **Dev mode only.** The tool refuses an app that is not in dev mode. Never switch an app to dev mode just to look at it; a Python/JS prod app is checked through its draft.
+- **Drafts only.** A prod app is checked through a draft of it; never switch it to dev mode to look at it. A legacy draft (`legacy_drafts` in `get_data_apps`) is converted first: [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §Converting a legacy draft.
 
 Without `get_data_app_preview_link` or without a browser, say that you could not look at the app, and ask the user to check it.
 

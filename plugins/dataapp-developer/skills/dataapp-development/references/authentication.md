@@ -96,21 +96,17 @@ your update call is only adjusting other fields (env vars, secrets, size) —
 omitting or hardcoding `authentication_type` is the most common cause of
 accidental OIDC -> basic-auth regressions.
 
-## Python/JS: `no-auth` is prod-only, never on a draft
+## Python/JS: a draft has the prod app's auth
 
-`modify_python_js_data_app` takes the same `authentication_type` values, with one
-extra rule: `"no-auth"` is accepted only on the **prod** app, and only when the
-user has explicitly asked to make the app public. It is rejected on a draft
-(create with `parent_configuration_id`, or update of a config with `isDraft`).
-A draft runs the prod app's code in the same project with its own Storage
-workspace and token, so disabling its auth exposes Storage-reading and
-Storage-writing endpoints publicly — for an app that was never meant to be public.
+A draft copies the prod app's config, authentication included, when it is created. It has no
+authentication of its own to change. `"no-auth"` goes on the prod app only when the user has
+explicitly asked to make the app public; a draft created after that is public at its own URL too,
+with the same Storage access. Before you create a draft of a `no-auth` app, tell the user its draft
+will be public too and create it only on their yes.
 
-Never change `authentication_type` to get a preview to load. Per the apps-proxy
-`kai-preview` design (`keboola/ui` `apps/kai-agent/docs/data-apps-architecture.md`),
-the in-platform preview of `deploy_data_app(mode="dev")` authenticates on top of
-whatever auth the app has. If the user wants the finished app public, set
-`"no-auth"` on the prod app when promoting, not on the draft.
+Never change `authentication_type` to get a preview to load. The preview link from
+`get_data_app_preview_link` opens a draft whatever its auth (see `keboola/ui`
+`apps/kai-agent/docs/data-apps-architecture.md`).
 
 ## Row-level data filtering pointer
 
