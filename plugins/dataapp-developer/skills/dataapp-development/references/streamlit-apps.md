@@ -153,7 +153,7 @@ rows = storage.select('SELECT * FROM "KBC_REGION_PROJID"."out.c-data-app"."mvc-c
 st.dataframe(rows)
 ```
 
-`@st.cache_resource` is for connection-like objects (DB clients, ML models) that should never be re-created. For caching the rows themselves across reruns within a session, wrap the read with `@st.cache_data(ttl=60)` instead:
+`@st.cache_resource` is for connection-like objects (DB clients, ML models) that should never be re-created. For caching the rows themselves across reruns, wrap the read with `@st.cache_data(ttl=60)` instead. It is one cache for all sessions and users of the app; see "Row-level security" below for a per-user key:
 
 ```python
 @st.cache_data(ttl=60)
@@ -165,10 +165,17 @@ If you reach this question, you usually want both — `@st.cache_resource` for t
 
 ### Row-level security — not supported yet
 
-In a workspace governed by row-level security, Query Service returns only the rows of the signed-in user. It needs the user token (`X-Kbc-App-User-Token`) that Keboola's apps proxy adds to the request. Streamlit cannot use it yet:
+In a workspace governed by row-level security, Query Service returns only the rows of the signed-in user. It needs the user token (`X-Kbc-App-User-Token`) that Keboola's apps proxy adds to the request. The Streamlit template sends it, but Streamlit cannot keep it valid yet:
 
-- Streamlit holds one WebSocket open for the whole session, up to hours. The apps proxy signs the token once, when the socket opens, and the token lives 5 minutes. After that, Query Service refuses the queries. A refresh bound to the live connection is a follow-up.
-- `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. In a governed workspace it would show one user's rows to another.
+- Streamlit holds one WebSocket open for the whole session, up to hours. The apps proxy signs the token once, when the socket opens, and the token lives 5 minutes. After that, Query Service refuses the queries until the user reloads the page. A refresh bound to the live connection is a follow-up.
+
+What the template already does, and what to keep when you change `utils/data_loader.py`:
+
+- `app_user_token()` is the only place that reads the token. Every query sends it through `auth=AppUserToken(app_user_token, storage_token=...)`, together with the app's Storage token; without a token, only the Storage token. The client (`@st.cache_resource`) is shared and never holds the user's token.
+- `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. The template's cached function takes `user_key`, the token's `idp` and `sub`. Streamlit leaves arguments whose name starts with `_` out of the key, so never rename it to `_user_key`: one user's rows would go to the next user. Key any new `@st.cache_data` of query results the same way.
+- A failed query raises inside the cached function, so it is not cached. A row-level security refusal (`RowLevelSecurityError`) shows "You have no access to this data."
+- The tests in `tests/` check this; run `uv run --group dev pytest -q tests`.
+- The shared DuckDB cache does not fit a governed workspace; `templates/duckdb-cache/python/cache.py` turns itself off when Query Service refuses its refresh (`enabled()` is then False).
 
 For per-user data today, build a Python/JS app from `templates/react-vite-app/`, which forwards the token by itself. See "Row-level security" in [storage-access.md](storage-access.md).
 

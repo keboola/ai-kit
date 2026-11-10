@@ -6,6 +6,7 @@ Generic harness for caching Keboola Snowflake data in an in-memory DuckDB so the
 
 - Read-only apps where data refresh interval is minutes, not seconds.
 - Skip for RW apps (Storage Access via Query Service) — every read should be current.
+- Skip for a workspace governed by row-level security. The Python harness turns itself off when Query Service refuses its refresh: check `enabled()` before `query()`.
 
 ## Files
 

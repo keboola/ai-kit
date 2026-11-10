@@ -30,7 +30,7 @@ Apply this pattern when all of:
 ## When to skip DuckDB caching
 
 Fall back to direct access when:
-- The workspace is governed by row-level security. Query Service refuses the refresh (it runs outside a user request, so it has no user token), and one shared cache would show one user's rows to another. See "Row-level security" in [storage-access.md](storage-access.md).
+- The workspace is governed by row-level security. Query Service refuses the refresh (it runs outside a user request, so it has no user token), and one shared cache would show one user's rows to another. Query Service sends no header that says a workspace is governed; the refusal is the only signal. The Python harness (`templates/duckdb-cache/python/cache.py`) turns itself off on that refusal: `enabled()` returns False and `query()` raises, so the app queries the workspace per request. See "Row-level security" in [storage-access.md](storage-access.md).
 - The app writes back via Storage Access (RW). See [storage-access.md](storage-access.md) — every read must be current; no caching.
 - The user expects sub-minute freshness (live operational dashboards, real-time monitoring).
 - The dataset is too large to fit in memory. Use pagination + direct RO workspace queries instead, or pre-aggregate before caching.
@@ -215,7 +215,7 @@ Pointer: full reference template at `templates/duckdb-cache/python/cache.py`.
 
 ## Streamlit caching alternative
 
-For Streamlit apps where the cache only needs to survive within a single user session (not shared across all users), `@st.cache_data(ttl=300)` is simpler:
+For Streamlit apps, `@st.cache_data(ttl=300)` is simpler. It is one cache for all sessions and users of the app, keyed by the function's arguments; on a workspace governed by row-level security, add the user to the arguments (see §Row-level security in [streamlit-apps.md](streamlit-apps.md)):
 
 ```python
 @st.cache_data(ttl=300)
@@ -232,7 +232,7 @@ Use DuckDB when:
 - You want to run arbitrary SQL against cached data, not just lookup pre-computed results.
 - You're on a non-Streamlit app type.
 
-You can combine both: DuckDB for the shared cache + `@st.cache_data` for derived per-session aggregations.
+You can combine both: DuckDB for the shared cache + `@st.cache_data` for derived aggregations.
 
 ## Verifying the cache is complete
 
