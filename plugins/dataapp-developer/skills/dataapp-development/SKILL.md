@@ -9,6 +9,8 @@ This skill covers the full lifecycle of Keboola Apps (formerly "Data Apps"): cho
 
 The skill is a router — it does not contain all the guidance itself. The `references/` files load on demand based on the task at hand. Read the decision tree below, then load only the references you need.
 
+**A client with its own extras skill** (Kai in the Builder loads `dataapp-building-kai-extras`) follows that skill's reading list instead of this tree, and opens a reference here only when that skill points at it.
+
 ## Decision tree
 
 Answer these questions in order. Each answer routes to the right reference.
