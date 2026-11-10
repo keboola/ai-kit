@@ -6,8 +6,11 @@ dependencies = [
     "streamlit~=1.45.0",
     "pandas~=2.2.0",
     "plotly~=6.0.0",
-    "keboola-query-service>=0.3.0",
+    "keboola-query-service>=0.4.0",
 ]
+
+[dependency-groups]
+dev = ["pytest"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
