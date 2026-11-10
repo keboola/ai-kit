@@ -177,6 +177,7 @@ Cache the discovered URL after the first lookup — it doesn't change for the li
 ```python
 import asyncio
 import os
+from contextlib import aclosing
 import streamlit as st
 from kai_client import KaiClient, KaiConfigurationError, KaiError, KaiNotFoundError
 
@@ -210,8 +211,9 @@ async def deny_approval(client, chat_id, tool_call_id):
 
 async def stream_response(chat_id, prompt):
     client = await KaiClient.from_storage_api(**KAI_CREDENTIALS)
-    async with client:
-        async for event in client.send_message(chat_id, prompt):
+    # aclosing() closes the stream when the answer ends early or the consumer stops.
+    async with client, aclosing(client.send_message(chat_id, prompt)) as events:
+        async for event in events:
             if event.type == "text":
                 yield event.text
             elif event.type == "tool-call" and event.state == "started":
@@ -221,7 +223,12 @@ async def stream_response(chat_id, prompt):
                     await deny_approval(client, chat_id, event.tool_call_id)
                     yield "\n[Kai asked for an approval or an answer; this app declined it.]\n"
                 except KaiError as e:
-                    yield f"\n[Could not decline Kai's request: {e.message}]\n"
+                    code = e.code or ""
+                    if code.startswith("conflict") or code == "http:409":
+                        continue  # already resolved, so Kai goes on
+                    # Still waiting: the turn stays blocked until kai-agent times it out.
+                    yield f"\n[Could not decline Kai's request, so Kai cannot go on: {e.message}]\n"
+                    return
             elif event.type == "error":
                 yield f"\n[Kai could not finish this answer: {event.message}]\n"
 
@@ -235,6 +242,8 @@ def iterate_sync(agen):
             except StopAsyncIteration:
                 return
     finally:
+        # Also when st.write_stream stops early: close the generator on its own loop first.
+        loop.run_until_complete(agen.aclose())
         loop.close()
 ```
 
