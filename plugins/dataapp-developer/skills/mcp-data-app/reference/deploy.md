@@ -23,20 +23,30 @@ preview. If you do want to stage changes on a branch first, use the prod-app-and
 in `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md` instead of this block.
 
 ```bash
-# 1. Resolve the app. An empty configuration_id CREATES an app and a managed repo, and the
-#    repo can never be attached to an existing app afterwards -- so look before you create.
-kbagent --json tool call get_data_apps --project <alias> --input '{}'
-#    Exactly one python-js app -> take its configuration_id as PROD and skip step 2.
+# 1. Resolve the app. Creating one also creates a managed repo, and that repo can never be
+#    attached to an existing app afterwards -- so look before you create.
+kbagent --json data-app list --project <alias>
+#    The list also shows drafts and apps on external repos. For each python-js app run
+#    kbagent --json data-app git-repo --project <alias> --app-id <app_id>
+#    The prod app on a managed repo has is_managed_git_repo: true. A draft has false and
+#    the URL of its prod app's repo.
+#    Exactly one such prod app -> take its app_id as <id> and skip step 2.
 
-# 2. ONLY when the project has no python-js app at all: create the prod app and its repo.
-kbagent --json tool call modify_python_js_data_app --project <alias> \
-  --input '{"name":"MCP Data App","slug":"mcp-data-app","description":"Hosted MCP server"}'
+# 2. ONLY when the project has no python-js app at all: create the app and its repo.
+#    --auth public: the app's own #MCP_API_KEY is the auth (see App-level auth below).
+kbagent --json data-app create --project <alias> --name "MCP Data App" --slug mcp-data-app \
+  --description "Hosted MCP server" --type python-js --use-managed-git-repo --auth public
+#    -> data.app_id is <id>. The repo starts empty of app code, so create does not deploy.
 
-# 3. Mint a push credential against PROD, push the source to main, deploy.
-kbagent --json tool call create_python_js_data_app_git_credential --project <alias> \
-  --input '{"configuration_id":"<prod-cfg>"}'
-# -> git_clone_url = https://kai:<secret>@git.<stack>/keboola/app-<id>.git  (keep in a var)
-git remote add keboola "$URL"
+# 3. Mint a push credential (needs an admin Storage token), push the source to main, deploy.
+#    The secret is shown once: never print it. Run step 3 as ONE shell command: a new shell
+#    has no $TOKEN. A failed kbagent call stops here and prints its error (no secret in it).
+CRED=$(kbagent --json data-app git-credentials-create --project <alias> --app-id <id> \
+  --type http_token --permissions readWrite --name push --yes)
+TOKEN=$(jq -er '.data.credential.secret' <<<"$CRED") || { jq -c '.error' <<<"$CRED" >&2; exit 1; }
+REPO=$(kbagent --json data-app git-repo --project <alias> --app-id <id>)
+HTTPS_URL=$(jq -er '.data.https_url' <<<"$REPO") || { jq -c '.error' <<<"$REPO" >&2; exit 1; }
+git remote add keboola "https://kai:${TOKEN}@${HTTPS_URL#https://}"
 # A new app's repo starts with one commit on `main` (Forgejo's README.md). Join it so the
 # push is a fast-forward; on a conflict your files win. An older app's repo may be empty:
 # then there is nothing to join. More than one commit means `main` already has app code:
@@ -50,15 +60,14 @@ if git ls-remote --exit-code --heads keboola main >/dev/null; then
   fi
 fi
 git push keboola HEAD:main   # skip when the step above printed STOP
-kbagent --json tool call deploy_data_app --project <alias> \
-  --input '{"action":"deploy","configuration_id":"<prod-cfg>"}'
+kbagent data-app deploy --project <alias> --app-id <id> --git-branch main --wait
 ```
 
 Note: "push source only" — the app carries no build artifact, so the keboola-git 15 MB / HTTP 413 path does not apply.
 
 ## MCP-tools driver (Kai / hosted MCP)
 
-Same three tools as the kbagent driver, called directly as MCP tools rather than via `kbagent … tool call`:
+The same steps as the kbagent driver, done with MCP tools:
 
 - `modify_python_js_data_app(...)` → returns `configuration_id`, `data_app_id`, `repo_url`. With an empty `configuration_id` it **creates a new prod app and a new repo** every time. A draft of an existing app comes from `create_python_js_data_app_draft` instead. Full rules: `plugins/dataapp-developer/skills/dataapp-development/references/python-js-prod-and-drafts.md`.
 - `create_python_js_data_app_git_credential(configuration_id)` → returns `git_clone_url` (contains a one-time secret; keep in a variable, never commit/echo).
@@ -117,7 +126,7 @@ To redeploy after a change, push to that GitHub branch and deploy again. `create
 | `#MCP_PUBLIC_URL` | No | Override only. See The app's own URL below |
 | `#KBC_WORKSPACE_ID` | No | Override only. With Storage Access enabled, `server.py` already pins tool calls to this app's own workspace from the injected `WORKSPACE_ID` at startup (each redeploy creates a new workspace, so never copy its ID into a secret). Set this only for a stable workspace you manage yourself |
 
-Via kbagent: `kbagent --allow-env-manage-token data-app secrets-set --project <alias> --app-id <id> '#KEY=VAL'` then redeploy.
+Via kbagent: `kbagent data-app secrets-set --project <alias> --app-id <id> --secret '#KEY=VAL'` then redeploy.
 
 ## App-level auth = None (critical)
 
