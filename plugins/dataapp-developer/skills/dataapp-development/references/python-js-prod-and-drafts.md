@@ -47,13 +47,14 @@ An empty prod app and a fully built one take the same path from here.
 
 ## Continue its draft, or start one?
 
-A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. `drafts_unavailable: true` or `legacy_drafts_unavailable > 0` means the list is incomplete, not empty: call it again before you conclude there are none. Take the first case that applies:
+A new draft every session strands the previous one: it stays on the app, keeps its branch, and boots cold. `get_data_apps(configuration_ids=[PROD])` lists its `drafts` and `legacy_drafts`. `drafts_unavailable: true` or `legacy_drafts_unavailable > 0` means the list is incomplete, not empty: call it again before you conclude there are none. Count drafts of both kinds, and take the first case that applies:
 
 1. **The request names a draft** — continue that one.
-2. **No `drafts`, exactly one legacy draft** — convert it (§Converting a legacy draft), then continue it.
-3. **No drafts of either kind** — start one (steps 2–5 below).
-4. **Exactly one draft** — continue it, unless the user asks for a separate change beside it.
-5. **Several, of either kind** — ask the user which to continue, or whether to start a new one, naming each by its `git_branch`. A legacy draft they pick is converted first.
+2. **No drafts** — start one (steps 2–5 below).
+3. **Exactly one** — continue it, unless the user asks for a separate change beside it.
+4. **Several** — ask the user which to continue, or whether to start a new one, naming each by its `git_branch`.
+
+A legacy draft is converted (§Converting a legacy draft) before you continue it.
 
 To continue `DRAFT_ID`:
 
@@ -76,8 +77,8 @@ A legacy draft is a configuration of its own, pinned to a branch of the prod app
 
 1. **Read it.** Its branch is the `git_branch` of its entry in `legacy_drafts` (`parameters.dataApp.git.branch` in its config). Mint a push credential on `PROD` for `$URL` (step 3 below), then check the branch is on the remote: `git ls-remote --heads "$URL" <branch>`. Without it, there is nothing to convert: tell the user and start a new draft.
 2. **Compare its config with the prod app's.** The new draft takes the **prod** config, so anything set on the legacy draft alone is lost: Storage access, writable `storage` tables, secrets, authentication, image. Storage access the app needs can go onto the prod config (§2). For anything else, tell the user what changes and ask before you put it on prod.
-3. **Prepare the branch, then create the draft on it.** Clone it and give it `keboola-config/supervisord-dev/` if it lacks one (step 4, the checklist at its end): a legacy draft's branch often predates it. Then `create_python_js_data_app_draft(configuration_id=PROD, git_branch=<branch>)` (step 5).
-4. **Delete the legacy draft** only once the new draft reports `run_state: running` in `get_data_apps(configuration_ids=[PROD])`, and only when step 2 found nothing that is lost, or the user agreed to lose it: `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch, and cannot be undone: secrets on it cannot be recovered. Otherwise keep it and work on the new draft; say the old one stays.
+3. **Prepare the branch, then create the draft on it.** Clone it and give it `keboola-config/supervisord-dev/` if it lacks one (step 4, the checklist at its end): a legacy draft's branch often predates it. Then `create_python_js_data_app_draft(configuration_id=PROD, git_branch=<branch>)` (step 5), and wait until it reports `run_state: running` in `get_data_apps(configuration_ids=[PROD])`.
+4. **Delete the legacy draft** only when step 2 found nothing that is lost, or the user agreed to lose it: `delete_python_js_data_app_draft(configuration_id=<legacy draft's configuration_id>)`. It removes the legacy configuration and its running app, never the branch, and cannot be undone: secrets on it cannot be recovered. Otherwise keep it and work on the new draft; say the old one stays.
 5. Tell the user in one line that the draft moved, and that its preview now has a new URL.
 
 ## Building into an existing prod app
