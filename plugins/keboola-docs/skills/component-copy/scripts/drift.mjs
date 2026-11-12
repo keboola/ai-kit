@@ -33,9 +33,20 @@ if (!id || id.startsWith('--')) {
   process.exit(2);
 }
 
-const index = val('--index')
-  ? JSON.parse(readFileSync(val('--index'), 'utf8'))
-  : await (await fetch(STORAGE, { headers: { accept: 'application/json' } })).json();
+// Exit 2 when the index cannot be read: exit 1 means "something to update" and must not come from a
+// network error.
+let index;
+try {
+  if (val('--index')) index = JSON.parse(readFileSync(val('--index'), 'utf8'));
+  else {
+    const res = await fetch(STORAGE, { headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(`${STORAGE} answered ${res.status}`);
+    index = await res.json();
+  }
+} catch (e) {
+  console.error(`RESULT: could not read the component index: ${e.message}`);
+  process.exit(2);
+}
 const c = (index.components || []).find((x) => x.id === id);
 if (!c) { console.error(`RESULT: ${id} is not in the Storage component index`); process.exit(2); }
 

@@ -10,7 +10,8 @@
 //       "options.tooltip": "Incremental uses HubSpot's search API, which stops at 10,000 results.",
 //       "options.enum_titles": ["Full fetch", "Incremental fetch"],
 //       "options.documentation": { "link": "https://...", "tooltip": "..." } } }
-// A path segment `items` steps into an array's item schema.
+// A path segment `[]` steps into an array's item schema (`root.rows[].name`), as lint-copy.mjs prints
+// it, so a property that is itself named `items` stays addressable (`root.items`).
 //
 // Only title, description, options.tooltip, options.documentation and options.enum_titles can
 // be set; anything else is refused. The file is re-serialised with its own indentation, and
@@ -49,11 +50,12 @@ const SETTABLE = ['title', 'description', 'options.tooltip', 'options.documentat
 const problems = [];
 
 function field(path) {
-  const parts = path.split('.');
-  if (parts[0] !== 'root') return null;
+  if (!path.startsWith('root')) return null;
+  const parts = path.slice(4).match(/\.[^.[\]]+|\[\]/g) ?? [];
+  if (parts.join('') !== path.slice(4)) return null;
   let node = schema;
-  for (const p of parts.slice(1)) {
-    node = p === 'items' ? node?.items : node?.properties?.[p];
+  for (const p of parts) {
+    node = p === '[]' ? node?.items : node?.properties?.[p.slice(1)];
     if (!node || typeof node !== 'object') return null;
   }
   return node;

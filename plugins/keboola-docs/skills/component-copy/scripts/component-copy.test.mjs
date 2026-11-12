@@ -156,3 +156,38 @@ test('schema-copy sets copy leaves, refuses functional ones', () => {
   assert.equal(run('schema-copy.mjs', join(d, 'schema.json'), join(d, 'bad.json')).status, 1);
   assert.equal(run('schema-copy.mjs', join(d, 'schema.json'), join(d, 'short.json')).status, 1);
 });
+
+// Review fixes, 2026-11-12.
+test('an empty long description on a connector fails both connector rules', () => {
+  const r = run('lint-copy.mjs', proposal({ 'component_long_description.md': '\n' }), '--connector');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /house#before-you-start/);
+  assert.match(r.stdout, /house#load-behaviour/);
+});
+
+test('a VERIFY about something else does not count as the load line', () => {
+  const other = proposal({ 'component_long_description.md': `Reads contacts.\n\n${BEFORE.replace('No network setup needed.', 'VERIFY(owner): IP allow-list?')}` });
+  const r = run('lint-copy.mjs', other, '--connector');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /house#load-behaviour/);
+});
+
+test('schema-copy addresses a property named items and array items with []', () => {
+  const d = proposal({
+    'schema.json': JSON.stringify({ type: 'object', properties: {
+      items: { type: 'string', title: 'Items', propertyOrder: 1 },
+      rows: { type: 'array', propertyOrder: 2, items: { type: 'object', properties: { name: { type: 'string', title: 'Name', propertyOrder: 1 } } } },
+    } }, null, 2) + '\n',
+    'edits.json': JSON.stringify({ 'root.items': { title: 'Objects' }, 'root.rows[].name': { title: 'Row name' } }),
+  });
+  const r = run('schema-copy.mjs', join(d, 'schema.json'), join(d, 'edits.json'));
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.equal(out.properties.items.title, 'Objects');
+  assert.equal(out.properties.rows.items.properties.name.title, 'Row name');
+});
+
+test('drift exits 2 when the index cannot be read', () => {
+  const r = run('drift.mjs', 'x.ex-good', '--repo', 'x/y', '--index', join(tmpdir(), 'no-such-index.json'));
+  assert.equal(r.status, 2, r.stderr);
+});

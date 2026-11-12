@@ -250,10 +250,17 @@ const block = (level, reason) => {
   if (gate.level !== 'hard') gate.level = level;
   gate.reasons.push(`[${level}] ${reason}`);
 };
-if (!row) {
+// The map holds public components only, so a hidden or deprecated one (component-retire,
+// --include-hidden) is never in it: that is expected, not a reason to stop. Its UI kind comes from
+// the live flags instead of the map row.
+if (!row && !hidden) {
   block('hard', 'Not present in category-map.json: regenerate the map (scripts/classify.mjs --write) before touching this component.');
 }
-if (row && row.genericUI === false && ['extractor', 'writer', 'application'].includes(c.type)) {
+if (!row && hidden) {
+  gate.reasons.push('Not in category-map.json because it is not public; lint it with lint-copy.mjs --retired (no bucket rules apply).');
+}
+const genericUI = row ? row.genericUI : (c.flags || []).includes('genericDockerUI');
+if (genericUI === false && ['extractor', 'writer', 'application'].includes(c.type)) {
   block('hard', 'Not a generic-UI component: its fields may be hard-coded in the Keboola UI monorepo, which needs a monorepo PR, not a config change.');
 }
 if (ambiguous) {

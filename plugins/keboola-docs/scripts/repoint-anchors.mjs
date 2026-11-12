@@ -99,7 +99,9 @@ for (const [k, v] of Object.entries(overrides)) if (v !== null && !map.has(k.rep
 const files = git(['ls-files', '-co', '--exclude-standard', '--', 'src', '_data']).stdout.split('\n')
   .filter((f) => f && /\.(md|mdx|astro|yml|yaml|mjs|ts|tsx|json)$/.test(f) && !f.startsWith('src/sidebar.mjs'));
 const esc = PAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/$/, '');
-const re = new RegExp(`(https?://help\\.keboola\\.com)?${esc}/?#([A-Za-z0-9_\\-\\p{L}\\p{N}%]+)`, 'gu');
+// The lookbehind keeps a longer URL that only ends with the page's path (/automate/flows/ for
+// --page /flows/) out of the match.
+const re = new RegExp(`(?<![\\w./-])(https?://help\\.keboola\\.com)?${esc}/?#([A-Za-z0-9_\\-\\p{L}\\p{N}%]+)`, 'gu');
 const rewritten = {}, unmapped = [];
 for (const f of files) {
   const abs = path.join(ROOT, f);

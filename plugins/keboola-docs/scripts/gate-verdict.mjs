@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
@@ -39,14 +40,16 @@ const ofThisRepo = (e) => { try { return worktrees.has(fs.realpathSync.native(e.
 // The trees of this branch's own commits: a verbatim move earlier on the branch must be rewritten by HEAD.
 const baseRef = ['keboola/main', 'origin/main', 'main'].find((r) => spawnSync('git', ['rev-parse', '-q', '--verify', r], { cwd: repo }).status === 0);
 const mb = baseRef ? git(['merge-base', 'HEAD', baseRef]) : '';
-const branchTrees = new Set(mb ? git(['log', '--format=%T', `${mb}..HEAD`]).split('\n').filter(Boolean) : [tree]);
+// HEAD's own tree is always in: with no commits of its own past the merge-base the range is empty.
+const branchTrees = new Set([tree, ...(mb ? git(['log', '--format=%T', `${mb}..HEAD`]).split('\n').filter(Boolean) : [])]);
 
 let best = null;
 const deferredPages = new Set();
 for (const log of logs) {
   if (!fs.existsSync(log)) continue;
   for (const line of fs.readFileSync(log, 'utf8').split('\n')) {
-    if (!line.trim()) continue;
+    // Cheap prefilter before JSON.parse: the logs only grow.
+    if (!line.trim() || ![...branchTrees].some((t) => line.includes(t))) continue;
     try {
       const e = JSON.parse(line);
       if (!branchTrees.has(e.tree) || !(log === own || ofThisRepo(e))) continue;
@@ -59,7 +62,8 @@ for (const log of logs) {
 // Verbatim-moved pages: what does HEAD say about their form?
 const unformed = [];
 if (deferredPages.size) {
-  const check = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'skills', 'docs-diataxis-check', 'scripts', 'check.mjs');
+  // fileURLToPath, not URL.pathname: a plugin under "Application Support" has a %20 in the pathname.
+  const check = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'docs-diataxis-check', 'scripts', 'check.mjs');
   const live = [...deferredPages].filter((pg) => spawnSync('git', ['cat-file', '-e', `HEAD:${pg}`], { cwd: repo }).status === 0);
   const r = live.length ? spawnSync(process.execPath, [check, '--root', repo, '--json', '--ref', 'HEAD', ...live], { cwd: repo, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }) : null;
   let j = null; try { j = r && JSON.parse(r.stdout); } catch { /* no JSON: say so below */ }

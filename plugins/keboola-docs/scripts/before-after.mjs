@@ -56,8 +56,8 @@ const pageFiles = opt('pages')
 if (!pageFiles.length) { console.error(`no changed pages under src/content/docs since ${BASE}`); process.exit(1); }
 
 const slugOf = (text) => {
-  const fm = text.match(/^---\n([\s\S]*?)\n---/);
-  const m = fm && fm[1].match(/^slug:\s*['"]?([^'"\n]*)['"]?\s*$/m);
+  const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const m = fm && fm[1].match(/^slug:\s*['"]?([^'"\r\n]*)['"]?\s*$/m);
   return m ? m[1].replace(/^\/|\/$/g, '') : null;
 };
 const pages = pageFiles.map(f => {
@@ -87,7 +87,7 @@ const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascrip
 const server = http.createServer((rq, rs) => {
   let p = decodeURIComponent(new URL(rq.url, 'http://x').pathname);
   let f = path.join(DIST, p);
-  if (!f.startsWith(DIST)) { rs.writeHead(403).end(); return; }
+  if (f !== DIST && !f.startsWith(DIST + path.sep)) { rs.writeHead(403).end(); return; }
   if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
   if (!fs.existsSync(f)) { rs.writeHead(404).end(); return; }
   rs.writeHead(200, { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' });

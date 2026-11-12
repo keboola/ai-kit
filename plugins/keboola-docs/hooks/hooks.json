@@ -1,5 +1,5 @@
 {
-  "description": "keboola-docs: commit gate (Diátaxis D1–D16, retired pages without a redirect, orphaned media, links when dist/ exists) on `git commit` in a connection-docs checkout; sidebar regeneration when _data/navigation.yml changes; PR labels after `gh pr create`; a before/after screenshot report (docs-before-after) after `gh pr create` or `git push` on a branch with an open PR, for Claude to publish as an Artifact.",
+  "description": "keboola-docs: commit gate (Diátaxis D1–D16, retired pages without a redirect, orphaned media, links when dist/ exists) on `git commit` in a connection-docs checkout; sidebar regeneration when _data/navigation.yml changes; PR labels after `gh pr create`; a before/after screenshot report (docs-before-after) after `gh pr create` (building dist/ if needed) or `git push` (from a fresh dist/ only) on a branch with an open PR, for Claude to publish as an Artifact.",
   "hooks": {
     "PreToolUse": [
       {

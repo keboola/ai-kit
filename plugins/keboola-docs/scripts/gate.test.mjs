@@ -473,3 +473,32 @@ test('a commit that puts back the line endings main has is a repair, not a FAIL'
   assert.equal(denied(o), null);
   assert.match(o.hookSpecificOutput.additionalContext, /back to what main has \(a repair\)/);
 });
+
+test('a split that git reports as a rename is deferred like an added page', () => {
+  const dir = repo();
+  git(dir, 'branch', '-M', 'main');
+  const big = PAGE(dir, 'big.md');
+  const section = (n) => `## Part ${n}\n\nPart ${n} explains one thing in a sentence of its own.\n\nA second sentence about part ${n}, also unique.\n\n- a list item of part ${n}\n- another item of part ${n}\n\nA closing line for part ${n}.\n`;
+  fs.writeFileSync(big, `---\ntitle: Big\nslug: 'guide/big'\ndescription: 'A big page.'\n---\n\nA big page. See the [clean how-to](/guide/clean-howto/).\n\n${section(1)}\n${section(2)}\n${section(3)}\n**Next:** [Clean how-to →](/guide/clean-howto/)\n`);
+  git(dir, 'add', '-A'); git(dir, 'commit', '-q', '-m', 'big page on main');
+  git(dir, 'checkout', '-q', '-b', 'split');
+  // the old page is retired and most of it lands verbatim in one new page: -M sees a rename
+  fs.rmSync(big);
+  fs.writeFileSync(PAGE(dir, 'parts.md'), `---\ntitle: Parts\nslug: 'guide/parts'\nredirect_from: ['/guide/big/']\n---\n\n${section(1)}\n${section(2)}\n${section(3)}`);
+  git(dir, 'add', '-A');
+  assert.match(git(dir, 'diff', '--cached', '--name-status', '-M'), /^R\d+\t.*big\.md\t.*parts\.md/m);
+  const o = gate(dir, 'git commit -m "move verbatim"');
+  assert.equal(denied(o), null, o?.hookSpecificOutput?.permissionDecisionReason);
+  assert.match(o.hookSpecificOutput.additionalContext, /parts\.md:\d+ D3 .*verbatim move/);
+});
+
+test('gate-verdict finds the entry when HEAD has no commits past the merge-base', () => {
+  const dir = repo();
+  git(dir, 'branch', '-M', 'main');
+  fs.appendFileSync(PAGE(dir, 'clean-howto.md'), '\nOne more line.\n');
+  git(dir, 'add', '-A');
+  assert.equal(denied(gate(dir, 'git commit -m "on main"')), null);
+  git(dir, 'commit', '-q', '-m', 'on main');
+  const v = spawnSync(process.execPath, [path.join(HERE, 'gate-verdict.mjs'), dir], { encoding: 'utf8', env: { ...process.env, CLAUDE_PLUGIN_DATA: '' } });
+  assert.equal(v.status, 0, v.stdout);
+});

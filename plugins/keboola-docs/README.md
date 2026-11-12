@@ -1,6 +1,6 @@
 # keboola-docs
 
-**Version**: 0.12.1
+**Version**: 0.12.2
 
 Write, update, retire and ship pages on help.keboola.com (keboola/connection-docs, Astro +
 Starlight) by the Diátaxis rules, with the checks, the media tooling and a commit gate in one

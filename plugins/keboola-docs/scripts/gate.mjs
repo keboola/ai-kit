@@ -148,7 +148,9 @@ for (const line of diff.stdout.split('\n')) {
   const [status, a, b] = line.split('\t');
   const s = status[0];
   if (s === 'D') { if (isPage(a)) retired.push(a); else if (a.startsWith('public/')) deletedMedia.push(a); }
-  else if (s === 'R') { if (isPage(a)) retired.push(a); if (isPage(b)) { pages.push(b); if (isPage(a)) renamedFrom.set(b, a); } }
+  // A split whose new page takes most of a retired one shows as a rename (-M): it is new for the
+  // verbatim-move check as much as an added page is.
+  else if (s === 'R') { if (isPage(a)) retired.push(a); if (isPage(b)) { pages.push(b); added.push(b); if (isPage(a)) renamedFrom.set(b, a); } }
   else if (isPage(a)) { pages.push(a); if (s === 'A') added.push(a); }
 }
 // A merge commit brings the merged-in side's pages along (#1209, 2026-10-27: main's own line-ending

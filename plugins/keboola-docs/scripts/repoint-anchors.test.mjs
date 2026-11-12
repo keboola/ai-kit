@@ -52,3 +52,13 @@ test('--map sends a renamed heading where it went; --dry-run writes nothing', ()
   run(dir, '--map', map);
   assert.match(fs.readFileSync(path.join(dir, 'src/content/docs/other.md'), 'utf8'), /\]\(\/tables\/manage\/#new-name\)/);
 });
+
+test('a longer URL that only ends with the page path is not rewritten', () => {
+  const dir = split();
+  write(dir, 'src/content/docs/elsewhere.md', fm('elsewhere') + 'See [the other keys](/storage/tables/#primary-keys) and [ours](/tables/#primary-keys).\n');
+  const r = run(dir);
+  assert.equal(r.status, 0, r.stderr);
+  const text = fs.readFileSync(path.join(dir, 'src/content/docs/elsewhere.md'), 'utf8');
+  assert.match(text, /\]\(\/storage\/tables\/#primary-keys\)/, 'a different page keeps its link');
+  assert.match(text, /\]\(\/tables\/keys\/#primary-keys\)/);
+});

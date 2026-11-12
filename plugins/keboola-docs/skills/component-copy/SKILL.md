@@ -5,6 +5,15 @@ description: Use when a Keboola component's user-facing copy needs to match the 
 
 # Component Copy — one component, one PR
 
+## Working Directory Context
+
+Run the scripts from the directory you work in (a scratch folder, or the component repo's root
+when step 5 applies a change), never from the skill directory: they find their own references
+through their location, `$SKILL_DIR` = `${CLAUDE_PLUGIN_ROOT}/skills/component-copy`. Proposals go to
+`$COMPONENT_COPY_PROPOSALS` (default `./proposals/` under the current directory). The scripts that
+read a component repo do it through `gh`, so no local checkout is needed until the apply step,
+which runs inside a fresh clone (`git rev-parse --is-inside-work-tree` before committing).
+
 ## Overview
 
 A component is "done" when a user scanning the catalog can tell **what service it talks to**

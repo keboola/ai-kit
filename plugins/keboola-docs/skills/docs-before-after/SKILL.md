@@ -39,12 +39,12 @@ Then publish the printed file with the Artifact tool (icon `compare` on the firs
 
 ## Automatic on every PR (hook)
 
-`scripts/pr-before-after.mjs` runs after every Bash call (PostToolUse). After `gh pr create`, or `git push` on a branch that has an open keboola/connection-docs PR with changed pages, it builds when needed, writes `<worktree>/.before-after/before-after.html` (kept out of git through `info/exclude`) and hands Claude the path. Publish that file with the Artifact tool straight away and give the author the link and the counts.
+`scripts/pr-before-after.mjs` runs after every Bash call (PostToolUse). After `gh pr create`, or `git push` on a branch that has an open keboola/connection-docs PR with changed pages, it writes `<worktree>/.before-after/before-after.html` (kept out of git through `info/exclude`) and hands Claude the path. Publish that file with the Artifact tool straight away and give the author the link and the counts.
 
 - It stays quiet on other commands, on main, without an open PR, without changed pages, when the report already covers this HEAD, and when nothing renders differently.
 - It says why it skipped when another `astro build` is running (shared `node_modules`) or the run failed; then run this skill by hand.
 - `DOCS_BEFORE_AFTER=skip git push` (or the env var) turns it off for one command.
-- A `git push` waits for the report: a few seconds with a fresh `dist/`, about 40 s when it has to build.
+- Only `gh pr create` builds `dist/` when it is stale (about 40 s). After a `git push` the report renders only from a fresh `dist/` (a few seconds); with a stale one the hook says so and you run `npm run build` and this skill when the author wants the report.
 
 ## Reading it
 

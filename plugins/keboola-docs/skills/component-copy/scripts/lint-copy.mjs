@@ -93,7 +93,16 @@ export function lintCopy(read, opts = {}) {
       return;
     }
     const t = text.trim();
-    if (!t) { add('warning', f, 'publish#component-name-and-description', 'Long description is empty — this is the gap-fill target: what the user gets, what they must provide, whether loading is incremental, links.'); return; }
+    if (!t) {
+      add('warning', f, 'publish#component-name-and-description', 'Long description is empty — this is the gap-fill target: what the user gets, what they must provide, whether loading is incremental, links.');
+      // An empty long description on a connector breaks both connector rules; say so, or the audit
+      // would count the component as passing them.
+      if (CONNECTOR) {
+        add('error', f, 'house#before-you-start', 'Long description is empty, so there is no "### Before you start" block.');
+        add('error', f, 'house#load-behaviour', 'Long description is empty, so there is no load-behaviour line.');
+      }
+      return;
+    }
     if (/^\s*\d+[.)]\s/m.test(t)) {
       // A warning: a numbered list can also be a list of objects the connector reads.
       add('warning', f, 'publish#component-name-and-description',
@@ -103,7 +112,10 @@ export function lintCopy(read, opts = {}) {
       add('warning', f, 'publish#component-name-and-description', 'Reads like configuration instructions ("click", "go to the configuration"), which belong to the documentation, not here.');
     }
     if (/\bplugin\b/i.test(t)) add('error', f, 'CLAUDE.md#voice', 'Uses "plugin"; the terms are `connector` / `component`.');
-    if (CONNECTOR && !/\bincremental|\bfull load|\bupsert|VERIFY\(/i.test(t)) {
+    // A VERIFY counts only when it is about loading; a VERIFY elsewhere (say in the Network item)
+    // does not stand in for the missing line.
+    const loadLine = /\bincremental|\bfull load|\bupsert/i.test(t) || /VERIFY\([^)]*\)[^\n]*\b(load|loading|incremental)\b/i.test(t);
+    if (CONNECTOR && !loadLine) {
       add('error', f, 'house#load-behaviour', 'A connector states its load behaviour, including the negative ("Incremental loading is not supported; every run is a full load."). Unknown: write VERIFY(owner), never leave it out.');
     }
     if (CONNECTOR) lintBeforeYouStart(f, t);
@@ -216,7 +228,8 @@ export function lintCopy(read, opts = {}) {
         add('warning', f, 'checklist#configuration-and-row-schema', `${path}: no \`required\` array while it defines ${Object.keys(props).length} propert${Object.keys(props).length === 1 ? 'y' : 'ies'}; required properties must be listed there.`);
       }
     }
-    if (node.items) walkProps(node.items, `${path}.items`, f);
+    // `[]` steps into an array's item schema, so a property that is itself named `items` stays addressable.
+    if (node.items) walkProps(node.items, `${path}[]`, f);
   }
 
   function lintSchema(name) {
