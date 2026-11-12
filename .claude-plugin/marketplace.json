@@ -70,6 +70,13 @@
       "version": "3.0.0",
       "source": "./plugins/sl-toolkit",
       "category": "development"
+    },
+    {
+      "name": "keboola-docs",
+      "description": "For contributors to keboola/connection-docs (help.keboola.com): write, update, retire and ship pages by the Diátaxis rules, with a guided page workflow, rule, link and VERIFY checks, UI screenshots and clips (Remotion included), a commit gate and PR labels. Also component copy in component_config: write, update, retire and audit the catalog's descriptions.",
+      "version": "0.13.2",
+      "source": "./plugins/keboola-docs",
+      "category": "documentation"
     }
   ]
 }

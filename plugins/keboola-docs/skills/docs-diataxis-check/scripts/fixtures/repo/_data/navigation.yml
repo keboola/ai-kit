@@ -1,0 +1,78 @@
+items:
+  - url: /
+    title: Home
+
+  - url: /guide/
+    title: Guide
+    items:
+      - url: /guide/clean-howto/
+        title: Clean how-to
+      - url: /guide/no-desc/
+        title: No description
+      - title: Sub group
+        items:
+          - url: /guide/broken-next/
+            title: Broken next
+          - url: /guide/skip-next/
+            title: Skips a sibling
+      - url: /guide/howto-no-goal/
+        title: How-to without Goal
+      - url: /guide/long-ref/
+        title: Long reference
+      - url: /guide/verify-no-owner/
+        title: VERIFY without owner
+      - url: /guide/fenced-h1/
+        title: Fenced H1
+      - url: /guide/plugin-word/
+        title: Plugin word
+      - url: /guide/no-lede/
+        title: No lede
+      - url: /guide/pagemeta/
+        title: PageMeta page
+      - url: /guide/course-step/
+        title: Course step
+      - url: /guide/course-fork/
+        title: Course fork
+      - url: /guide/prose-next/
+        title: Prose Next, not exempt
+      - url: /guide/marker-first/
+        title: Marker before the lede
+      - url: /guide/howto-h3/
+        title: How-to with third-level tasks
+      - url: /guide/before-sub/
+        title: Before the group
+      - url: /guide/sub/
+        title: Sub section
+        items:
+          - url: /guide/sub/first/
+            title: Sub first
+          - url: /guide/sub/last/
+            title: Sub last
+      - url: /guide/last/
+        title: Last page
+
+  - url: /nest/
+    title: Nest
+    items:
+      - url: /nest/group/
+        title: Nest group
+        items:
+          - title: Nest labels
+            items:
+              - url: /nest/group/a/
+                title: Nest a
+              - url: /nest/group/b/
+                title: Nest b
+      - url: /nest/leaf/
+        title: Nest leaf
+        items: []
+
+  - url: /components/writers/
+    title: Writers
+    items:
+      - url: /components/writers/alpha/
+        title: Alpha writer
+      - url: /components/writers/beta/
+        title: Beta writer
+      - url: /components/writers/gamma/
+        title: Gamma writer

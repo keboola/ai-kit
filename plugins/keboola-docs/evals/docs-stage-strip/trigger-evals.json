@@ -1,0 +1,34 @@
+[
+  {
+    "query": "add the Getting Started line with numbered dots to the build-locally how-to",
+    "should_trigger": true
+  },
+  {
+    "query": "полоса этапов с точками для этой страницы",
+    "should_trigger": true
+  },
+  {
+    "query": "show the steps of this how-to as dots on a line",
+    "should_trigger": true
+  },
+  {
+    "query": "does this page earn a stage strip?",
+    "should_trigger": true
+  },
+  {
+    "query": "make an animated explainer for the hub page",
+    "should_trigger": false
+  },
+  {
+    "query": "take a UI screenshot for the deploy step",
+    "should_trigger": false
+  },
+  {
+    "query": "draw an architecture diagram of the Keboola stack",
+    "should_trigger": false
+  },
+  {
+    "query": "add a progress bar component to my Streamlit app",
+    "should_trigger": false
+  }
+]

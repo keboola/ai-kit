@@ -1,0 +1,34 @@
+[
+  {
+    "query": "write a new how-to page for help.keboola.com about pausing an app",
+    "should_trigger": true
+  },
+  {
+    "query": "PRDCT-712: we need a new tutorial page on the Keboola docs site for setting up a Snowflake writer",
+    "should_trigger": true
+  },
+  {
+    "query": "напиши новую страницу в доках keboola про то, как запланировать flow",
+    "should_trigger": true
+  },
+  {
+    "query": "start a reference page for the new data app environment variables on help.keboola.com",
+    "should_trigger": true
+  },
+  {
+    "query": "the screenshots on data-apps/operate are stale, the button got renamed",
+    "should_trigger": false
+  },
+  {
+    "query": "delete the old storage/tables/overview page and redirect it",
+    "should_trigger": false
+  },
+  {
+    "query": "check whether cli/workflows.md is one Diátaxis type",
+    "should_trigger": false
+  },
+  {
+    "query": "write release notes for the new Kai feature for the changelog blog",
+    "should_trigger": false
+  }
+]

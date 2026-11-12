@@ -1,0 +1,34 @@
+[
+  {
+    "query": "check links and redirects after I moved the storage pages",
+    "should_trigger": true
+  },
+  {
+    "query": "проверь ссылки и редиректы после переезда страниц",
+    "should_trigger": true
+  },
+  {
+    "query": "are there broken anchors or images on the pages changed in this docs PR?",
+    "should_trigger": true
+  },
+  {
+    "query": "verify the retired URLs still land on real pages in the Vercel preview",
+    "should_trigger": true
+  },
+  {
+    "query": "is this page one Diátaxis type?",
+    "should_trigger": false
+  },
+  {
+    "query": "delete the old page and add a redirect",
+    "should_trigger": false
+  },
+  {
+    "query": "the API link in my component README returns 404, fix the code",
+    "should_trigger": false
+  },
+  {
+    "query": "check my Keboola flow for failed jobs",
+    "should_trigger": false
+  }
+]

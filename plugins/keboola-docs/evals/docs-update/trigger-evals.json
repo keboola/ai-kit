@@ -1,0 +1,34 @@
+[
+  {
+    "query": "the Open App button is now called Open, update the apps docs",
+    "should_trigger": true
+  },
+  {
+    "query": "скрины на странице data-apps/operate устарели, переснять",
+    "should_trigger": true
+  },
+  {
+    "query": "Michal answered the VERIFY marker on the auto-sleep page, apply his answer",
+    "should_trigger": true
+  },
+  {
+    "query": "a reviewer commented on my PR that the flows page lists the wrong default schedule, fix it",
+    "should_trigger": true
+  },
+  {
+    "query": "write a brand-new page about Kai pricing for help.keboola.com",
+    "should_trigger": false
+  },
+  {
+    "query": "merge the two duplicate MCP setup pages into one and redirect",
+    "should_trigger": false
+  },
+  {
+    "query": "push my docs branch and open the PR",
+    "should_trigger": false
+  },
+  {
+    "query": "record a 10 second clip of Kai building an app for the getting started hub",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {"query": "the HubSpot extractor README lists new endpoints but the component description doesn't, update it", "should_trigger": true},
+  {"query": "Matyáš answered the VERIFY on the Snowflake writer copy, apply it to component_config", "should_trigger": true},
+  {"query": "the image in the Microsoft Dynamics component description is broken, fix it", "should_trigger": true},
+  {"query": "fix the tooltips and enum titles in the configRowSchema of keboola.ex-medallia", "should_trigger": true},
+  {"query": "актуализируй описание компоненты, в README появились новые объекты", "should_trigger": true},
+  {"query": "the Apify component has no configuration description at all, write one", "should_trigger": false},
+  {"query": "keboola.ex-google-analytics is deprecated, mark it and point to GA4", "should_trigger": false},
+  {"query": "update the help.keboola.com page about flows, a button was renamed", "should_trigger": false}
+]

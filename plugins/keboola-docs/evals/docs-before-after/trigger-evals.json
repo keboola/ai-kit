@@ -1,0 +1,10 @@
+[
+  {"query": "show me before and after screenshots of what my docs branch changes on the pages", "should_trigger": true},
+  {"query": "покажи до и после по этому PR, что поменялось на страницах", "should_trigger": true},
+  {"query": "visual diff of the rendered pages on PR 1236 against the live site", "should_trigger": true},
+  {"query": "what changed on the storage tables page in this branch, with screenshots", "should_trigger": true},
+  {"query": "shoot a new screenshot of the Flows list for the docs", "should_trigger": false},
+  {"query": "check all links and anchors on the PR I just made", "should_trigger": false},
+  {"query": "write a new how-to page about Data Streams", "should_trigger": false},
+  {"query": "record a states clip of the Apps create dialog", "should_trigger": false}
+]

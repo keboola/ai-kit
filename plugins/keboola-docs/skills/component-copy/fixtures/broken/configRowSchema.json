@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "required": ["table", "incremental"],
+  "properties": {
+    "table": { "type": "string", "title": "Table", "propertyOrder": 1 },
+    "columns": { "title": "Columns", "propertyOrder": 2 }
+  }
+}

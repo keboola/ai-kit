@@ -1,0 +1,48 @@
+{
+  "description": "keboola-docs: commit gate (Diátaxis D1–D16, retired pages without a redirect, orphaned media, links when dist/ exists) on `git commit` in a connection-docs checkout; sidebar regeneration when _data/navigation.yml changes; PR labels after `gh pr create`; a before/after screenshot report (docs-before-after) after `gh pr create` (building dist/ if needed) or `git push` (from a fresh dist/ only) on a branch with an open PR, for Claude to publish as an Artifact.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/gate.mjs\"",
+            "timeout": 60,
+            "statusMessage": "docs gate: checking staged pages"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/sidebar-regen.sh\"",
+            "timeout": 60,
+            "statusMessage": "Regenerating sidebar from navigation.yml"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/pr-label.sh\"",
+            "timeout": 60,
+            "statusMessage": "Labelling the new PR"
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/pr-before-after.mjs\"",
+            "timeout": 300,
+            "statusMessage": "Rendering the PR's before/after screenshots"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "query": "ok, ship it: push the docs branch and open the PR",
+    "should_trigger": true
+  },
+  {
+    "query": "открывай PR по этой странице",
+    "should_trigger": true
+  },
+  {
+    "query": "push and open the pull request for the docs change I just committed",
+    "should_trigger": true
+  },
+  {
+    "query": "the handoff looks good, ok to ship",
+    "should_trigger": true
+  },
+  {
+    "query": "merge PR 1204 in connection-docs",
+    "should_trigger": false
+  },
+  {
+    "query": "review this pull request for bugs",
+    "should_trigger": false
+  },
+  {
+    "query": "label my open docs PRs",
+    "should_trigger": false
+  },
+  {
+    "query": "create a pull request for my Python component code",
+    "should_trigger": false
+  }
+]

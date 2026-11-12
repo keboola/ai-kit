@@ -1,0 +1,34 @@
+[
+  {
+    "query": "rework the MCP section into tutorial, how-to, reference and explanation pages",
+    "should_trigger": true
+  },
+  {
+    "query": "split this frankenstein page that mixes explanation, steps and a field table",
+    "should_trigger": true
+  },
+  {
+    "query": "the Storage overview is just a list of links, turn it into a real overview",
+    "should_trigger": true
+  },
+  {
+    "query": "shape the just-migrated Flows section into Diátaxis pages with a reading order",
+    "should_trigger": true
+  },
+  {
+    "query": "the Generic Extractor pages came from developers.keboola.com, rework them",
+    "should_trigger": false
+  },
+  {
+    "query": "where should the migrated Extend pages live in the help nav?",
+    "should_trigger": false
+  },
+  {
+    "query": "check this one page against the Diátaxis rules",
+    "should_trigger": false
+  },
+  {
+    "query": "refactor this Python module into smaller files",
+    "should_trigger": false
+  }
+]
