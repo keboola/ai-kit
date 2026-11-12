@@ -2,6 +2,8 @@
 
 Minimal Keboola-deployable Streamlit data app.
 
+**Row-level security is not supported in this template yet.** It does not send the user token, and its `@st.cache_data` is shared by all users. For per-user data or a governed workspace, use `templates/react-vite-app/`. See `references/streamlit-apps.md` §Row-level security — not supported yet.
+
 ## Local development
 
 ```bash

@@ -12,7 +12,7 @@ Source: https://github.com/keboola/mcp-server
 
 The MCP server that exposes Keboola tools to agents. Provides:
 
-- **Data app lifecycle:** `modify_streamlit_data_app` (Streamlit), `modify_python_js_data_app` + `create_python_js_data_app_git_credential` (Python/JS, git-backed — see `references/python-js-prod-and-drafts.md`), `deploy_data_app`, `get_data_apps`.
+- **Data app lifecycle:** `modify_streamlit_data_app` (Streamlit), `modify_python_js_data_app` + `create_python_js_data_app_git_credential` + `create_python_js_data_app_draft` / `delete_python_js_data_app_draft` / `get_data_app_preview_link` (Python/JS, git-backed — see `references/python-js-prod-and-drafts.md`), `deploy_data_app`, `get_data_apps`.
 - **Data validation:** `get_project_info`, `get_table`, `query_data`, `search`.
 - **Docs lookup:** `docs_query` — searches the Keboola Connection documentation. Prefer this over guessing from memory.
 - **Config management:** `get_components`, `find_component_id`, `get_configs`, `create_config`, `update_config`, `add_config_row`, `update_config_row`, `run_sync_action`.
@@ -33,7 +33,7 @@ curl -LsSf https://raw.githubusercontent.com/keboola/cli/main/install.sh | sh
 Configure a project:
 
 ```bash
-kbagent project add --project <alias> --url <KBC_URL> --token <KBC_TOKEN>
+kbagent project add --alias <alias> --url <KBC_URL> --token <KBC_TOKEN>
 kbagent doctor          # sanity check
 kbagent project list
 ```
@@ -60,7 +60,7 @@ Useful sub-docs in that repo:
 
 Source: https://github.com/keboola/kai-client
 
-Python async client for the Keboola AI Assistant (Kai). Provides SSE streaming, session management, tool-approval flow, and a `kai` CLI. JS apps integrate by proxying HTTP requests to the same `/api/chat` endpoint — no separate JS package needed.
+Python async client for the Keboola AI Assistant (Kai). Provides SSE streaming, session management, tool-approval flow, and a `kai` CLI; it talks to the `kai-agent` backend by default. JS apps integrate by proxying HTTP requests to the same `/api/chat` endpoint — no separate JS package needed.
 
 The repo also ships its own skill plugin (`plugins/kai-dataapp/skills/{kai-js, kai-streamlit}`) covering deeper integration patterns (full chat UI, history, voting, tool-approval UX).
 
@@ -70,7 +70,7 @@ Install (Python apps):
 uv add kai-client
 ```
 
-See `references/kai-integration.md` for the embed patterns.
+See `references/kai-integration.md` for turning Kai on (`runtime.kai.enabled`), the token and headers it needs, and the embed patterns.
 
 ### keboola-query-service (RW Storage Access)
 
@@ -97,6 +97,16 @@ npm install @keboola/api-client
 Source: https://github.com/keboola/keboola_streamlit
 
 Streamlit utility package: read/write tables via simple `keboola.read_table()` / `keboola.write_table()`, AgGrid Enterprise license accessor, Snowflake session helpers. Pre-installed in the Streamlit base image — you don't need to declare it.
+
+## App user token and row-level security terms
+
+- **`X-Kbc-App-User-Token`** — a request header that Keboola's apps proxy adds after an OAuth/OIDC login: a JWT that says "user X, acting through app Y". It lives 5 minutes and is new on each request. The user key is its `idp` + `sub` claims. The app forwards it unchanged to Query Service, always together with the app's `X-StorageApi-Token`; the browser cannot send it. It works on any workspace.
+- **`STORAGE_API_TOKEN_PATH`** — the file with the app's Storage token, mounted by the platform, which can rotate it; the image then restarts the app. `KBC_TOKEN` holds the same value; the React + Vite template reads the file before every request as a safeguard.
+- **Credential provider** — `@keboola/api-client`'s `createQueryServiceClient({ auth: () => credential })` and `keboola-query-service` 0.4.0's `Client(auth=lambda: credential)`: a function the client calls before every request, so it can pick the request's user and read a rotated token.
+- **Governed workspace** — a workspace where Query Service enforces row-level security policies.
+- **Row-level security refusal** — Query Service `403` with the exception `Row-level security does not allow this query`, for a call with no signed-in user, an unsupported query or an invalid policy. A signed-in app user gets 0 rows instead when no policy grants a table. A `503` `Row-level security could not be applied to this workspace` means Query Service could not enforce the policies.
+
+Details and the app-side rules: "The app user token" and "Row-level security" in [storage-access.md](storage-access.md).
 
 ## Keboola Connection UI locations
 

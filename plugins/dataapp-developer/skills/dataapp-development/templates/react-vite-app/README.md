@@ -2,7 +2,7 @@
 
 The default stack for a Keboola Python/JS app — **React 19 + Vite + Tailwind 4 + TanStack Query** on the client, **Express 5** on the server, one Node container. Everything the browser loads is bundled at build time; nothing comes from a CDN at runtime.
 
-Copy the whole directory into the app's repo root as its first commit, then replace `src/App.tsx` and add routes to `server/index.ts`. The first `deploy_data_app(mode='dev')` comes up green before any custom code exists.
+Copy the whole directory into the app's repo root as its first commit, then replace `src/App.tsx` and add routes to `server/index.ts`. A draft on that commit comes up green before any custom code exists.
 
 ## Layout
 
@@ -20,7 +20,7 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 │   └── lib/api.ts                # fetchJson + QueryClient
 ├── server/
 │   ├── index.ts                  # Express: /api/*, JSON errors, the built client in prod
-│   └── kbcQuery.ts               # runQuery(sql) on @keboola/api-client — every row, Snowflake or BigQuery
+│   └── kbcQuery.ts               # runQuery(sql), currentUserKey() on @keboola/api-client/sdk/dataAppServer
 └── keboola-config/
     ├── nginx/sites/default.conf  # 8888 → :3000, answers the platform's POST / health check, gzip
     ├── setup.sh / setup-dev.sh   # prod: npm install + vite build · dev: npm install
@@ -30,7 +30,7 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 
 ## Dev and prod
 
-`deploy_data_app(mode='dev')` selects `setup-dev.sh` + `supervisord-dev/`; a plain deploy selects `setup.sh` + `supervisord/`.
+A draft runs `setup-dev.sh` + `supervisord-dev/`; a prod deploy runs `setup.sh` + `supervisord/`.
 
 | | Dev | Prod |
 |---|---|---|
@@ -38,7 +38,7 @@ Copy the whole directory into the app's repo root as its first commit, then repl
 | `:3100` | Express under `tsx watch` | — |
 | Build | none | `vite build` |
 
-In dev, push and watch: client edits hot-reload, server edits restart Express in about a second (the client retries meanwhile), a `package.json` change re-installs. Call `deploy_data_app` again only to switch branch or revive a stopped container.
+In dev, push and watch: client edits hot-reload, server edits restart Express in about a second (the client retries meanwhile), a `package.json` change re-installs. A draft needs no deploy: an asleep one wakes on the next request, and another branch needs a draft of its own. `deploy_data_app` publishes the prod app only.
 
 ## Picking a part in the preview
 
@@ -53,13 +53,17 @@ In dev mode the user can pick a part of the page in Keboola's app preview and as
 
 ## Data and errors
 
-- **Server:** `runQuery(sql)` in `server/kbcQuery.ts` runs SQL in the app's workspace through `@keboola/api-client`'s Query Service SDK and returns every row. Write the SQL in the project's dialect (`references/storage-access.md`). Rows come back typed — numbers, booleans, `YYYY-MM-DD` dates, ISO timestamps — with lower-case keys (`COUNT(*) AS n` is `row.n` on both backends).
+- **Server:** `runQuery(sql)` in `server/kbcQuery.ts` runs SQL in the app's workspace through `@keboola/api-client/sdk/dataAppServer` and returns every row. Write the SQL in the project's dialect (`references/storage-access.md`). Rows come back typed — numbers, booleans, `YYYY-MM-DD` dates, ISO timestamps — with lower-case keys (`COUNT(*) AS n` is `row.n` on both backends). A decimal a number cannot hold exactly (`NUMBER(38,6)`, an ID past 2^53) stays a string, and two columns with one name throw: alias them with `AS`.
 - **Client:** `useQuery({ queryKey, queryFn: ({ signal }) => fetchJson(url, { signal }) })`. Results stay fresh for 5 minutes — every refetch is a warehouse query.
 - **Errors:** the API answers `{ error }` as JSON and the client shows it at once. Only "API not up" (network error, 502–504) is retried, with backoff up to ~15 s.
+- **User token:** Keboola's apps proxy adds `X-Kbc-App-User-Token` to every request. `kbc.server.expressMiddleware()` keeps it for the request, and `runQuery` sends it to the Query Service together with the app's Storage token, so a workspace with row-level security returns that user's rows. Route code does nothing for it. A refusal is `@keboola/api-client`'s `RowLevelSecurityError`, which `kbc.server.expressErrorHandler()` answers as `403 { error, code: "ROW_LEVEL_SECURITY" }`.
+- **Storage token:** read before every request from the file at `STORAGE_API_TOKEN_PATH` (the platform can rotate it), or from `KBC_TOKEN` when that is not set (local runs).
+- **No user, no token:** `runQuery` outside a request (at startup, in a timer, in a background job) sends no user token. A workspace with row-level security refuses it, and the server log says so.
+- **Caches:** a cache in the server must not give one user's rows to another. Key it by `currentUserKey()` (`server/kbcQuery.ts`), and cache nothing when it is `undefined`. `references/storage-access.md` §Row-level security.
 
 ## Dependencies
 
-- Add one by editing `package.json` — the setup scripts run `npm install`, never `npm ci`, so a lagging lockfile still boots. Commit the regenerated lockfile.
+- Add one by editing `package.json` — the setup scripts run `npm install`, never `npm ci`, so a lagging lockfile still boots. Commit the regenerated lockfile. Renaming the package (`name` in `package.json`) changes the lockfile too: regenerate it the same way.
 - Generate the lockfile with the image's npm (11.12.1 in the `…_node-24` images; `npm -v` in the container tells), or the container rewrites it on first install and every push looks like a dependency change: `npx -y npm@11.12.1 install --package-lock-only`.
 - npm, not bun: the dev-mode watcher looks for the legacy `bun.lockb`.
 

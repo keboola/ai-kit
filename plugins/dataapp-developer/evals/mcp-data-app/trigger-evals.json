@@ -42,5 +42,9 @@
   {
     "query": "I have a draft glossary MCP server data app — help me preview it and redeploy if needed",
     "should_trigger": true
+  },
+  {
+    "query": "host our MCP server as a keboola data app straight from our private github repo, no PAT",
+    "should_trigger": true
   }
 ]

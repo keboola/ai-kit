@@ -10,7 +10,8 @@
 - Read-write direct access (Storage Access wrapper + SQL injection validation)
 - Query Service return shape — cells come back as strings (both backends)
 - Input mapping — discouraged for new apps
-- Data access management — PLACEHOLDER
+- The app user token — always with the Storage token, a credential provider, a rotating Storage token
+- Row-level security — simple queries only, preprocessing in a transformation, the refusal, per-user caches, background jobs
 
 ## Enabling Storage access on a deployed app
 
@@ -58,10 +59,9 @@ than a passing mention:
   here. If the app must be limited to particular tables, that is input mapping or a
   purpose-scoped workspace, not `storage_access` — see §Input mapping and §WORKSPACE_ID.
 
-**A draft and its prod app each need their own.** They are two separate Storage
-configurations, and a git merge moves source code, not config — so Storage access enabled on a
-draft does not reach the app you promote to. See
-[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6.
+**Set it on the prod app, before the draft.** A draft copies the prod config when it is created,
+and a git merge moves source code, not config. See
+[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §2.
 
 Underneath, this sets `runtime.workspace.enabled`, or on projects without the
 `data-apps-storage-workspace` feature falls back to a deprecated
@@ -116,7 +116,7 @@ A provisioned compute workspace (Snowflake by default; BigQuery on BigQuery-back
 
 **Read-only data app — reuse the MCP session's workspace.** Call `mcp__keboola__get_project_info` and read the `workspace_id` field. That's the workspace the agent's MCP session is already using; it has read access to everything in the project. Paste it into `.env.local` and you're done. No need to create a new workspace just for local dev.
 
-**Read-write data app — create a dedicated workspace.** The platform provisions an ephemeral, permission-scoped workspace at deploy time, but that workspace doesn't exist locally. For local testing of writes, you need to create your own workspace with grants matching the production setup:
+**Read-write data app — create a dedicated workspace.** The platform provisions a permission-scoped workspace at deploy time, but that workspace doesn't exist locally. For local testing of writes, you need to create your own workspace with grants matching the production setup:
 
 - Via the UI: project → **Workspaces** → **New Workspace** → Snowflake/BigQuery → pick a size (XS or S is enough). Open the workspace detail and grant it write access on the same tables the app's `direct-grant` output mapping covers.
 - Via kbagent (if you're already on that path): `kbagent workspace create ...` then grant the same tables.
@@ -125,7 +125,7 @@ In both cases, use the numeric ID (e.g. `12345`), not the Snowflake schema name 
 
 Notes:
 - One read-only workspace can serve multiple local-dev sessions across developers — no need to provision per-person.
-- Never reuse a write-enabled local workspace for production data app deployment. The platform owns workspace provisioning for deployed apps and uses ephemeral, fresh-on-each-start workspaces with `direct-grant` output mappings (see "Read-write direct access" below).
+- Never reuse a write-enabled local workspace for production data app deployment. The platform owns workspace provisioning for deployed apps and uses its own workspaces with `direct-grant` output mappings (see "Read-write direct access" below).
 
 ### BRANCH_ID
 
@@ -162,6 +162,7 @@ The pattern (applies on both Snowflake and BigQuery):
 5. Every dashboard query runs against DuckDB, not the warehouse.
 
 When NOT to use this default:
+- The workspace is governed by row-level security — see "Row-level security" below. A shared cache would show one user's rows to another, and Query Service refuses the background refresh.
 - The app writes back via Storage Access — see "Read-write direct access" below. Every read must be current; no caching.
 - The user needs sub-minute freshness (live operational monitoring) — see "Direct RO workspace queries".
 - The cached dataset would exceed container memory. Rule of thumb: pulling more than a few hundred MB at a time is the warning sign — either pull aggregates instead of raw rows, or fall back to "Direct RO workspace queries".
@@ -184,7 +185,7 @@ Two paths to call the workspace:
 
 Required env vars (Keboola auto-injects them on deploy once Storage access is enabled — see
 "Enabling Storage access on a deployed app" above if the app is missing `WORKSPACE_ID`):
-- `KBC_URL`, `KBC_TOKEN` — auth + base host.
+- `KBC_URL`, `KBC_TOKEN` — auth + base host. In a deployed app the Storage token is also the file named by `STORAGE_API_TOKEN_PATH`, which the platform can rotate; the image then restarts the app (see "The app user token" below).
 - `QUERY_SERVICE_URL` — Query Service host. If unset, read it from the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`); the React + Vite template's `runQuery` does that for you.
 - `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
@@ -260,7 +261,7 @@ The SDKs handle the submit-job → poll-status → paginate-results dance intern
 
 Two statement-level rules (verified on BigQuery, apply on both backends):
 - **One SQL command per statement.** Each entry in `statements` must be a single command — a semicolon-joined script in one string is rejected (`ValidationError: Each statement must contain exactly one SQL command`). To run several commands, pass them as separate list items.
-- **Statements in one `execute_query` (Python) / `executeQuery` (JS) call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`).
+- **Statements in one `execute_query` (Python) / `executeQuery` (JS) call share a session/transaction** (default `transactional=True`). A `CREATE TEMP TABLE` in the first statement is visible to an `INSERT` and `SELECT` in later statements of the same call. DML works and `result.rows_affected` is populated (e.g. a two-row `INSERT` returns `rows_affected=2`). A workspace governed by row-level security runs neither: only plain `SELECT`s, see §Row-level security, "Simple queries only".
 
 ### How to know which SQL dialect to emit
 
@@ -306,7 +307,7 @@ SELECT * FROM `out_c_Test_Data___Customers_Products_Orders`.`customers` LIMIT 10
 
 Only the **dataset** (bucket) name is mangled — the **table** name keeps its original form. A table named `cashier-data` stays `cashier-data`; it just needs backticks because of the hyphen.
 
-**Find the exact names without deriving them by hand.** Open the table in **Storage** → **Overview** tab; it shows the **Dataset Name** (the bucket's BigQuery dataset, e.g. `in_c_shared_bucket`) and the **Table Name** to use in your queries. If the app needs to discover names dynamically at runtime, query `INFORMATION_SCHEMA.SCHEMATA` to list the datasets the workspace can see. (`mcp__keboola__get_table`'s `fully_qualified_name`/`fqn` is Snowflake-style — on BigQuery, prefer Storage → Overview or translate by the two rules above.)
+**Find the exact names without deriving them by hand.** Open the table in **Storage** → **Overview** tab; it shows the **Dataset Name** (the bucket's BigQuery dataset, e.g. `in_c_shared_bucket`) and the **Table Name** to use in your queries. If the app needs to discover names dynamically at runtime, query `INFORMATION_SCHEMA.SCHEMATA` to list the datasets the workspace can see (not on a workspace governed by row-level security, which refuses it; see "Row-level security" below). (`mcp__keboola__get_table`'s `fully_qualified_name`/`fqn` is Snowflake-style — on BigQuery, prefer Storage → Overview or translate by the two rules above.)
 
 ### Alternative: Storage API workspace-query endpoint (BigQuery)
 
@@ -372,13 +373,12 @@ A few things worth noting on the BQ path that differ from Query Service:
 
 ## Read-write direct access (Storage Access)
 
-Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state.
+Real-time read AND write to Keboola Storage. Works on **both Snowflake and BigQuery** backends through the Query Service. No caching — every read must reflect the latest state. Not on a workspace governed by row-level security, which refuses every write (§Row-level security, "Writes").
 
 On BigQuery, the SQL you send must use BigQuery quoting and dataset names — see "BigQuery SQL dialect" under "Direct RO workspace queries" above. Everything else (setup, workspace lifecycle, env vars, the SDK wrapper, SQL-injection validation) is identical across backends.
 
-Writable tables live in the app's own `storage` block, so like `storage_access` they do **not**
-travel between a draft and its prod app in either direction — see
-[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §6. Forgetting them on prod fails
+Writable tables live in the prod app's `storage` block, set like `storage_access` before the draft
+is created — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §2. Forgetting them on prod fails
 differently from forgetting Storage access: reads keep working and only the writes fail, because
 the workspace has no grant on the destination table.
 
@@ -402,7 +402,7 @@ access on a deployed app" above):
 
 **Bucket stage doesn't restrict writes.** The destination can be in any stage — `out.`, `in.`, or otherwise — as long as the workspace has write privileges on it. The `out.` examples here are convention; writing back into an `in.` bucket your workspace owns is equally valid. The `direct-grant` strategy is what makes the grant work; the bucket-name prefix is just a label.
 
-Workspace lifecycle: **ephemeral**. A fresh workspace is created each time the app starts or wakes from sleep. The previous workspace is deleted. Permission changes take effect on the next start.
+Workspace lifecycle: **managed by the platform**. The workspace is kept while the app sleeps and wakes. Each redeploy creates a new workspace, so read its ID at startup and never copy it into config or secrets. Permission changes take effect on the next redeploy.
 
 Env vars set when Storage Access is enabled:
 - `KBC_WORKSPACE_MANIFEST_PATH` — path to a JSON manifest with `workspaceId` and other metadata. **Preferred source for the workspace ID.**
@@ -465,7 +465,7 @@ class Storage:
 storage = Storage()  # module-level singleton
 ```
 
-**Node.js / TypeScript:** use `templates/react-vite-app/server/kbcQuery.ts` — `runQuery(sql)` reads its env per call (a missing var fails the request, not the server start), finds the Query Service URL without guessing it, and never lets the SDK's `ApiError` (which carries the token) reach a log.
+**Node.js / TypeScript:** use `templates/react-vite-app/server/kbcQuery.ts` — `runQuery(sql)` from `@keboola/api-client/sdk/dataAppServer` reads the platform's settings on first use (a missing var fails the request, not the server start), finds the Query Service URL without guessing it, reads the Storage token before every request, and sends the signed-in user's token with it (see "The app user token" below).
 
 Usage from the rest of the app:
 
@@ -636,10 +636,140 @@ import pandas as pd
 df = pd.read_csv("/data/in/tables/customers.csv")
 ```
 
-## Data access management — PLACEHOLDER
+## The app user token
 
-Per-user / row-level data access control at the app-storage layer is **not currently supported by the platform**. Column-level permissions are also missing.
+**What it is.** Keboola's apps proxy signs a short-lived token for the signed-in user (`X-Kbc-App-User-Token`, a JWT that lives 5 minutes, new on each request) and adds it to every request it passes to the app. The app forwards it, unchanged, on every Query Service call it makes for that request. The browser cannot send it: the apps proxy drops any copy from the browser, and Query Service does not allow it in CORS. So only the server side can forward it.
 
-Internal patterns differ between JS/Python apps and legacy Streamlit apps. They will be documented here once the patterns are firmed up and verified.
+**Always together with the Storage token.** A Query Service call for a user sends two headers: the user's `X-Kbc-App-User-Token` and the app's own `X-StorageApi-Token`. Never send the user token alone. A call that is not for a user (no user token) sends only the Storage token.
 
-**Until then, this section is intentionally empty. Do not invent a pattern based on app-specific code you encounter in customer repos — those are convention-specific to that app, not platform features.**
+**The token does not depend on row-level security.** It works on any workspace, governed or not, so forward it everywhere.
+
+**Read the Storage token before every request.** The platform mounts the app's Storage token as a file and names it in `STORAGE_API_TOKEN_PATH`; it can rotate the token. `KBC_TOKEN` holds the same value for local runs. Read the file when the variable is set, `KBC_TOKEN` otherwise. If the file cannot be read, fail the call; do not fall back to a `KBC_TOKEN` that may be stale. This is a safeguard, not a requirement: the image restarts the app when the token file changes, so existing code that reads `KBC_TOKEN` once at start is correct and needs no rewrite.
+
+**The React + Vite template does all of this for you,** through `@keboola/api-client/sdk/dataAppServer`. `server/kbcQuery.ts` calls `initializeApp()` once; `server/index.ts` mounts `kbc.server.expressMiddleware()` first and `kbc.server.expressErrorHandler()` before its own error handler. Every Query Service call `runQuery` makes inside a request (submit, polls, result pages) then carries that request's user token with a freshly read Storage token.
+
+Route code does nothing for it. Keep both `app.use` lines in `server/index.ts`, and call `runQuery` from the request handler (directly or through other functions), not from work started outside the request (a timer set at startup, a queue). Never share one in-flight query between requests (for example `pending ??= runQuery(sql)` to merge equal queries): the second user gets the first user's rows.
+
+**Python apps** use `keboola-query-service` 0.4.0 or newer (0.3.0 has none of this): `Client(base_url, auth=...)` takes a credential or a provider, and every method takes a per-call `auth=`. The credentials are `StorageToken(token)` and `AppUserToken(user_token, storage_token=StorageToken(...))`; each token is a value or a callable (for example `lambda: Path(os.environ["STORAGE_API_TOKEN_PATH"]).read_text().strip()`). Pick the credential per request, as the Node provider does, never once for a shared client. A refusal raises `RowLevelSecurityError`.
+
+A Flask backend, for example; a call outside a request (startup, a timer) gets only the Storage token:
+
+```python
+import os
+from pathlib import Path
+
+from flask import Flask, has_request_context, jsonify, request
+from keboola_query_service import AppUserToken, Client, RowLevelSecurityError, StorageToken
+
+app = Flask(__name__)
+
+
+def read_storage_token() -> str:
+    path = os.environ.get("STORAGE_API_TOKEN_PATH")
+    return Path(path).read_text().strip() if path else os.environ["KBC_TOKEN"]
+
+
+STORAGE_TOKEN = StorageToken(read_storage_token)
+
+
+def credential():
+    user_token = request.headers.get("X-Kbc-App-User-Token") if has_request_context() else None
+    return AppUserToken(user_token, storage_token=STORAGE_TOKEN) if user_token else STORAGE_TOKEN
+
+
+client = Client(base_url=os.environ["QUERY_SERVICE_URL"], auth=credential)
+
+
+@app.get("/api/orders")
+def orders():
+    try:
+        [result] = client.execute_query(
+            branch_id=os.environ["BRANCH_ID"],
+            workspace_id=os.environ["WORKSPACE_ID"],
+            statements=['SELECT "region", COUNT(*) AS "orders" FROM "in.c-crm"."orders" GROUP BY "region"'],
+        )
+    except RowLevelSecurityError:
+        return jsonify(error="Row-level security does not allow this query", code="ROW_LEVEL_SECURITY"), 403
+    names = [column.name for column in result.columns]
+    return jsonify([dict(zip(names, row)) for row in result.data])
+```
+
+Cells arrive as strings, as on every Query Service path; see "Query Service return shape" above.
+
+## Row-level security
+
+A project can govern its workspace with row-level security. Query Service then returns only the rows the identity of the call may see. The app does not filter rows itself.
+
+**Who is refused.** A governed workspace refuses a call that does not carry a signed-in user. That includes every call with only the app's Storage token:
+
+- Code outside a user request: work at startup, a `setInterval`, a scheduled refresh, a background job.
+- Requests the apps proxy does not sign: apps with password login or no login, public paths, drafts and Kai's preview of a draft.
+
+**No rows instead of a refusal.** For a signed-in app user, a table with no policy, or whose policy has no rule or `default` for that user, reads as empty: the query succeeds and returns 0 rows. The user is not told that a policy hides the rows. So an empty result is often a missing policy (a new output table, a table the app started to read), not missing data; check the table's policies first. An administrator's call (Storage token only) is refused instead.
+
+A governed workspace refuses `SHOW` / `INFORMATION_SCHEMA` queries. Read the schema with Keboola MCP while building, not from the app at run time.
+
+`runQuery` logs such a refusal and says why (for example "it ran outside a user request"). It never logs a token; `@keboola/api-client` redacts both tokens in its errors.
+
+**Simple queries only.** Query Service rewrites each query so that every governed table is read through its policy, and it refuses any query it cannot rewrite safely. Write every app's read queries this way from the start, governed or not: the same app keeps working when row-level security is turned on later.
+
+**Writes.** A governed workspace runs only reads: it refuses every `INSERT`, `UPDATE`, `MERGE` and `DELETE`. Read-write Storage access (above) works only on a workspace without row-level security, so an app that writes back to Storage cannot have row-level security. Tell the user that before you build one for a governed project.
+
+Allowed — one `SELECT` that reads Storage tables:
+
+- `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`, joins, CTEs (`WITH`), subqueries, `UNION`, window functions, common built-in functions (`SUM`, `COALESCE`, `CASE`, `CAST`, date functions), and reading values out of JSON (`PARSE_JSON("payload"):items[0]:product`, `JSON_EXTRACT_PATH_TEXT`, BigQuery `JSON_VALUE`).
+- A multi-step model written as CTEs in one `SELECT` (aggregate, then rank, then filter). BigQuery `CROSS JOIN UNNEST(...)` over an array column.
+- Tables named with their bucket: `"in.c-crm"."orders"` (the Snowflake database prefix is fine), BigQuery `` `in_c_crm`.`orders` ``.
+
+Refused:
+
+- Anything that is not a `SELECT`: `CREATE TABLE … AS SELECT`, `SELECT … INTO`, temporary tables, `USE SCHEMA`, `SET` variables, `EXECUTE IMMEDIATE`, stored procedures, and the writes above.
+- Table functions and dynamic names: `FLATTEN` / `LATERAL FLATTEN` (one row into many, on Snowflake), `TABLE(...)`, `IDENTIFIER(...)`, `UNNEST` on Snowflake, BigQuery wildcard tables (`events_*`), user-defined functions, and built-ins the engine does not recognize (the refusal names the function: use a standard one, or move the work into a transformation).
+- Tables outside Storage buckets (views or tables in the workspace's own schema), unqualified table names, BigQuery `project.dataset.table`, and modifiers on a table: `PIVOT` / `UNPIVOT`, `SAMPLE`, time travel (`AT` / `BEFORE`, `FOR SYSTEM_TIME AS OF`).
+- Metadata: `SHOW`, `INFORMATION_SCHEMA`, query history, system variables, `GET_DDL` and similar.
+- A CTE name the engine cannot match for sure: quoted differently than where it is declared (`WITH "x" AS (…) SELECT * FROM X`), a CTE that reads itself without `RECURSIVE`, or a name declared only in a nested query. Spell each CTE name the same way everywhere.
+
+**Totals and ranks cover only the user's rows.** Each governed table is filtered before the rest of the query runs, so aggregates and window functions see only the rows the user may see. A rank, a running total or a share of total (`RATIO_TO_REPORT`) is computed over those rows, and two users get different numbers for "rank among all customers". When a figure must cover every row, compute it in a transformation (below) and store it as a column of the output table. Such a column tells each user something about rows they cannot see, so confirm with the user that this is acceptable.
+
+**Preprocess in a transformation, not in the app.** When the data needs work a plain `SELECT` cannot do — flattening a JSON array into rows on Snowflake (`FLATTEN`), several statements, temporary tables — do that work in a Keboola transformation (SQL or Python) and let the app read its output table with a plain `SELECT`. Work a `SELECT` can do (JSON values, CTE models, a heavy join) may stay in the app; move it to the transformation too when every page load would repeat it on a large table. Run the transformation in a flow on a schedule that matches how fresh the app must be. Transformations run as jobs, which row-level security does not govern, so they see every row:
+
+- Keep the column the policy filters on (owner email, region, account) in the output table. An output aggregated across it cannot be filtered per user.
+- The output table is a new table: on a governed workspace it needs its own `rls-policy`, or it reads as empty for every app user.
+- Its columns are text unless the table is typed, so a number sorts as text (`1, 10, 2`). Cast it in the app's query: `ORDER BY CAST("global_rank" AS INTEGER)`.
+- Write it to an `out.c-…` bucket the app reads, and ask the user before creating the transformation or the flow: they are project changes outside the app.
+- A Snowflake SQL transformation can read the source table by its full name (`"<DATABASE>"."in.c-crm"."orders"`) without an input mapping; each `CREATE TABLE "<name>"` it runs becomes an output table, mapped to the bucket in its output mapping. With kbagent: `kbagent transformation create --name … --sql-file … --created-table …`, then a flow with a schedule (`kbagent flow schedule`).
+
+**The refusal.** Query Service answers `403` with the exception text `Row-level security does not allow this query`. It comes for a call with no signed-in user, a query that is not a plain `SELECT` on bucket tables, or an invalid policy; a signed-in app user gets no rows instead for a missing policy (see "No rows instead of a refusal"). The precise reason is only in the Query Service log. `@keboola/api-client` turns it into `RowLevelSecurityError` (guard `isRowLevelSecurityError`; its `message` is that text). The template's API answers it with `403 { "error": "Row-level security does not allow this query", "code": "ROW_LEVEL_SECURITY" }`, and the client shows it. Two other failures are not this refusal: a `403` "Failed to get workspace credentials", and a `503` "Row-level security could not be applied to this workspace" (Query Service could not enforce the policies; try again later).
+
+**Caches must be per user.** A cache in the server is shared by every user of the app. In a governed workspace, one user's rows in a shared cache are a leak to the next user.
+
+- Key every server-side cache of query results by user. In the template, use `currentUserKey()` from `server/kbcQuery.ts`: it is the token's `idp` and `sub`, the same for every token of that user. Never key by the token itself, it changes on every request. Cache nothing when `currentUserKey()` is `undefined`.
+- The shared DuckDB cache ("Preferred default for read-only apps" above, [duckdb-caching.md](duckdb-caching.md)) does not work in a governed workspace. Its refresh runs outside a user request, so Query Service refuses it, and one shared table would mix users anyway. Query the workspace per request instead, with a per-user cache if it is needed.
+- The client cache (TanStack Query in the browser) belongs to one user and needs no change.
+
+**An existing Node app.** An app built before `@keboola/api-client/sdk/dataAppServer` queries with only its Storage token, so once row-level security is on, every query it makes is refused (403 `Row-level security does not allow this query`) even for a signed-in user. Move it over:
+
+1. `@keboola/api-client` `^53.0.0` in `package.json`, `server/kbcQuery.ts` from the template, the two `app.use` lines in `server/index.ts`; delete an old `server/userToken.ts`.
+2. Check what the old `runQuery` returned. Apps from the template since 2026-10-12 got the same typed records with lower-case keys, so their callers stay as they are. Older apps got string cells (or had no `kbcQuery.ts` and call Query Service themselves): convert those callers, and drop casts such as `Number(row.TOTAL)` the SDK now does.
+3. Key any server cache by `currentUserKey()` and move queries made at startup or in a timer into the request.
+4. Preview on a draft as usual. A draft gets no `rlsPolicies` from prod, so it shows the data but not the filtering; the filtering applies after promote.
+
+On a workspace without row-level security the app answers as before.
+
+**Turning row-level security on.** A project admin writes the policies; the app only names them. Ask the user before you create or change one: a policy decides who sees which rows.
+
+- A policy is an `rls-policy` object in Metastore, one per table: `https://metastore.<stack>` (the Connection URL with `connection.` replaced by `metastore.`), header `X-StorageApi-Token` with a project admin token. `GET /api/v1/repository/rls-policy?table=in.c-crm.orders` shows the policies of a table and the column each one filters on. `POST /api/v1/repository/rls-policy` creates one; the response's `data.id` is its ID. `GET /api/v1/schema/rls-policy/1.2.0` (no token) is the full schema.
+- A rule selects readers by `groups` or `subjects` (`<idp>|<sub>`), never by email; `["*"]` selects every signed-in user. Its condition may compare a column with the reader's email, `{"$identity": "email"}` (only an email the identity provider verified). Example body, "each user sees their own rows":
+
+  ```json
+  {"name": "orders-own-rows", "branch": "main", "schemaVersion": "1.2.0", "scope": "targeted", "targetProjectIds": [<project id>],
+   "data": {"table": "in.c-crm.orders", "dialect": "snowflake",
+            "rules": [{"groups": ["*"], "condition": {"column": "owner_email", "op": "eq", "value": {"$identity": "email"}}}]}}
+  ```
+
+- The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables; a table without one reads as empty. The config is refused unless the app also has an OAuth/OIDC login on every path, so set both in one config change, then redeploy; the redeploy gives the app a new governed workspace.
+- Only the prod app is governed. A draft gets no `rlsPolicies`, so the filtering shows only after promote, with a real login.
+
+**Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
+
+Column-level permissions are not part of this.

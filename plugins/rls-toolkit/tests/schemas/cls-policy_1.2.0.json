@@ -1,0 +1,100 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "cls-policy",
+ "type": "object",
+ "additionalProperties": false,
+ "version": "1.2.0",
+ "required": [
+  "table",
+  "rules"
+ ],
+ "properties": {
+  "table": {
+   "type": "string",
+   "pattern": "^[A-Za-z0-9_.\\-]+\\.[A-Za-z0-9_\\-]+$",
+   "x-filterable": true
+  },
+  "dialect": {
+   "type": "string",
+   "enum": [
+    "snowflake",
+    "bigquery"
+   ],
+   "x-filterable": true,
+   "x-filter-match-absent": true
+  },
+  "rules": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "visible_columns"
+    ],
+    "oneOf": [
+     {
+      "required": [
+       "subjects"
+      ]
+     },
+     {
+      "required": [
+       "groups"
+      ]
+     }
+    ],
+    "properties": {
+     "subjects": {
+      "type": "array",
+      "items": {
+       "anyOf": [
+        {
+         "const": "*"
+        },
+        {
+         "type": "string",
+         "pattern": "^[^|\\s]+\\|\\S.*$",
+         "maxLength": 1024
+        }
+       ]
+      },
+      "minItems": 1,
+      "if": {
+       "contains": {
+        "const": "*"
+       }
+      },
+      "then": {
+       "maxItems": 1
+      }
+     },
+     "groups": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      },
+      "minItems": 1,
+      "if": {
+       "contains": {
+        "const": "*"
+       }
+      },
+      "then": {
+       "maxItems": 1
+      }
+     },
+     "visible_columns": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "pattern": "^[A-Za-z0-9_]+$"
+      },
+      "minItems": 1
+     }
+    }
+   }
+  }
+ }
+}

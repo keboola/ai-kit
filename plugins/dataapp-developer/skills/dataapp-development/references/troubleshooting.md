@@ -8,6 +8,7 @@
 - WebSocket fails / Streamlit blank page
 - Streaming responses arrive all at once
 - App won't start / restart loop
+- Draft stays `pending`
 - Port mismatch local vs Keboola
 - Exit code 153
 - Dev API picks up only the first push
@@ -17,6 +18,10 @@
 - `KeyError` on Storage Access env var
 - Query Service auth error with narrow-scoped token
 - `Insufficient privileges` on write
+- `Row-level security does not allow this query` (403)
+- A governed app shows no rows for a table
+- 500 after login: `Error while parsing OAuth2 state: invalid length`
+- Kai chat returns 400 / 401 / 403
 - Reading logs (incl. Streamlit silent exceptions)
 
 ## "Cannot POST /" / "Method Not Allowed" on startup
@@ -48,6 +53,14 @@
 **Cause:** Any of: relative paths in supervisord configs, missing `uv run` prefix for Python, non-executable `setup.sh`, `[program:nginx]` declared (the base image owns nginx).
 
 **Fix:** Absolute `/app/...` paths, `command=uv run python /app/app.py`, `chmod +x keboola-config/setup.sh` (commit the executable bit), and remove any `[program:nginx]` block. See [python-js-apps.md](python-js-apps.md) §Supervisord.
+
+## Draft stays `pending`
+
+**Symptom:** `get_data_apps(configuration_ids=[PROD])` still shows the draft `pending` (or `starting`) more than ~2 minutes after the create. The API never reports `failed` for it.
+
+**Cause:** almost always no `keboola-config/supervisord-dev/` on the draft's branch. The container exits at boot with `Dev mode requires keboola-config/supervisord-dev/ in the app repo` and restarts in a loop.
+
+**Fix:** add `keboola-config/supervisord-dev/` as [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §4 says, and push. Still `pending` ~2 minutes later: delete the draft and create it again on the same branch.
 
 ## Port mismatch local vs Keboola
 
@@ -111,9 +124,40 @@
 **Cause:** Destination table not in `storage.output.tables` with `unload_strategy: "direct-grant"` (production), or the local workspace lacks write grants on the table (local dev).
 
 **Fix:**
-- **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the ephemeral workspace is re-provisioned.
+- **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the workspace gets the new grant.
 - **Local dev:** create a dedicated workspace and grant write access on the same tables. See [storage-access.md](storage-access.md) §`WORKSPACE_ID`.
 - Bucket stage (`in.` vs `out.`) isn't the issue — the workspace grant is.
+
+## `Row-level security does not allow this query` (403)
+
+**Cause:** the workspace is governed and Query Service refused the query: no signed-in user (password login, a draft, a query at startup or in a timer, a Storage-token call), a query it cannot rewrite (not a plain `SELECT`, a table function, a write), or an invalid policy. The precise reason is only in the Query Service log.
+
+**Fix:** see [storage-access.md](storage-access.md) §Row-level security — "Who is refused", "Simple queries only", "Writes", "Turning row-level security on". An app built before `@keboola/api-client/sdk/dataAppServer` does not forward the user token at all: SKILL.md rule 19.
+
+## A governed app shows no rows for a table
+
+**Cause:** for a signed-in app user, a table with no policy, or whose policy has no rule or `default` for that user, reads as empty instead of failing. Typical after the app starts reading a new table, such as a transformation's output.
+
+**Fix:** check the table's policies (`GET /api/v1/repository/rls-policy?table=<bucket>.<table>` on Metastore) and that the policy ID is in the app's `runtime.workspace.rlsPolicies`; then redeploy. See [storage-access.md](storage-access.md) §Row-level security, "No rows instead of a refusal".
+
+## 500 after login: `Error while parsing OAuth2 state: invalid length`
+
+**Cause:** the browser reached the login callback (`/_proxy/callback?continue_auth=true`) without a valid OAuth `state`, typically after reloading or going back to the callback page. Not the app's config.
+
+**Fix:** open the app's URL again to start a fresh login. If it fails on a fresh login every time, report it with the exception ID shown on the page.
+
+## Kai chat returns 400 / 401 / 403
+
+**Cause:** The Kai request carries the wrong token or workspace, or the project or app is not set up for Kai. The error message names which:
+- 403 `Storage token has no associated Keboola user` — the app sent `KBC_TOKEN`, the app's own token with no user behind it.
+- 403 `A Data App Kai token requires the x-workspace-id header` — the `x-workspace-id` header is missing.
+- 403 `The pinned workspace does not belong to the Data App of this Kai token` or `… is not available to this Data App Kai token` — `x-workspace-id` is not this app's `WORKSPACE_ID` (often a value copied from local dev).
+- 403 `Project does not have the agent-chat feature enabled` — the project has no Kai.
+- 403 `Kai is not available in a Data App with row-level security yet` — the app's workspace uses row- or column-level security (any governed workspace).
+- 400 `Invalid x-workspace-id header; expected a positive integer` — `WORKSPACE_ID` is not numeric; see §Non-numeric `WORKSPACE_ID`.
+- 401 `Invalid storage API token` — the Kai token expired (90 days after the deploy) or was revoked.
+
+**Fix:** Send `KAI_STORAGE_API_TOKEN` (with `runtime.kai.enabled`) and `x-workspace-id: $WORKSPACE_ID` on every Kai request; redeploy the app for a fresh token. See [kai-integration.md](kai-integration.md) §Token and headers.
 
 ## Reading logs
 
@@ -121,7 +165,7 @@ Three options:
 
 - **MCP `mcp__keboola__get_data_apps(configuration_ids=[cfg_id])`** — latest 20 log lines via `deployment_info.logs`. Preferred from an agent / Claude Code session.
 - **Keboola UI Terminal Log tab** — near-real-time `stdout`/`stderr`. "Download Logs" gives the full file. Logs are deleted when the app stops.
-- **kbagent CLI** — a `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+- **kbagent CLI** — `kbagent data-app logs --project P --app-id N --lines 300` (or `--since <ISO time>`). The app must be running or recently stopped. A failed startup that left no container logs shows up in `kbagent data-app runs --project P --app-id N` (`failure_reason`, `startup_logs`).
 
 ### Streamlit-specific footgun: silent exceptions
 

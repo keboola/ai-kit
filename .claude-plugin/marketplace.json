@@ -20,19 +20,19 @@
     {
       "name": "dataapp-developer",
       "description": "Toolkit for building and deploying Keboola Apps (Streamlit and Python/JS) — full lifecycle: choosing app type, deployment paths, storage access, authentication, DuckDB caching, styling, dashboard patterns, optional Kai chat, and the validate-build-verify dev workflow; and hosting an MCP server as a data app.",
-      "version": "1.10.5",
+      "version": "1.15.2",
       "source": "./plugins/dataapp-developer",
       "category": "development"
     },
     {
       "name": "kbagent",
       "description": "AI-friendly interface to Keboola Connection projects — explore configs, jobs, lineage, sync configs as files, manage dev branches, and debug SQL in workspaces",
-      "version": "0.99.0",
+      "version": "1.1.0",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/keboola/cli.git",
         "path": "plugins/kbagent",
-        "ref": "v0.99.0"
+        "ref": "v1.1.0"
       },
       "category": "development"
     },
@@ -46,7 +46,7 @@
     {
       "name": "keboola-git",
       "description": "Access Keboola-managed Git (Forgejo) repos for python-js data apps via the kbagent CLI — provision repos, mint push credentials, and copy source between GitHub and Keboola git with the 15MB/build-at-deploy path handled",
-      "version": "1.1.3",
+      "version": "1.2.3",
       "source": "./plugins/keboola-git",
       "category": "development"
     },
@@ -55,6 +55,13 @@
       "description": "Migrate an existing Microsoft Power BI semantic model (TMDL or per-table JSON) into a Keboola semantic layer model. Brownfield companion to sl-toolkit.",
       "version": "1.0.0",
       "source": "./plugins/powerbi-to-sl",
+      "category": "development"
+    },
+    {
+      "name": "rls-toolkit",
+      "description": "Row- and column-level security toolkit for Keboola — guided setup of rls/cls policies in bulk for the tables a data app reads, per IdP group, with binding to the app. Companion to the kbagent plugin (rls / cls commands).",
+      "version": "1.0.0",
+      "source": "./plugins/rls-toolkit",
       "category": "development"
     },
     {

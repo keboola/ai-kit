@@ -76,7 +76,7 @@ Supervisord starts and supervises your app processes. Rules that catch people ou
 - Absolute `/app/...` paths only. Relative paths cause startup failures because supervisord's CWD is not what you think it is.
 - Python commands MUST be prefixed with `uv run` to pick up the `uv`-managed venv. A bare `python app.py` runs the wrong interpreter.
 - Node tools run as their binary (`/app/node_modules/.bin/vite`), not through `npx`. Stopping `npx` leaves its child running (Node 20 and 24 images), so a restart fails with the port still taken.
-- A running dev container keeps the program of a renamed or deleted `supervisord-dev/` `.conf`. Rename a program inside its existing file, or `deploy_data_app(mode='dev')` after the push.
+- A running dev container keeps the program of a renamed or deleted `supervisord-dev/` `.conf`. Rename a program inside its existing file, or delete the draft and create it again on the same branch.
 - Never declare `[program:nginx]`. The base image manages nginx automatically; declaring it yourself causes a conflict and one of the two starts fails.
 
 Sample `keboola-config/supervisord/services/app.conf` for Python via uv:
@@ -196,7 +196,7 @@ The template ships it. An existing Vite app without it gets it in the first chan
 2. In `vite.config.ts`, `import { kaiPreview } from '@keboola/vite-plugin-kai-preview'` and add `kaiPreview()` to `plugins`. An app that renders into an element other than `#root` passes it: `kaiPreview({ mount: '#app' })`.
 3. Remove what it replaces, or the preview hears two signals: an inline plugin that injects an error/healthy script (older apps call it `kaiPreviewErrorHandler`), and copied `preview-signal.js`, `preview-picker.js` or `preview-source.js` with the plugins that load them.
 4. Keep the app's error boundary. It still sets `window.__kaiPreviewCrashed` and calls `window.__kaiNotifyError`; type those with the package's `KaiPreviewWindow`.
-5. Type-check and push. The running dev container installs the package and restarts its `app` program, so Vite must run as `[program:app]` in `keboola-config/supervisord-dev/`, started as in §Supervisord. An app on `[program:vite]` renames the section inside its existing `.conf` and runs the binary. If it did not run the binary before (`npx vite`, `npm run dev`), it then runs `deploy_data_app(mode='dev')` once: the stopped wrapper left Vite on port 3000. Check the preview for the pick button.
+5. Type-check and push. The running dev container installs the package and restarts its `app` program, so Vite must run as `[program:app]` in `keboola-config/supervisord-dev/`, started as in §Supervisord. An app on `[program:vite]` renames the section inside its existing `.conf` and runs the binary. If it did not run the binary before (`npx vite`, `npm run dev`), it then deletes the draft and creates it again on the same branch: the stopped wrapper left Vite on port 3000. Check the preview for the pick button.
 6. Keep it out of the conversation: the user asked for their change, not this. No progress line about it, no mention in the reply — unless a step fails and holds up their change; then say so in one line.
 
 An app on an older release updates it the same way: `npm install --save-dev @keboola/vite-plugin-kai-preview@^<version>`, then steps 5 and 6.
@@ -218,7 +218,7 @@ The overlay's `keboola-config/` is the working reference — copy it, don't rety
 
 Local dev: skip nginx and supervisord entirely. Run each process in its own terminal. Use the frontend dev server's proxy to route `/api/*` to the backend — Next.js: `rewrites` in `next.config.ts`; Vite: `server.proxy` in `vite.config.mts`. That way the frontend code calls `/api/...` everywhere and it works the same locally as in Keboola.
 
-User-identity passthrough across the local-vs-Keboola boundary (e.g. injecting an email header for testing) is app-specific convention, not a platform feature — see the placeholder in [storage-access.md](storage-access.md).
+The user's identity reaches the backend as the `X-Kbc-App-User-Token` header, added by Keboola's apps proxy. Forward it, together with the app's Storage token, on every Query Service call made for that request. The React + Vite template's Node server already does; a Python backend does it with `keboola-query-service` 0.4.0's `AppUserToken` credential, picked per request. Locally there is no apps proxy and no token. See "The app user token" in [storage-access.md](storage-access.md).
 
 Runnable starter: `templates/python-node-app/`.
 
@@ -252,13 +252,15 @@ For the validate -> build -> verify change loop, see [dev-workflow.md](dev-workf
 
 ## Keboola-hosted dev mode
 
-When the platform sets `KBC_APP_MODE=dev` on the container, the image hot-reloads off the configured git branch. You don't have to redeploy on every push — the running container polls the branch and pulls changes. To opt in, add:
+Dev mode isn't available for an app on organization auth yet ([github-organization-auth.md](github-organization-auth.md)).
 
-- `keboola-config/supervisord-dev/<program>.conf` — required for dev mode. Hot-reload variant of your supervisord configs (e.g. `streamlit run app.py --server.runOnSave=true`, or `uvicorn --reload`). Each push replaces the changed files by write-and-rename, so a dev watcher must poll: Vite with `watch.usePolling`, a Node server under `tsx watch` with `CHOKIDAR_USEPOLLING="1"`. After a dependency change the watcher restarts only the program named `app`, so give that name to the one that must reload new packages (in `react-vite-app`, Vite).
+A draft always runs in dev mode: the platform sets `KBC_APP_MODE=dev` on its container, and the image hot-reloads off the draft's branch. You never redeploy on a push — the running container polls the branch and pulls changes in about 5 seconds. The repo needs:
+
+- `keboola-config/supervisord-dev/<program>.conf` — required. Without it the draft never starts and stays `pending` ([troubleshooting.md](troubleshooting.md) §Draft stays `pending`). Hot-reload variant of your supervisord configs (e.g. `streamlit run app.py --server.runOnSave=true`, or `uvicorn --reload`). Each push replaces the changed files by write-and-rename, so a dev watcher must poll: Vite with `watch.usePolling`, a Node server under `tsx watch` with `CHOKIDAR_USEPOLLING="1"`. After a dependency change the watcher restarts only the program named `app`, so give that name to the one that must reload new packages (in `react-vite-app`, Vite).
 - `keboola-config/setup-dev.sh` — optional. Dev-time dependency install. Falls back to `setup.sh` if absent.
 - `keboola-config/dev-deps` — optional. List of dependency file paths the in-pod watcher hashes for change detection. Lines starting with `#` and blank lines are ignored.
 
-To see what the app shows while it runs in dev mode, open it in your own browser through a preview link: [dev-workflow.md](dev-workflow.md) §Verify an app running in dev mode.
+To see what a draft shows, open it in your own browser through a preview link: [dev-workflow.md](dev-workflow.md) §Verify a draft.
 
 Env vars:
 
@@ -285,8 +287,10 @@ Customers usually don't touch this. The base image's `src/hooks/bootstrap-app.sh
 
 Python/JS apps deploy from git. The MCP tools do not carry source the way `modify_streamlit_data_app` does; they provision the repo, mint a push credential, and trigger deploys, and you drive `git` yourself.
 
-The repo can be **Keboola-managed** (provisioned with the prod app, the default for anything started from the Apps page) or **customer-provided** (GitHub/GitLab with a PAT or SSH key). Both are supported.
+The repo can be **Keboola-managed** (provisioned with the prod app, the default for anything started from the Apps page) or **customer-provided**. Both are supported.
 
-For a Keboola-managed repo the app is really two configurations: a **prod** app that owns the repo, and **drafts** that branch off it for iteration. Which one you build into, the full tool sequence, and the one argument that decides whether you create a draft or a stray second app are all in **[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md)**. Read it before the first `modify_python_js_data_app` call.
+For a customer-provided private repo on GitHub, offer **organization auth** before a PAT or SSH key: `modify_python_js_data_app(git_repository="https://github.com/<org>/<repo>", git_auth="organization")` or `kbagent data-app create --name … --slug … --git-repo <url> --git-auth organization --wait`. An app already on a Keboola-managed repo (anything started from the Apps page) can't be switched to it. The platform reads the repo through the Keboola organization's GitHub App connection and stores no credential. It needs the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)); it is https GitHub/GHE only, read-only, and has no dev mode, preview or drafts yet. Prerequisites, limits and errors: [github-organization-auth.md](github-organization-auth.md). GitLab and other hosts still use a PAT or SSH key.
+
+For a Keboola-managed repo the app is a **prod** app that owns the repo, plus **drafts** that each run one branch of it for iteration. Which one you build into, the full tool sequence, and the one argument that decides whether you update the app or create a stray second one are all in **[python-js-prod-and-drafts.md](python-js-prod-and-drafts.md)**. Read it before the first `modify_python_js_data_app` call.
 
 Git plumbing for the managed repo, the ~15MB / HTTP 413 push cap, and the build-at-deploy recipe live in the `keboola-git` skill.

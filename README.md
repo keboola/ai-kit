@@ -33,6 +33,7 @@ claude-kit/
 │   ├── keboola-docs/        # help.keboola.com docs by Diátaxis: write, update, retire, ship
 │   ├── keboola-git/         # Keboola-managed Git (Forgejo) access for data apps
 │   ├── powerbi-to-sl/       # Migrate Power BI semantic models to Keboola
+│   ├── rls-toolkit/         # Row- and column-level security: guided policy setup for data apps
 │   └── sl-toolkit/          # Semantic layer inspect, validate, build + conversational CRUD
 ├── README.md                # This file
 └── LICENSE                  # MIT license
@@ -68,10 +69,11 @@ A specialized toolkit for building production-ready Keboola Python components fo
 A toolkit for building and deploying data apps to Keboola — Streamlit development with validate/build/verify workflow, plus deployment guides for Node.js, Python, and any web framework.
 
 **Features:**
-- 🎯 **Skills**: `dataapp-development` covering both Streamlit and Python/JS apps with 16 topical references, plus `semantic-layer-usage` for confirming a semantic model's physical columns before querying
+- 🎯 **Skills**: `dataapp-development` covering both Streamlit and Python/JS apps with 17 topical references, plus `semantic-layer-usage` for confirming a semantic model's physical columns before querying
 - 🚀 **App Types**: Streamlit (Code or Git), React + Vite + Express (Python/JS default, no CDN), the same with a Python backend
-- 🏗️ **Prod app + drafts**: Python/JS apps build into the existing prod app via a draft, so an app created from the Keboola Apps page is never duplicated; an existing draft is continued, publishing removes the draft and its branch, and a running draft can be checked in the agent's own browser through a preview link
-- 💾 **Storage**: RO workspace (default), RW direct access via Query Service, input mapping (legacy)
+- 🔑 **GitHub organization auth**: deploy from a customer's private GitHub repo through the organization's GitHub connection instead of a PAT or SSH key; Custom Python and dbt use the same connection
+- 🏗️ **Prod app + drafts**: Python/JS apps build into the existing prod app via a draft, so an app created from the Keboola Apps page is never duplicated; an existing draft is continued, a legacy draft is converted onto its branch, publishing removes the draft and its branch, and a running draft can be checked in the agent's own browser through a preview link
+- 💾 **Storage**: RO workspace (default), RW direct access via Query Service, input mapping (legacy), per-user data on workspaces governed by row-level security (the React + Vite template forwards the app user token; queries stay simple, preprocessing goes into a transformation)
 - 🔒 **Authentication**: None / Basic / OIDC / GitHub / GitLab / JumpCloud
 - ⚡ **Performance**: Opinionated DuckDB caching pattern (Python + Node templates included)
 - 🎨 **Styling**: Default Keboola theme + optional bundled React+Vite stack + brand customization paths
@@ -139,12 +141,29 @@ Access Keboola-managed Git (Forgejo) repos for python-js data apps via the `kbag
 **Features:**
 - 🎯 **Skill**: `keboola-git` — provision/find the managed repo, mint a one-time `git_clone_url`, raw clone/push, 413 + build-at-deploy recipe, deploy + verify
 - 🏗️ **Resolve before you create**: an empty `configuration_id` makes a second app and a second repo, so the create step is gated on `get_data_apps`
+- 🔑 **Organization auth alternative**: offers deploying straight from a GitHub repo through the organization's GitHub connection (no copy, no PAT) before copying into Keboola git
 - ⚡ **Command**: `/keboola-git-copy to-keboola|to-github` — bidirectional GitHub ↔ Keboola git source copy with size guard and scratch-branch safety
 - 📦 **Build-at-deploy**: untrack committed builds (`frontend/.next`), build in `keboola-config/setup.sh` to stay under the 15MB push cap
 - 🔒 **Credential safety**: one-time push secrets kept in shell vars, never committed; no force-push, scratch-branch-only reverse copies
 - 🛠️ **kbagent-CLI driven**: ships no MCP server
 
 **[→ View Keboola Git Plugin Documentation](./plugins/keboola-git/README.md)**
+
+### rls-toolkit Plugin
+
+**Location**: [`./plugins/rls-toolkit`](./plugins/rls-toolkit)
+
+Row- and column-level security for Keboola — set up `rls-policy` / `cls-policy` objects in bulk for the tables a data app reads, per IdP group, and bind them to the app. Companion to the `kbagent` plugin.
+
+**Features:**
+- ⚡ **Commands**: `/rls-show` (read-only overview), `/rls-build` (guided setup)
+- 🗣️ **Interview**: asks where policies are enforced, which IdP and groups, which tables, rows and/or columns, defaults and administrators
+- 🔎 **Discovery**: reads the data app configuration for providers, SSO and candidate tables; suggests rules from column names and sampled values
+- 🔒 **Default deny aware**: every table a governed app reads needs a policy; the close-out lists tables that still have none
+- ✅ **Safe writes**: dry-run summary and an explicit "go" before anything is written; updates instead of delete + create
+- 🛠️ **kbagent-CLI driven**: ships no MCP server
+
+**[→ View rls-toolkit Plugin Documentation](./plugins/rls-toolkit/README.md)**
 
 ### sl-toolkit Plugin
 

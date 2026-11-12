@@ -10,7 +10,7 @@ A FastAPI backend added next to the default `react-vite-app/` template, in one K
 
 ## What runs where
 
-| | Dev (`mode='dev'`) | Prod |
+| | Dev (a draft) | Prod |
 |---|---|---|
 | nginx `/api/*` | FastAPI :8050 (`--reload`) | FastAPI :8050 |
 | nginx `/` | Vite :3000 (HMR) | Express :3000 serving `dist/client/` |
