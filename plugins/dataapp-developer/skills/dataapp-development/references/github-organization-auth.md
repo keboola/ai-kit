@@ -17,7 +17,7 @@ A data app config can read its repo through the Keboola organization's GitHub Ap
 }
 ```
 
-At each deploy the platform mints a short-lived, read-only token from oauth-service through that connection. Nothing is stored in the configuration: no `username`, no `#password`, no `#sshKey`. Nobody has to create, paste or rotate a PAT.
+At each deploy the platform mints a short-lived, read-only token from oauth-service through that connection. To push, `create_python_js_data_app_git_credential` mints a short-lived write token the same way. Nothing is stored in the configuration: no `username`, no `#password`, no `#sshKey`. Nobody has to create, paste or rotate a PAT.
 
 ## Contents
 - Prerequisites
@@ -47,13 +47,13 @@ Both buttons are on the organization's GitHub tab: `https://connection.<stack>/c
 |---|---|
 | `https://` URL only | `git@github.com:org/repo.git` is refused. Use `https://github.com/org/repo` |
 | github.com or a GitHub Enterprise host the stack is configured for | The MCP accepts only `github.com` and `*.ghe.com`. A GHE Server host on its own domain works through kbagent, not the MCP. GitLab, Bitbucket and other hosts still need a PAT or SSH key. The stack checks the host at deploy time |
-| Read-only | The platform clones; it never pushes. Code reaches the repo through the user's own GitHub access, never through a token in the chat |
-| No dev mode yet | No `deploy_data_app(mode='dev')`, no preview link, no drafts. Deploy in prod mode |
-| No managed repo | `create_python_js_data_app_git_credential` has nothing to mint for this app |
+| Short-lived push token | `create_python_js_data_app_git_credential` returns a token valid for about an hour (`expires_at`), for that one repository. On a 401/403, mint a new one and `git remote set-url`. It needs the GitHub organization owner to approve the GitHub App's write access |
+| Drafts need prod on `main` | Drafts and their preview links work as on a managed repo, branched off `main`. An app that deploys from another branch has none |
+| `main` may be protected | When the push to `main` at promote is refused, the customer's team merges the draft branch through a pull request; then redeploy prod |
 | Not for an app on a Keboola-managed repo | The managed repo is fixed when the app is created. That app can't be switched to org auth (see below) |
 | Exclusive with credentials | A `git` block with `authType: organization` and a `username` / `#password` / `#sshKey` is rejected |
 
-When one of these rules it out (GitLab repo, the user wants drafts and previews), fall back to the Keboola-managed repo (`keboola-git` skill) or to a PAT or SSH key.
+When one of these rules it out (GitLab repo, prod on a branch other than `main`), fall back to the Keboola-managed repo (`keboola-git` skill) or to a PAT or SSH key.
 
 ## Create or switch an app
 
@@ -108,14 +108,13 @@ It sets `authType` and removes `username` / `#password` / `#sshKey` in one write
 
 ## Changing the code of an org-auth app
 
-There is no draft and no preview for an org-auth app yet, so the draft flow in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) does not apply to it:
+Through the MCP, an org-auth app on `main` takes the draft flow in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): `create_python_js_data_app_git_credential` gives the push token, the draft serves your branch, and promote merges it into `main`. The customer's team sees the draft branches: name them after the change. Never ask the user for a GitHub token.
+
+Without the MCP (kbagent has no draft command), or for an app on another branch:
 
 1. Validate and run the change locally ([dev-workflow.md](dev-workflow.md)).
-2. Push it to the GitHub repo on the branch the app serves (or open a PR there and let the user merge it), with git access that is already set up locally.
-   **No local git access** (a hosted sandbox such as Kai, or no GitHub credentials configured)? Then don't ask for a token: no plaintext credential may enter the chat or the sandbox. Describe the change, or hand over the changed files, and let the user push it. Redeploy once they say it's pushed.
+2. Push it to the GitHub repo on the branch the app serves (or open a PR there and let the user merge it), with git access that is already set up locally. No such access? Describe the change, or hand over the changed files, and let the user push it.
 3. Redeploy the prod app (`deploy_data_app(action="deploy", ...)` or `kbagent data-app deploy --wait`). The deploy locks the new commit.
-
-Tell the user that the push goes live on the next deploy, with no preview in between.
 
 ## Errors and what to do
 

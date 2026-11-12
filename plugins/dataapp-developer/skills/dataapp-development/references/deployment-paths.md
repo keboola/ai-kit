@@ -131,7 +131,7 @@ For **Python/JS** apps:
 
 - Must use git (no Code mode for this type). Work happens on a **draft** branched off the prod app's repo, never on a second app — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md).
 - Edit locally, push to the draft branch (the draft serves it in seconds), then publish: merge into `main` and `deploy_data_app` via MCP or `kbagent data-app deploy`. Both MCP and kbagent drive the same tools here.
-- A customer-provided private GitHub repo: connect it with organization auth before asking for a PAT or SSH key — [github-organization-auth.md](github-organization-auth.md). Such an app has no drafts yet: push to its branch, then deploy prod.
+- A customer-provided private GitHub repo: connect it with organization auth before asking for a PAT or SSH key — [github-organization-auth.md](github-organization-auth.md). Through the MCP, such an app on `main` takes the draft flow with a short-lived push token.
 
 Best fit for:
 
@@ -198,7 +198,7 @@ kbagent data-app password --app-id N    # if basic-auth
     --git-repo https://github.com/<org>/<repo> --git-auth organization --git-branch main --type python-js --wait
   ```
 
-  It needs the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)). It takes https GitHub/GHE URLs only, is read-only, and has no dev mode or preview yet. `create` deploys as part of the call, so no separate deploy is needed. To move an existing app on an external repo (PAT or SSH key) over, run `kbagent data-app git-auth-set --app-id N --git-auth organization`, then `data-app deploy --wait`. It refuses an app on a Keboola-managed repo. A missing organization connection only fails at deploy, so confirm it before you create. `create --wait` then deletes the new app unless `--keep-on-failure` is passed. Prerequisites, limits and errors: [github-organization-auth.md](github-organization-auth.md).
+  It needs the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)). It takes https GitHub/GHE URLs only. kbagent has no draft command: drafts and previews of such an app go through the MCP. `create` deploys as part of the call, so no separate deploy is needed. To move an existing app on an external repo (PAT or SSH key) over, run `kbagent data-app git-auth-set --app-id N --git-auth organization`, then `data-app deploy --wait`. It refuses an app on a Keboola-managed repo. A missing organization connection only fails at deploy, so confirm it before you create. `create --wait` then deletes the new app unless `--keep-on-failure` is passed. Prerequisites, limits and errors: [github-organization-auth.md](github-organization-auth.md).
 
 - When org auth doesn't fit (GitLab or another host, the organization isn't connected), `--git-pat-env GITHUB_PAT_DATAAPP` is the preferred PAT auth — the plaintext token never appears in argv:
 
