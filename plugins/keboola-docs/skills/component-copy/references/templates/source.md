@@ -20,19 +20,30 @@ Fivetran's "Lite" connector shells are the anti-pattern). If the component is **
 deprecated**, that status opens the long description — a reader deep-linked to the component
 must see lifecycle state on the page itself, not only on a catalog badge.
 
-## What every component always has (house rules, agreed 2026-11-12)
+## What every component always has (house rules, agreed 2026-11-12 with the owner)
 
-Four things are never left out, whatever the sources say; the linter fails a component without them:
+The linter fails a component without these:
 
-1. **`### Before you start`** in the long description of every connector: Account and plan,
-   Access, Permissions, Network, Set up first. All five, in that order; "not needed" is written
-   out, unknown is `VERIFY(owner)`.
-2. **Load behaviour** in the long description of every connector, in fixed phrasing and
+1. **Load behaviour** in the long description of every connector, in fixed phrasing and
    including the negative. Unknown → `VERIFY(owner)` and the PR waits for the answer.
-3. **A configuration description**, at least a minimal one: where the credentials or access
-   come from, and what the first run produces. Gotchas on top when they exist.
-4. **Images only from `https://help.keboola.com/`.** The file goes into keboola/connection-docs
-   `public/` and the copy uses its absolute URL. No other host, no README-relative path.
+2. **`## Prerequisites` in the README** of every connector, five items in a fixed order:
+   Account and plan, Access, Permissions, Network, Set up first. "Not needed" is written out,
+   unknown is `VERIFY(owner)`. The owner wants prerequisites in the README, not in the copy the
+   Keboola UI shows.
+3. **No images in the copy the UI shows** (short, long, configuration description). Pictures go in
+   the README, in the repo, as they always have.
+
+Where each field shows (checked 2026-11-12 on components.keboola.com and in a Keboola project):
+
+| Field | components.keboola.com | Keboola project |
+|---|---|---|
+| Short description | under the name | the card in Add New Component, and the dialog that creates a configuration |
+| Long description | below the component's facts | only on a configuration's page, inside the facts box once it is expanded (collapsed by default); not on the component page, not in the create dialog |
+| Configuration description | not shown | only on a configuration's page, in the "Configuration Description" panel (collapsed by default) |
+
+So most users meet the short description first and the long one rarely, once a configuration
+exists. The configuration description is optional; the owner would rather remove that field from
+the UI than fill it, so leave it empty unless it already has text.
 
 Everything else below is "state it when a source has it, omit it when not".
 
@@ -53,22 +64,40 @@ Everything else below is "state it when a source has it, omit it when not".
 ```
 {{what_the_user_gets}}
 
-### Before you start
-
-- Account and plan: {{account_and_plan}}
-- Access: {{access}}
-- Permissions: {{permissions}}
-- Network: {{network}}
-- Set up first: {{set_up_first}}
-
 {{incremental_behaviour}}
 
 {{resource_links}}
 ```
 
 - `what_the_user_gets` — which objects, endpoints or reports land in Storage, and as what.
-- `### Before you start` — **always present, all five items, in this order and with these
-  labels** (house rule, 2026-11-12), so a reader can compare components and tell "not needed"
+- `incremental_behaviour` — is loading incremental, and on what key. **Always present**: state it
+  in the fleet's fixed phrasing **including the negative**, and where no source answers it write
+  `VERIFY(owner)` rather than guess or omit (*"Incremental loading is not supported; every run is a
+  full load."*). An explicit no beats silence: users compare components on exactly this line
+  (benchmark: Fivetran's feature matrix works because the vocabulary is identical across ~700
+  connectors; its one flaw is blank cells where "No" should be).
+- `resource_links` — the service's own API/limits documentation.
+- **Never configuration instructions.** This text is shown *before* the user starts
+  configuring, so steps here have no context to land in.
+
+## README.md: Prerequisites
+
+Part of the same PR when the README lacks it or has it in another shape. Replace the README's
+existing prerequisites section in place (keep any detail it has, such as a list of scopes, under
+the matching item); never rewrite the rest of the README.
+
+```
+## Prerequisites
+
+- Account and plan: {{account_and_plan}}
+- Access: {{access}}
+- Permissions: {{permissions}}
+- Network: {{network}}
+- Set up first: {{set_up_first}}
+```
+
+- **Always present in a connector's README, all five items, in this order and with these
+  labels** (house rule, 2026-11-12; in the README on the owner's word), so a reader can compare components and tell "not needed"
   from "not written". An item that does not apply says so in fixed phrasing ("No paid plan
   needed.", "None.", "No network setup needed."). An item no source answers gets
   `VERIFY(owner)`; never drop it.
@@ -81,27 +110,16 @@ Everything else below is "state it when a source has it, omit it when not".
     SSH tunnel. For databases this is the usual reason a connection fails; for a public cloud API
     it is "No network setup needed."
   - `set_up_first` — anything the user creates or switches on in the service before configuring (an API app, a read replica, a setting).
-- `incremental_behaviour` — is loading incremental, and on what key. **Always present**: state it
-  in the fleet's fixed phrasing **including the negative**, and where no source answers it write
-  `VERIFY(owner)` rather than guess or omit (*"Incremental loading is not supported; every run is a
-  full load."*). An explicit no beats silence: users compare components on exactly this line
-  (benchmark: Fivetran's feature matrix works because the vocabulary is identical across ~700
-  connectors; its one flaw is blank cells where "No" should be).
-- `resource_links` — the service's own API/limits documentation.
-- **Never configuration instructions.** This text is shown *before* the user starts
-  configuring, so steps here have no context to land in.
 
 ## configuration_description.md
 
 ```
-{{where_access_comes_from}} {{what_the_first_run_produces}}
-
 {{non_trivial_setup_notes}}
 ```
 
-- **Always present.** The minimum is one to three sentences: where the credentials or access
-  come from (who issues them, where in the service's UI) and what the first run produces. Add
-  setup notes only where the configuration is not self-explanatory.
+- **Optional; leave it empty** unless the component already has text here. The owner would
+  rather remove the field from the UI than fill it (2026-11-12). Existing text is kept and must
+  follow the rules below; images in it are removed (they go in the README).
 - Must **not** start with a header (the UI prepends a level-2 one) and may use only `###` and
   `####`.
 - Must not repeat what Configuration and Row schema already make obvious.

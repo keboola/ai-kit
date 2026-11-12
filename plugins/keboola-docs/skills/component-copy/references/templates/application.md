@@ -15,16 +15,16 @@ component: "Trigger a dbt Cloud job and wait for its result", not "This applicat
 
 What it takes in (tables, files, nothing), what it does, what it leaves behind (tables, files,
 a side effect in another system), what credentials it needs. Links to the service's docs.
-No configuration steps. When the application talks to an external service, use the same
-`### Before you start` block as `source.md` (recommended here; the linter requires it only for
-connectors).
+No configuration steps, no images. When the application talks to an external service, give its
+README the same `## Prerequisites` section as `source.md` (recommended here; the linter requires
+it only for connectors).
 
 ## configuration_description.md
 
-Always present (house rule, 2026-11-12): at least where any credentials come from and what a
-run produces or changes. On top of that, what the form does not make obvious: order of
-operations, side effects on the external system, and what a failed run leaves behind. Starts
-with a sentence; `###`/`####` only. Images only from `https://help.keboola.com/`.
+Optional; leave it empty unless it already has text (the owner would rather remove the field from
+the UI, 2026-11-12). Existing text covers only what the form does not make obvious: order of
+operations, side effects on the external system, what a failed run leaves behind. Starts with a
+sentence; `###`/`####` only; no images.
 
 ## configSchema.json / configRowSchema.json
 

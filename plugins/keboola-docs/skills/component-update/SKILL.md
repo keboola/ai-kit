@@ -1,6 +1,6 @@
 ---
 name: component-update
-description: "Use when a published Keboola component's copy has gone stale or out of rule and must be brought up to date: the README or schema gained endpoints or modes the description does not mention, the owner answered a VERIFY, an image broke, the copy lacks Before you start or a load-behaviour line, field tooltips need fixing, or the fleet audit put it on the list. Finds the drift with scripts, proposes only the changed lines, one owner-gated PR. Writing missing copy from scratch is component-copy; deprecating a component is component-retire."
+description: "Use when a published Keboola component's copy has gone stale or out of rule and must be brought up to date: the README or schema gained endpoints or modes the description does not mention, the owner answered a VERIFY, an image sits in the copy, the README lacks its Prerequisites section or the copy a load-behaviour line, field tooltips need fixing, or the fleet audit put it on the list. Finds the drift with scripts, proposes only the changed lines, one owner-gated PR. Writing missing copy from scratch is component-copy; deprecating a component is component-retire."
 ---
 
 # Component update: bring live copy back in line
@@ -26,7 +26,8 @@ which runs inside a fresh clone (`git rev-parse --is-inside-work-tree` before co
 - The fleet audit (`node $CC/scripts/audit.mjs`) lists the component.
 - The component's README or schema changed: new endpoints, objects, modes or limits.
 - The owner answered a `VERIFY(...)` that is in the live copy.
-- An image in the copy is broken or not hosted on `https://help.keboola.com/`.
+- The copy the UI shows has an image (pictures belong in the README), or the README has no
+  `## Prerequisites` section in the house shape.
 - Schema field copy (titles, descriptions, tooltips, enum titles) needs fixing.
 
 **Not for:** empty fields on a component nobody has touched yet (`component-copy`), a component
@@ -41,10 +42,10 @@ node $CC/scripts/component-facts.mjs <component.id>        # repo, bucket, publi
 node $CC/scripts/drift.mjs <component.id> --repo <repo from the facts>
 ```
 
-`drift.mjs` prints `lint` (house-rule findings on the live copy), `verify` (open owner
+`drift.mjs` prints `lint` (house-rule findings on the live copy and the README), `verify` (open owner
 questions), `readmeItems` (things the README lists under an endpoints or objects heading that
-the long description never names) and `prerequisites` (the README's own section, the source for
-`### Before you start`). Exit 0 means nothing to do: say so and stop.
+the long description never names) and `prerequisites` (the README's own section, the starting point for
+its house-shaped `## Prerequisites`). Exit 0 means nothing to do: say so and stop.
 
 The gate from `component-facts.mjs` holds exactly as in component-copy: `hard` stops, `soft`
 drafts a proposal only.
@@ -59,9 +60,11 @@ Copy the live text into `$COMPONENT_COPY_PROPOSALS/<id>/` (files named like thei
 - `readmeItems` is a hint, not an instruction: name the items in "what you get" when they are
   data the user receives; ignore option values that slipped through.
 - An owner's answer replaces its `VERIFY(...)` with the answer, in the answer's own terms.
-- A broken image is re-hosted on help.keboola.com (file into keboola/connection-docs
-  `public/`, shot with `capturing-keboola-ui-screenshots` or `docs-clip`) or removed. Say which
-  in the PR.
+- An image in the copy goes: into the README when the README lacks it, otherwise just removed.
+  Say which in the PR.
+- The README's prerequisites section is replaced in place by the five-item `## Prerequisites`
+  (template `README.md: Prerequisites`), keeping the detail it had; the rest of the README is
+  not touched. Lint with `--readme <proposed README>`.
 
 ### 3. Schema field copy (separate PR)
 

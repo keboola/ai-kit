@@ -31,11 +31,13 @@ rules already forbid:
   and **25 have no `longDescription`** — the user is configuring against silence.
 
 **Always present, whatever the sources say** (house rules agreed 2026-11-12, enforced by
-`lint-copy.mjs`): a connector's `### Before you start` block (Account and plan, Access,
-Permissions, Network, Set up first) and its load behaviour in the long description (unknown →
-`VERIFY(owner)`), a configuration description of at least where access comes from and what the
-first run produces, and images only from `https://help.keboola.com/`. The templates hold the
-detail.
+`lint-copy.mjs`; reshaped the same day on the owner's review): a connector's load behaviour in
+the long description (unknown → `VERIFY(owner)`), a `## Prerequisites` section in the connector's
+README (Account and plan, Access, Permissions, Network, Set up first), and no images in the copy
+the UI shows. The configuration description is optional and usually stays empty: the owner would
+rather remove that field from the UI. The templates hold the detail, including where each field
+shows in Keboola and on components.keboola.com (checked live 2026-11-12: the long description
+appears in a project only on a configuration's page, in a collapsed box).
 
 **Behaviour:** gather facts with scripts → draft into a proposal directory → lint →
 **stop for the operator's approval of the diff** → only then branch, commit, open a draft PR.
@@ -152,7 +154,9 @@ own linked documentation. Nothing else. You are reshaping facts that exist, not 
 marketing. Anything you cannot source gets `VERIFY(owner)` inline — a guess that reads well is
 the worst possible output here, because nobody downstream can tell it from a fact.
 
-**In the first cut, touch only the three markdown files.** Schema field copy (titles,
+**In the first cut, touch only the short and long description and the README's
+`## Prerequisites` section** (the configuration description only to remove an image or a rule
+break in text that is already there). Schema field copy (titles,
 tooltips, enum titles) is a separate PR through `component-update` step 3 and
 `scripts/schema-copy.mjs`.
 
@@ -187,8 +191,9 @@ cd /tmp/cc-<id> && git checkout -b PRDCT-586-copy-<id>
 for f in component_short_description.md component_long_description.md configuration_description.md; do
   [ -f "<proposal-dir>/$f" ] && cp "<proposal-dir>/$f" component_config/
 done
-node $SKILL_DIR/scripts/lint-copy.mjs component_config --full --bucket <bucket>   # --full: real dir, not a proposal
-git add component_config/*.md && git diff --cached --stat        # nothing but .md files
+# README: replace only its Prerequisites section with the approved one, by hand; never copy a whole README
+node $SKILL_DIR/scripts/lint-copy.mjs component_config --full --bucket <bucket> --readme README.md   # --full: real dir
+git add component_config/*.md README.md && git diff --cached --stat   # nothing but .md files
 git commit -m "PRDCT-586: <what changed> for <component id>"
 gh pr create --draft --title "PRDCT-586: component copy for <component id>" --body "<see below>"
 ```
@@ -227,22 +232,19 @@ node $SKILL_DIR/scripts/lint-copy.mjs <path>/component_config --full --schemas -
 No live copy, no repo search, no gate and no ledger row: fill the bucket's template, lint to
 exit 0, and ship the copy with the component. This is the mode the engineering toolkit uses.
 
-## Images, GIFs and video in component copy
+## Images, GIFs and video
 
-Long and configuration descriptions are Markdown and may embed media. Take screenshots with
-`capturing-keboola-ui-screenshots` and make GIFs or video with `docs-clip`; do not invent a
-second capture pipeline here.
+No images in the copy the Keboola UI shows (owner, 2026-11-12): pictures go in the README, in
+the repo, as they always have. Take screenshots with `capturing-keboola-ui-screenshots` and make
+GIFs or video with `docs-clip`; do not invent a second capture pipeline here.
 
 - Never hotlink: raw URLs from private repos answer 404 to customers, and Bitbucket or image
   hosts like i.ibb.co break without notice. On 2026-11-12, 11 public components embedded
   images and 6 of them were broken: a vendor logo answering 404 (four revolt-bi components)
   and README-relative paths that mean nothing outside the repo (`kds-team.wr-lytics-v2`,
   `keboola.processor-duckdb`).
-- Images are hosted on `https://help.keboola.com/` only (house rule, 2026-11-12): the file goes
-  into keboola/connection-docs `public/`, the copy uses its absolute URL, and `lint-copy.mjs`
-  fails anything else. A broken image is re-hosted there or dropped; the PR says which.
-- Whether the Keboola UI renders images in these fields at all is not confirmed yet:
-  `VERIFY(Matyáš Jirát)`. Until it is, a proposal adds no new image.
+- `lint-copy.mjs` fails any image in the short, long or configuration description. A proposal
+  drops it, and moves it to the README when the README lacks it; the PR says which.
 
 ## Fleet audit
 
@@ -250,8 +252,9 @@ second capture pipeline here.
 node $SKILL_DIR/scripts/audit.mjs --out audit.md     # every public component against the house rules
 ```
 
-Read-only. Counts per rule and per bucket, then the components to fix first (an empty field,
-then images, then Before you start, then load behaviour). Run it before choosing a batch and
+Read-only. Counts per rule and per bucket, then the components to fix first (an empty short or
+long description, then images, then load behaviour). The README's Prerequisites section is not in
+the Storage index, so the audit cannot see it: `drift.mjs` checks it per component. Run it before choosing a batch and
 after a batch is published; a component it lists goes through this skill when its fields are
 empty and through `component-update` when they exist.
 

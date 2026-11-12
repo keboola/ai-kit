@@ -45,13 +45,12 @@ copy in the portal and you hand him the text.
 - `component_long_description.md` opens with one line, then keeps what is still true:
   `Deprecated: use [<Successor name>](<successor documentation URL>) instead.` or
   `Deprecated: no replacement.` Add the date when the owner gave one.
-- `configuration_description.md` opens with the same line, because existing configurations
-  still open this form.
+- `configuration_description.md`, when it has text, opens with the same line, because existing
+  configurations still open this form. When it is empty, leave it empty.
 - `component_short_description.md` stays as it is; the catalog marks deprecated components
   itself.
 - `documentationUrl.md` keeps pointing at the component's own docs while they exist.
-- Images: remove any that are not on `https://help.keboola.com/`; nobody will re-host media
-  for a component that is going away.
+- Images: remove any from the copy; nobody will move media for a component that is going away.
 - The prerequisites block and the load-behaviour line are not required for a retired component
   (`--retired` turns those rules off), so no new `VERIFY` questions are raised for it.
 

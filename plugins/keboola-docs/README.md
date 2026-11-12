@@ -1,6 +1,6 @@
 # keboola-docs
 
-**Version**: 0.12.2
+**Version**: 0.13.1
 
 Write, update, retire and ship pages on help.keboola.com (keboola/connection-docs, Astro +
 Starlight) by the Diátaxis rules, with the checks, the media tooling and a commit gate in one
@@ -58,7 +58,7 @@ the commit with the reasons; `DOCS_GATE=skip git commit …` bypasses it when yo
 | Label a PR by its ticket and files | `docs-pr-label` (also a hook) |
 | Keep the MCP tools page in sync with the server | `mcp-tools-sweep` |
 | See every rendered change on a branch: live vs local screenshots and word diffs, as one Artifact page | `/keboola-docs:docs-before-after` |
-| Fill a component's empty copy in `component_config` (short, long and configuration description), one owner-gated PR per component; audit the whole catalog | `/keboola-docs:component-copy` |
+| Fill a component's empty copy in `component_config` (short and long description) and its README's Prerequisites section, one owner-gated PR per component; audit the whole catalog | `/keboola-docs:component-copy` |
 | Bring a component's existing copy up to date: README drift, answered VERIFYs, broken images, schema field tooltips | `/keboola-docs:component-update` |
 | Deprecate or replace a component: deprecation line, successor, help page via docs-retire | `/keboola-docs:component-retire` |
 

@@ -7,7 +7,8 @@
 //
 // The repo comes from component-facts.mjs (`repo`); --index and --readme replace the live
 // fetches (tests, offline runs). Prints one JSON blob:
-//   lint        house-rule findings on the live copy (the same rules as lint-copy.mjs)
+//   lint        house-rule findings on the live copy and the README's Prerequisites section (the
+//               same rules as lint-copy.mjs)
 //   verify      VERIFY(...) markers still in the live copy: questions the owner has not answered
 //   readmeItems items the README lists under an endpoints/objects/reports heading that the long
 //               description never names: candidates for "what you get", or the README is ahead
@@ -71,7 +72,7 @@ try {
   bucket = JSON.parse(readFileSync(join(REFS, 'category-map.json'), 'utf8')).rows.find((r) => r.id === id)?.bucket ?? null;
 } catch { /* no map: lint by type */ }
 const lint = lintCopy((n) => files[n] ?? null, {
-  full: true, name: c.name, bucket,
+  full: true, name: c.name, bucket, readme: readme ?? undefined,
   connector: !bucket && (c.type === 'extractor' || c.type === 'writer'),
   retired: argv.includes('--retired'),
 });

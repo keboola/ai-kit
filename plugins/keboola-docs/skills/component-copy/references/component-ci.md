@@ -16,14 +16,16 @@ Vendor `lint-copy.mjs` into the shared CI (for example `keboola/component-ci` at
 - name: Component copy rules
   # Report only at first: 370 of 398 public components fail at least one house rule today.
   continue-on-error: true
-  run: node scripts/lint-copy.mjs component_config --full --connector
+  run: node scripts/lint-copy.mjs component_config --full --connector --readme README.md
 ```
 
 - `--full`: the directory is a complete `component_config/`, so an absent required file is a
   finding.
-- `--connector`: extractors and writers get the connector rules (Before you start, load
-  behaviour). Drop it for applications, processors and transformations. The repo does not know
-  its catalog bucket; the component type is enough for CI.
+- `--connector`: extractors and writers get the connector rules (a load-behaviour line in the
+  long description, the `## Prerequisites` section in the README). Drop it for applications,
+  processors and transformations. The repo does not know its catalog bucket; the component type
+  is enough for CI.
+- `--readme README.md`: the repo's README, for the Prerequisites rule.
 - Without `--schemas`, schema problems are warnings, so a copy rule never blocks a code change
   through an old schema quirk.
 

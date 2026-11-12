@@ -7,9 +7,9 @@
 //   node audit.mjs --json                machine-readable result
 //   node audit.mjs --out <file>          write the report to a file as well
 //
-// Priority, highest first: an empty field the user meets (short, long, configuration
-// description), a broken or off-host image, a connector without "Before you start" or a load
-// behaviour line, then everything else. Schema findings are warnings here: the audit judges
+// Priority, highest first: an empty short or long description, an image in the copy, a connector
+// without a load-behaviour line, then everything else. The README's Prerequisites section is not
+// in the Storage index, so the audit cannot judge it: drift.mjs and the component CI do, per repo. Schema findings are warnings here: the audit judges
 // the copy, and a schema change is its own reviewed PR.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -43,7 +43,6 @@ const schema = (o) => (o && typeof o === 'object' && Object.keys(o).length ? JSO
 const PRIORITY = [
   ['empty field', (f) => /is empty|is missing/i.test(f.message) && /description/.test(f.file)],
   ['image', (f) => f.rule === 'house#images'],
-  ['before you start', (f) => f.rule === 'house#before-you-start'],
   ['load behaviour', (f) => f.rule === 'house#load-behaviour'],
 ];
 const rank = (f) => {
@@ -125,7 +124,7 @@ if (argv.includes('--json')) {
     '',
     '## Fix first',
     '',
-    'Ordered by the worst finding: an empty field, then images, then Before you start, then load behaviour.',
+    'Ordered by the worst finding: an empty short or long description, then images, then load behaviour. README prerequisites are checked per repo (drift.mjs, component CI), not here.',
     '',
     '| Component | Bucket | Errors | Rules |',
     '|---|---|---|---|',

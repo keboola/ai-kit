@@ -33,8 +33,8 @@ test('schema-diff blocks a functional change', () => {
   assert.notEqual(r.status, 0);
 });
 
-// House rules agreed 2026-11-12: load behaviour always stated, a configuration
-// description always present, images only from help.keboola.com.
+// House rules agreed 2026-11-12, reshaped on the owner's review: load behaviour in the long
+// description, Prerequisites in the README, configuration description optional, no images in copy.
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
@@ -43,58 +43,62 @@ const proposal = (files) => {
   for (const [name, text] of Object.entries(files)) writeFileSync(join(d, name), text);
   return d;
 };
-const BEFORE = '### Before you start\n\n- Account and plan: A HubSpot account; no paid plan needed.\n- Access: A private app token.\n- Permissions: Read scopes for contacts and deals.\n- Network: No network setup needed.\n- Set up first: A private app in HubSpot.\n';
-const LONG_OK = `Reads contacts and deals into Storage tables.\n\n${BEFORE}\nIncremental loading is not supported; every run is a full load.\n`;
+const PREREQS = '## Prerequisites\n\n- Account and plan: A HubSpot account; no paid plan needed.\n- Access: A private app token.\n- Permissions: Read scopes for contacts and deals.\n- Network: No network setup needed.\n- Set up first: A private app in HubSpot.\n';
+const README_OK = `# HubSpot\n\n${PREREQS}\n## Configuration\n\nPick the endpoints.\n`;
+const LONG_OK = 'Reads contacts and deals into Storage tables.\n\nIncremental loading is not supported; every run is a full load.\n';
 
-test('a connector long description without load behaviour fails, VERIFY passes', () => {
-  const bad = proposal({ 'component_long_description.md': `Reads contacts and deals into Storage tables.\n\n${BEFORE}` });
+test('a connector long description without load behaviour fails, VERIFY about loading passes', () => {
+  const bad = proposal({ 'component_long_description.md': 'Reads contacts and deals into Storage tables.\n' });
   assert.equal(run('lint-copy.mjs', bad, '--bucket', 'source/saas-api').status, 1);
   assert.equal(run('lint-copy.mjs', bad, '--bucket', 'processor').status, 0);
-  const verify = proposal({ 'component_long_description.md': `Reads contacts.\n\n${BEFORE}\nVERIFY(owner): incremental?\n` });
+  const verify = proposal({ 'component_long_description.md': 'Reads contacts.\n\nVERIFY(owner): is loading incremental?\n' });
   assert.equal(run('lint-copy.mjs', verify, '--bucket', 'source/saas-api').status, 0);
 });
 
-test('an empty configuration description fails; a missing one fails only with --full', () => {
-  assert.equal(run('lint-copy.mjs', proposal({ 'configuration_description.md': '  \n' })).status, 1);
-  assert.equal(run('lint-copy.mjs', proposal({ 'component_long_description.md': LONG_OK })).status, 0);
+test('the configuration description is optional; text in it still follows the published rules', () => {
+  assert.equal(run('lint-copy.mjs', proposal({ 'configuration_description.md': '  \n' })).status, 0);
   const full = proposal({
     'component_short_description.md': 'CRM platform for marketing, sales and service teams.\n',
     'component_long_description.md': LONG_OK,
     'documentationUrl.md': 'https://github.com/keboola/component-hubspot-v2/blob/main/README.md\n',
   });
-  const r = run('lint-copy.mjs', full, '--full');
-  assert.equal(r.status, 1);
-  assert.match(r.stdout, /configuration_description\.md \[house#configuration-description\]/);
+  assert.equal(run('lint-copy.mjs', full, '--full').status, 0, 'no configuration_description.md is fine');
+  assert.equal(run('lint-copy.mjs', proposal({ 'configuration_description.md': '## Setup\n\nText.\n' })).status, 1);
 });
 
-test('images must come from help.keboola.com', () => {
-  for (const src of ['docs/imgs/a.png', 'https://bitbucket.org/x/raw/a.png', 'https://i.ibb.co/a.png']) {
-    const d = proposal({ 'configuration_description.md': `Where the token comes from.\n\n![token](${src})\n` });
-    assert.equal(run('lint-copy.mjs', d).status, 1, src);
+test('any image in the copy the UI shows fails, wherever it is hosted', () => {
+  for (const img of ['![a](docs/imgs/a.png)', '![a](https://help.keboola.com/a.png)', '![a][ref]', '<img src="https://i.ibb.co/a.png">']) {
+    const d = proposal({ 'configuration_description.md': `Where the token comes from.\n\n${img}\n` });
+    const r = run('lint-copy.mjs', d);
+    assert.equal(r.status, 1, img);
+    assert.match(r.stdout, /house#images/);
   }
-  const html = proposal({ 'component_long_description.md': `${LONG_OK}\n<img src="https://raw.githubusercontent.com/x/a.png">\n` });
-  assert.equal(run('lint-copy.mjs', html).status, 1);
-  const ok = proposal({ 'configuration_description.md': 'Where the token comes from.\n\n![token](https://help.keboola.com/components/hubspot/token.png)\n' });
-  assert.equal(run('lint-copy.mjs', ok).status, 0);
 });
 
-test('a connector needs all five Before you start items, filled and in order', () => {
-  const lint = (text) => run('lint-copy.mjs', proposal({ 'component_long_description.md': text }), '--bucket', 'destination/database');
-  assert.equal(lint(LONG_OK).status, 0, lint(LONG_OK).stdout);
-  assert.equal(run('lint-copy.mjs', fixtureClean(), '--schemas', '--bucket', 'source/database').status, 0);
-  const none = lint('Writes tables.\n\nIncremental loading is not supported.\n');
-  assert.equal(none.status, 1);
-  assert.match(none.stdout, /No "### Before you start" block/);
-  const missing = lint(LONG_OK.replace('- Network: No network setup needed.\n', ''));
-  assert.match(missing.stdout, /no "- Network:" item/);
-  const empty = lint(LONG_OK.replace('- Access: A private app token.', '- Access:'));
-  assert.match(empty.stdout, /"- Access:" is empty/);
-  const swapped = lint(LONG_OK.replace('- Account and plan: A HubSpot account; no paid plan needed.\n- Access: A private app token.', '- Access: A private app token.\n- Account and plan: A HubSpot account; no paid plan needed.'));
-  assert.match(swapped.stdout, /out of order/);
-  const verify = lint(LONG_OK.replace('No network setup needed.', 'VERIFY(owner): IP allow-list?'));
-  assert.equal(verify.status, 0);
-  assert.equal(run('lint-copy.mjs', proposal({ 'component_long_description.md': 'Sends a Slack message.\n' }), '--bucket', 'application').status, 0);
+test('a prerequisites block in the long description fails: it belongs in the README', () => {
+  const r = run('lint-copy.mjs', proposal({ 'component_long_description.md': `Reads contacts.\n\n### Before you start\n\n- Access: a token\n\n${LONG_OK}` }), '--connector');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /house#prerequisites-in-readme/);
 });
+
+test('a connector README needs all five Prerequisites items, filled and in order', () => {
+  const lint = (readme) => run('lint-copy.mjs', proposal({ 'component_long_description.md': LONG_OK, 'README.md': readme }), '--bucket', 'destination/database');
+  assert.equal(lint(README_OK).status, 0, lint(README_OK).stdout);
+  assert.equal(run('lint-copy.mjs', fixtureClean(), '--schemas', '--bucket', 'source/database').status, 0);
+  const none = lint('# X\n\nNothing here.\n');
+  assert.equal(none.status, 1);
+  assert.match(none.stdout, /No "## Prerequisites" section/);
+  assert.match(lint(README_OK.replace('- Network: No network setup needed.\n', '')).stdout, /no "- Network:" item/);
+  assert.match(lint(README_OK.replace('- Access: A private app token.', '- Access:')).stdout, /"- Access:" is empty/);
+  assert.match(lint(README_OK.replace('- Account and plan: A HubSpot account; no paid plan needed.\n- Access: A private app token.', '- Access: A private app token.\n- Account and plan: A HubSpot account; no paid plan needed.')).stdout, /out of order/);
+  assert.equal(lint(README_OK.replace('No network setup needed.', 'VERIFY(owner): IP allow-list?')).status, 0);
+  const ext = proposal({ 'component_long_description.md': LONG_OK, 'README.md': README_OK });
+  const other = proposal({ 'r.md': '# X\n' });
+  assert.equal(run('lint-copy.mjs', ext, '--connector', '--readme', join(other, 'r.md')).status, 1, '--readme wins over README.md');
+  assert.equal(run('lint-copy.mjs', proposal({ 'component_long_description.md': LONG_OK }), '--connector').status, 0, 'no README at hand: rule skipped');
+  assert.equal(run('lint-copy.mjs', proposal({ 'README.md': '# X\n' }), '--bucket', 'application').status, 0, 'applications: recommended only');
+});
+
 const fixtureClean = () => join(FIX, 'clean');
 
 // component-update / component-retire / audit / CI support (2026-11-12).
@@ -158,16 +162,14 @@ test('schema-copy sets copy leaves, refuses functional ones', () => {
 });
 
 // Review fixes, 2026-11-12.
-test('an empty long description on a connector fails both connector rules', () => {
+test('an empty long description on a connector fails the load rule', () => {
   const r = run('lint-copy.mjs', proposal({ 'component_long_description.md': '\n' }), '--connector');
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /house#before-you-start/);
   assert.match(r.stdout, /house#load-behaviour/);
 });
 
 test('a VERIFY about something else does not count as the load line', () => {
-  const other = proposal({ 'component_long_description.md': `Reads contacts.\n\n${BEFORE.replace('No network setup needed.', 'VERIFY(owner): IP allow-list?')}` });
-  const r = run('lint-copy.mjs', other, '--connector');
+  const r = run('lint-copy.mjs', proposal({ 'component_long_description.md': 'Reads contacts.\n\nVERIFY(owner): which tables does a run create?\n' }), '--connector');
   assert.equal(r.status, 1);
   assert.match(r.stdout, /house#load-behaviour/);
 });

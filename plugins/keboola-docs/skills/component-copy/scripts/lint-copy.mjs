@@ -26,7 +26,9 @@ import { fileURLToPath } from 'node:url';
 //   bucket     category-map bucket; source/* and destination/* are connectors
 //   connector  connector rules without a bucket (component-ci knows the type, not the bucket)
 //   retired    the component is being deprecated: the deprecation line is required and the
-//              connector prerequisites are not (house rule agreed 2026-11-12)
+//              connector rules are not (house rule agreed 2026-11-12)
+//   readme     the component repo's README text; without it `read('README.md')` is used, and with
+//              neither the README rule is skipped (the Storage index has no READMEs)
 export function lintCopy(read, opts = {}) {
   const FULL = !!opts.full;
   const SCHEMAS = !!opts.schemas;
@@ -45,18 +47,17 @@ export function lintCopy(read, opts = {}) {
     findings.push({ level, file, rule, message });
   };
 
-  // Images in component copy are hosted on help.keboola.com only (house rule agreed
-  // 2026-11-12): other hosts move or vanish, private raw URLs answer 404 to customers,
-  // and README-relative paths mean nothing outside the repo.
+  // No images in the copy the Keboola UI shows (owner's rule, 2026-11-12): pictures belong in the
+  // README, which keeps them in the repo as it always has. In these fields they rot (private raw
+  // URLs answer 404 to customers, README-relative paths mean nothing outside the repo).
   function lintImages(f, t) {
     const urls = [
       ...[...t.matchAll(/!\[[^\]]*\]\(\s*<?([^)\s>]+)/g)].map((m) => m[1]),
+      ...[...t.matchAll(/!\[[^\]]*\]\[[^\]]*\]/g)].map((m) => m[0]),
       ...[...t.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)/gi)].map((m) => m[1]),
     ];
     for (const u of urls) {
-      if (!/^https:\/\/help\.keboola\.com\//.test(u)) {
-        add('error', f, 'house#images', `Image ${u} is not hosted on https://help.keboola.com/. Put the file in keboola/connection-docs public/ and use its absolute URL, or drop the image.`);
-      }
+      add('error', f, 'house#images', `Image ${u} in the copy the UI shows. Pictures go in the README; drop it here.`);
     }
   }
 
@@ -95,12 +96,9 @@ export function lintCopy(read, opts = {}) {
     const t = text.trim();
     if (!t) {
       add('warning', f, 'publish#component-name-and-description', 'Long description is empty — this is the gap-fill target: what the user gets, what they must provide, whether loading is incremental, links.');
-      // An empty long description on a connector breaks both connector rules; say so, or the audit
-      // would count the component as passing them.
-      if (CONNECTOR) {
-        add('error', f, 'house#before-you-start', 'Long description is empty, so there is no "### Before you start" block.');
-        add('error', f, 'house#load-behaviour', 'Long description is empty, so there is no load-behaviour line.');
-      }
+      // An empty long description on a connector has no load line either; say so, or the audit
+      // would count the component as passing that rule.
+      if (CONNECTOR) add('error', f, 'house#load-behaviour', 'Long description is empty, so there is no load-behaviour line.');
       return;
     }
     if (/^\s*\d+[.)]\s/m.test(t)) {
@@ -118,21 +116,26 @@ export function lintCopy(read, opts = {}) {
     if (CONNECTOR && !loadLine) {
       add('error', f, 'house#load-behaviour', 'A connector states its load behaviour, including the negative ("Incremental loading is not supported; every run is a full load."). Unknown: write VERIFY(owner), never leave it out.');
     }
-    if (CONNECTOR) lintBeforeYouStart(f, t);
+    // Prerequisites live in the README, not in the copy the UI shows (owner, 2026-11-12).
+    if (/^#{1,6}\s*(Before you start|Prerequisites)\b/im.test(t)) {
+      add('error', f, 'house#prerequisites-in-readme', 'A prerequisites block in the long description. It belongs in the README\'s "## Prerequisites"; keep here what the user gets and what the component can do.');
+    }
     lintImages(f, t);
   }
 
-  // Every connector's long description carries the same prerequisites block, all five items in
-  // this order (house rule agreed 2026-11-12), so "not needed" is never confused with "not written".
+  // Every connector's README carries the same prerequisites section, all five items in this order
+  // (house rule agreed 2026-11-12, moved from the long description to the README on the owner's word
+  // the same day), so "not needed" is never confused with "not written".
   const BEFORE_ITEMS = ['Account and plan', 'Access', 'Permissions', 'Network', 'Set up first'];
-  function lintBeforeYouStart(f, t) {
-    const head = t.search(/^### Before you start\s*$/m);
+  function lintReadme(t) {
+    const f = 'README.md';
+    const head = t.search(/^##\s+(Prerequisites|Before you start)\s*$/im);
     if (head < 0) {
-      add('error', f, 'house#before-you-start', `No "### Before you start" block. Every connector lists ${BEFORE_ITEMS.join(', ')}; write "not needed" out and VERIFY(owner) what is unknown.`);
+      add('error', f, 'house#before-you-start', `No "## Prerequisites" section. Every connector's README lists ${BEFORE_ITEMS.join(', ')}; write "not needed" out and VERIFY(owner) what is unknown.`);
       return;
     }
     const rest = t.slice(head).split('\n').slice(1);
-    const end = rest.findIndex((l, i) => i > 0 && /^#{1,6}\s/.test(l));
+    const end = rest.findIndex((l, i) => i > 0 && /^#{1,2}\s/.test(l));
     const block = (end < 0 ? rest : rest.slice(0, end)).join('\n');
     let last = -1;
     for (const item of BEFORE_ITEMS) {
@@ -146,15 +149,11 @@ export function lintCopy(read, opts = {}) {
 
   function lintCfgDesc(text) {
     const f = 'configuration_description.md';
-    // Every component carries at least a minimal configuration description (house rule agreed
-    // 2026-11-12): where the credentials come from and what the first run produces. In a
-    // proposal an absent file only means "not proposed".
-    if (text === null) {
-      if (FULL) add('error', f, 'house#configuration-description', 'File is missing. Every component needs at least a short configuration description: where the credentials come from and what the first run produces.');
-      return;
-    }
+    // Optional, and empty on most components: the owner would rather drop the field from the UI than
+    // fill it (2026-11-12). When it has text, the published rules below apply.
+    if (text === null) return;
     const t = text.trim();
-    if (!t) { add('error', f, 'house#configuration-description', 'Configuration description is empty. Write at least where the credentials come from and what the first run produces.'); return; }
+    if (!t) return;
     lintImages(f, t);
     if (/^#/.test(t)) {
       add('error', f, 'publish#component-configuration',
@@ -271,6 +270,8 @@ export function lintCopy(read, opts = {}) {
   lintShort(read('component_short_description.md'));
   lintLong(read('component_long_description.md'));
   lintCfgDesc(read('configuration_description.md'));
+  const readme = opts.readme ?? read('README.md');
+  if (CONNECTOR && readme !== null) lintReadme(readme);
   lintDocUrl(read('documentationUrl.md'));
   lintSchema('configSchema.json');
   lintSchema('configRowSchema.json');
@@ -287,7 +288,7 @@ if (isMain) {
   const dir = argv[0];
   const val = (name) => { const i = argv.indexOf(name); return i > -1 ? String(argv[i + 1] || '') : ''; };
   if (!dir || dir.startsWith('--')) {
-    console.error('usage: lint-copy.mjs <component_config-dir> [--full] [--schemas] [--name "<component name>"] [--bucket <bucket> | --connector] [--retired] [--json]');
+    console.error('usage: lint-copy.mjs <component_config-dir> [--full] [--schemas] [--name "<component name>"] [--bucket <bucket> | --connector] [--readme <README.md>] [--retired] [--json]');
     process.exitCode = 2;
   } else if (!existsSync(dir)) {
     console.error(`RESULT: lint could not run — ${dir} does not exist`);
@@ -309,6 +310,7 @@ if (isMain) {
       bucket: val('--bucket'),
       connector: argv.includes('--connector'),
       retired: argv.includes('--retired'),
+      readme: val('--readme') ? (existsSync(val('--readme')) ? readFileSync(val('--readme'), 'utf8') : '') : undefined,
     });
     const errors = findings.filter((f) => f.level === 'error');
     const warnings = findings.filter((f) => f.level === 'warning');
