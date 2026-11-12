@@ -38,11 +38,12 @@ Where each field shows (checked 2026-11-12 on components.keboola.com and in a Ke
 | Field | components.keboola.com | Keboola project |
 |---|---|---|
 | Short description | under the name | the card in Add New Component, and the dialog that creates a configuration |
-| Long description | below the component's facts | only on a configuration's page, inside the facts box once it is expanded (collapsed by default); not on the component page, not in the create dialog |
+| Long description | below the component's facts | on the component's page and on each configuration's page, inside the facts box once it is expanded (collapsed by default); not on the card, not in the create dialog |
 | Configuration description | not shown | only on a configuration's page, in the "Configuration Description" panel (collapsed by default) |
 
-So most users meet the short description first and the long one rarely, once a configuration
-exists. The configuration description is optional; the owner would rather remove that field from
+So most users meet the short description first; the long one only when they open the collapsed
+facts box. Images render in all of these places, the configuration description's included
+(checked with a temporary configuration, 2026-11-12). The configuration description is optional; the owner would rather remove that field from
 the UI than fill it, so leave it empty unless it already has text.
 
 Everything else below is "state it when a source has it, omit it when not".

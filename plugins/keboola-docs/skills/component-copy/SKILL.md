@@ -36,8 +36,8 @@ the long description (unknown → `VERIFY(owner)`), a `## Prerequisites` section
 README (Account and plan, Access, Permissions, Network, Set up first), and no images in the copy
 the UI shows. The configuration description is optional and usually stays empty: the owner would
 rather remove that field from the UI. The templates hold the detail, including where each field
-shows in Keboola and on components.keboola.com (checked live 2026-11-12: the long description
-appears in a project only on a configuration's page, in a collapsed box).
+shows in Keboola and on components.keboola.com (checked live 2026-11-12: in a project the long description sits in a
+collapsed box on the component's and each configuration's page, and images render there).
 
 **Behaviour:** gather facts with scripts → draft into a proposal directory → lint →
 **stop for the operator's approval of the diff** → only then branch, commit, open a draft PR.
