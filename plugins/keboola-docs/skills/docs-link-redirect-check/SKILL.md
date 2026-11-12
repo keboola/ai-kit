@@ -62,6 +62,10 @@ covers all of it for the pages you changed, then tells you what to fix.
    - `BROKEN LINK / ANCHOR ON A CHANGED PAGE` — internal `href` whose path is missing, or whose
      `#fragment` has no matching `id` on the target (same-page fragments included). Cross-check
      against `scripts/audit-phase2.mjs`, which stays the site-wide authority for paths.
+     Rows marked `(into a changed page)` come from the other direction: a page nobody touched links
+     to a `#fragment` that a changed page no longer has, which is what a split leaves behind.
+     `scripts/repoint-anchors.mjs` (docs-retire) rewrites those links. Absolute
+     `https://help.keboola.com/…` links count as internal here.
    - `MEDIA MISSING` — `img src`, `video > source src`, `poster` on changed pages with no file in
      `dist/`.
    - `SIDEBAR OUT OF DATE` — `src/sidebar.mjs` differs from what `scripts/convert-nav.mjs`

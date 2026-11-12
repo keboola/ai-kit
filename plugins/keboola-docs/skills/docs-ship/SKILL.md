@@ -22,7 +22,9 @@ and only then does anything leave the machine.
 - The commits passed the gate: run `node "${CLAUDE_PLUGIN_ROOT}/scripts/gate-verdict.mjs" <worktree>`.
   It finds the gate's decision for `HEAD^{tree}` in every `keboola-docs-*` log (the log folder depends on
   how the plugin was loaded: `keboola-docs-<marketplace>` or `keboola-docs-inline`). Exit 0 `allow` is fine;
-  exit 3 `skip` means say which check was skipped and get the ok again; exit 1 (deny, or no entry: the
+  exit 3 `skip` means say which check was skipped and get the ok again; exit 3 with "the rewrite
+  commit is missing" means a page the gate let through as a verbatim move (section-rework's first
+  split commit) still has no description, lede or Next at HEAD: rewrite it before pushing; exit 1 (deny, or no entry: the
   commit bypassed the gate) means re-run it with `git commit --amend --no-edit`, which the gate judges
   against HEAD's parent without changing the content.
 - The PR is the author's own (the plugin ships with `docs-pr-label/rules.json` naming the
@@ -39,6 +41,10 @@ and only then does anything leave the machine.
 2. Build the body from `references/pr-body.md`: fill every `<…>` from the state file
    (`${CLAUDE_PLUGIN_DATA}/docs-page/<repo-dir>--<branch>.md`) and `git diff --stat
    <base>...HEAD`. Sections with nothing to say are dropped, not left as placeholders.
+   A branch made by section-rework, docs-retire or by hand has no state file: fill the body from
+   the handoff blocks in the conversation, `git log --oneline <base>..HEAD` and the diff, and
+   create the state file now (front matter `branch`, `repo`, `phase: shipped`, `pr:` empty until
+   step 6), so the next run on the branch finds it.
 3. Preview the labels before the PR exists:
    `node "${CLAUDE_PLUGIN_ROOT}/skills/docs-pr-label/scripts/label-pr.mjs" --preview --title "<title>"
    --branch <branch> --files "$(git diff --name-only <base>...HEAD | paste -sd, -)"`, and show them
@@ -50,8 +56,9 @@ and only then does anything leave the machine.
    or when the author said "draft".
 5. The plugin's PostToolUse hook runs `docs-pr-label` and prints the labels it added (the ones the
    preview showed). If it printed nothing, run `label-pr.mjs --apply <url>` by hand.
-6. Print the PR URL. Bind it to the session when the host has `ccd_pr` tools. Update the state
-   file (`pr: <url>`). Do not request reviewers unless the author named them.
+6. Print the PR URL. Bind it to the session when the host has `ccd_pr` tools. Write `pr: <url>`
+   (and, on a stacked branch, `base: <branch>`) into the state file, the one step 2 created when
+   there was none. Do not request reviewers unless the author named them.
 
 ## Never
 

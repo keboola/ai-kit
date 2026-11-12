@@ -420,3 +420,56 @@ test("a merge commit is judged on its own changes, not on the merged-in side's p
   git(dir, 'add', '-A');
   assert.match(denied(gate(dir, 'git commit --no-edit')) ?? '', /from-main\.md:\d+ D3 /);
 });
+
+test('a verbatim split commit passes with its form deferred; gate-verdict holds the push until the rewrite', () => {
+  const dir = repo();
+  git(dir, 'branch', '-M', 'main');
+  const big = PAGE(dir, 'big.md');
+  const section = (n) => `## Part ${n}\n\nPart ${n} explains one thing in a sentence of its own.\n\nA second sentence about part ${n}, also unique.\n\n- a list item of part ${n}\n- another item of part ${n}\n\nA closing line for part ${n}.\n`;
+  fs.writeFileSync(big, `---\ntitle: Big\nslug: 'guide/big'\ndescription: 'A big page.'\n---\n\nA big page with two parts. See the [clean how-to](/guide/clean-howto/).\n\n${section(1)}\n${section(2)}\n**Next:** [Clean how-to →](/guide/clean-howto/)\n`);
+  git(dir, 'add', '-A'); git(dir, 'commit', '-q', '-m', 'big page on main');
+  git(dir, 'checkout', '-q', '-b', 'split');
+  // commit 1: part 2 moves verbatim to a new page, no description, lede or Next
+  fs.writeFileSync(big, fs.readFileSync(big, 'utf8').replace(section(2) + '\n', ''));
+  fs.writeFileSync(PAGE(dir, 'part-two.md'), `---\ntitle: Part two\nslug: 'guide/part-two'\n---\n\n${section(2)}`);
+  git(dir, 'add', '-A');
+  const o = gate(dir, 'git commit -m "move part 2 verbatim"');
+  assert.equal(denied(o), null, 'a verbatim move is not denied for its missing form');
+  assert.match(o.hookSpecificOutput.additionalContext, /part-two\.md:\d+ D3 .*verbatim move from src\/content\/docs\/guide\/big\.md/);
+  assert.match(o.systemMessage, /1 verbatim-moved page to rewrite/);
+  git(dir, 'commit', '-q', '-m', 'move part 2 verbatim');
+  const verdict = () => spawnSync(process.execPath, [path.join(HERE, 'gate-verdict.mjs'), dir], { encoding: 'utf8', env: { ...process.env, CLAUDE_PLUGIN_DATA: '' } });
+  const held = verdict();
+  assert.equal(held.status, 3, held.stdout);
+  assert.match(held.stdout, /rewrite commit is missing[\s\S]*part-two\.md D1/);
+  // commit 2: the rewrite gives the page its form; the gate is strict again and the push is free
+  fs.writeFileSync(PAGE(dir, 'part-two.md'), `---\ntitle: Part two\nslug: 'guide/part-two'\ndescription: 'Part two of the big page.'\n---\n\nPart two of the [big page](/guide/big/), on its own page.\n\n${section(2)}\n**Next:** [Clean how-to →](/guide/clean-howto/)\n`);
+  git(dir, 'add', '-A');
+  assert.equal(denied(gate(dir, 'git commit -m rewrite')), null);
+  git(dir, 'commit', '-q', '-m', 'rewrite');
+  assert.equal(verdict().status, 0, verdict().stdout);
+});
+
+test('a new page with text of its own is not a verbatim move, so its FAILs still block', () => {
+  const dir = repo();
+  fs.writeFileSync(PAGE(dir, 'fresh.md'), "---\ntitle: Fresh\nslug: 'guide/fresh'\n---\n\n## One\n\nNew text one.\n\nNew text two.\n\n## Two\n\nNew text three.\n\nNew text four.\n");
+  const p = PAGE(dir, 'clean-howto.md');
+  fs.appendFileSync(p, '\n');
+  git(dir, 'add', '-A');
+  assert.match(denied(gate(dir, 'git commit -m x')) ?? '', /fresh\.md:\d+ D3 /);
+});
+
+test('a commit that puts back the line endings main has is a repair, not a FAIL', () => {
+  const dir = repo();
+  git(dir, 'branch', '-M', 'main');
+  git(dir, 'checkout', '-q', '-b', 'feature');
+  const p = PAGE(dir, 'clean-howto.md');
+  const t = fs.readFileSync(p, 'utf8');
+  fs.writeFileSync(p, t.replace(/\n/g, '\r\n'));
+  git(dir, 'commit', '-q', '-am', 'an earlier commit lost the endings');   // bypassed the gate
+  fs.writeFileSync(p, t);
+  git(dir, 'add', '-A');
+  const o = gate(dir, 'git commit -m "restore the endings"');
+  assert.equal(denied(o), null);
+  assert.match(o.hookSpecificOutput.additionalContext, /back to what main has \(a repair\)/);
+});

@@ -17,6 +17,13 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/scripts/retire.mjs"` (`--from <slug> --to <
 or `--from <slug> --rename <new-slug>`, `--dry-run`, `--json`, `--delete-orphans`). It never
 touches `dist/`.
 
+A split (section-rework) retires no URL, but it retires anchors: the page keeps its URL and loses
+headings that other pages link to. `node "${CLAUDE_PLUGIN_ROOT}/scripts/repoint-anchors.mjs" --page
+<slug> [--dry-run] [--json] [--map map.json] [--to <slug>]` rewrites those links to the page that now
+holds each heading. It reads the page's headings at the merge-base with main, keeps links whose
+anchor the page still has, and lists the anchors with no single new home (a renamed heading, a
+section that became a whole page) for `--map`. Line endings are kept.
+
 ## Phases
 
 | # | Phase | Does | Stop |

@@ -16,6 +16,11 @@
 // A FAIL that the same page already had on the merge-base with main is reported as a WARN ("already on
 // main"): touching a page for one link must not drag its old form debt into the change. D9 (VERIFY
 // owners) and D16 (template leftovers) are never downgraded.
+// A new page whose body is text this commit takes from another page (section-rework's first, verbatim
+// split commit) may lack its description, lede and Next (D1, D3, D5): those are reported as WARN and
+// logged as `deferred`, and gate-verdict holds the push until a later commit gives the page its form.
+// A page whose lines changed only in their line endings is a FAIL, unless the change puts the endings
+// back the way they are on main (a repair of an earlier commit on the branch).
 // Every decision is appended to <git common dir>/keboola-docs/gate-log.jsonl (and ${CLAUDE_PLUGIN_DATA}/gate-log.jsonl)
 // with the tree it judged, so docs-ship can tell whether HEAD went through the gate.
 import fs from 'node:fs';
@@ -136,7 +141,7 @@ const diff = git(['diff', ...(ALL ? [PARENT] : ['--cached', PARENT]), '--name-st
 const src = makeSource(root, { index: !ALL, prefixes: ['src/content/docs', '_data', 'public'] });
 if (diff.status !== 0) process.exit(0);
 const isPage = (f) => /\.(md|mdx)$/.test(f) && f.startsWith('src/content/docs/');
-const pages = [], retired = [], deletedMedia = [];
+const pages = [], retired = [], deletedMedia = [], added = [];
 const renamedFrom = new Map();
 for (const line of diff.stdout.split('\n')) {
   if (!line.trim()) continue;
@@ -144,7 +149,7 @@ for (const line of diff.stdout.split('\n')) {
   const s = status[0];
   if (s === 'D') { if (isPage(a)) retired.push(a); else if (a.startsWith('public/')) deletedMedia.push(a); }
   else if (s === 'R') { if (isPage(a)) retired.push(a); if (isPage(b)) { pages.push(b); if (isPage(a)) renamedFrom.set(b, a); } }
-  else if (isPage(a)) pages.push(a);
+  else if (isPage(a)) { pages.push(a); if (s === 'A') added.push(a); }
 }
 // A merge commit brings the merged-in side's pages along (#1209, 2026-10-27: main's own line-ending
 // changes and a main page's missing Next blocked a merge of main). A file whose content equals that
@@ -173,19 +178,52 @@ const timeout = (what) => (mode === 'strict' ? fails : warns).push(`${what} time
 // ---- 0. line endings: a page whose lines changed only from LF to CRLF (or back) -------------------------
 // Two field runs rewrote a mixed-ending page as all CRLF, so the diff showed the frontmatter as changed
 // (G2, G5). Compare the change with and without --ignore-cr-at-eol.
-const numstat = (extra) => {
-  const r = git(['diff', ...(ALL ? [PARENT] : ['--cached', PARENT]), '--numstat', ...extra, '--', ...pages]);
+const numstat = (extra, ref = PARENT, files = pages) => {
+  const r = git(['diff', ...(ALL ? [ref] : ['--cached', ref]), '--numstat', ...extra, '--', ...files]);
   const m = new Map();
   for (const l of (r.stdout ?? '').split('\n')) { const [a, d, f] = l.split('\t'); if (f && a !== '-') m.set(f, +a + +d); }
   return m;
 };
 if (pages.length) {
   const plain = numstat([]), noEol = numstat(['--ignore-cr-at-eol']);
+  // Endings that flip back to main's are a repair: a later commit restoring the CRLF an earlier commit
+  // on the branch lost was refused, and the only way through was rewriting that earlier commit (2026-11-12).
+  const eolVsMain = (f) => {
+    if (!mergeBase || git(['cat-file', '-e', `${mergeBase}:${f}`]).status !== 0) return null;
+    return (numstat([], mergeBase, [f]).get(f) ?? 0) - (numstat(['--ignore-cr-at-eol'], mergeBase, [f]).get(f) ?? 0);
+  };
   for (const [f, n] of plain) {
     const extra = n - (noEol.get(f) ?? 0);
-    if (extra >= 2) fails.push(`${f}: ${Math.floor(extra / 2)} line(s) changed only in their line endings (LF/CRLF): keep the file's endings (edit with Python open(newline=""), check git diff --stat), or stage only the real change with git add -p`);
+    if (extra < 2) continue;
+    const vsMain = eolVsMain(f);
+    if (vsMain !== null && vsMain < 2) { warns.push(`${f}: ${Math.floor(extra / 2)} line(s) changed only in their line endings, back to what main has (a repair)`); continue; }
+    fails.push(`${f}: ${Math.floor(extra / 2)} line(s) changed only in their line endings (LF/CRLF): keep the file's endings (edit with Python open(newline=""), check git diff --stat), or stage only the real change with git add -p`);
   }
 }
+
+// ---- verbatim move: the first commit of a split ----------------------------------------------------
+// section-rework moves text verbatim first and rewrites it second, so the new pages of the first commit
+// have no description, lede or Next yet. A new page counts as moved when all but a few of its body lines
+// (a scaffolded lede, say) are lines of a page this commit changes or retires, as that page was before.
+const DEFERRABLE = new Set(['D1', 'D3', 'D5']);
+const moved = new Map();   // new page → the pages its text came from
+if (added.length) {
+  const body = (text) => text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').split(/\r?\n/).map((l) => l.trim())
+    .filter((l) => l && !/^<!--[\s\S]*-->$/.test(l) && !/^\{\/\*[\s\S]*\*\/\}$/.test(l) && !/^\*\*Next:\*\*/.test(l));
+  const pool = new Map();
+  for (const f of [...pages.filter((p) => !added.includes(p)), ...retired]) {
+    const prev = git(['show', `${PARENT}:${renamedFrom.get(f) ?? f}`]);
+    if (prev.status === 0) for (const l of body(prev.stdout)) if (!pool.has(l)) pool.set(l, f);
+  }
+  if (pool.size) for (const f of added) {
+    let lines; try { lines = body(src.read(path.join(root, f))); } catch { continue; }
+    if (lines.length < 5) continue;
+    const from = new Set(lines.filter((l) => pool.has(l)).map((l) => pool.get(l)));
+    const misses = lines.filter((l) => !pool.has(l)).length;
+    if (misses <= Math.max(2, Math.floor(lines.length * 0.05))) moved.set(f, [...from]);
+  }
+}
+const deferred = new Set();
 
 // ---- 1. Diátaxis on staged pages ----------------------------------------------------------------
 const existing = pages.filter((p) => src.exists(path.join(root, p)));
@@ -214,7 +252,10 @@ if (existing.length) {
       const line = `${p.file}${f.line ? ':' + f.line : ''} ${f.id} ${f.msg}`;
       const old = f.level === 'FAIL' && !NEVER_DOWNGRADE.has(f.id) && oldFails.get(p.file)?.has(f.id);
       if (old) warns.push(`${line} (already on main, not this change: leave it for a form pass)`);
-      else if (f.level === 'FAIL') fails.push(line); else if (f.level === 'WARN') warns.push(line);
+      else if (f.level === 'FAIL' && moved.has(p.file) && DEFERRABLE.has(f.id)) {
+        deferred.add(p.file);
+        warns.push(`${line} (verbatim move from ${moved.get(p.file).join(', ')}: the rewrite commit must fix it; gate-verdict holds the push until then)`);
+      } else if (f.level === 'FAIL') fails.push(line); else if (f.level === 'WARN') warns.push(line);
     }
   }
 }
@@ -316,8 +357,8 @@ if (fails.length) {
   out({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } });
   process.exit(0);
 }
-const summary = `docs gate: ✓ ${n(pages.length, 'page')} · 0 fail · ${n(warns.length, 'warn')}`;
-logDecision('allow', { scope: scopeName, fails: 0, warns: warns.length });
+const summary = `docs gate: ✓ ${n(pages.length, 'page')} · 0 fail · ${n(warns.length, 'warn')}${deferred.size ? ` · ${n(deferred.size, 'verbatim-moved page')} to rewrite` : ''}`;
+logDecision('allow', { scope: scopeName, fails: 0, warns: warns.length, ...(deferred.size ? { deferred: [...deferred] } : {}) });
 out({ systemMessage: summary, hookSpecificOutput: { hookEventName: 'PreToolUse',
   additionalContext: [summary, ...(warns.length ? ['warnings (not blocking):', ...cut(warns).map((l) => '  ' + l)] : [])].join('\n') } });
 process.exit(0);

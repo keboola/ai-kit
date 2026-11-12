@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "title": "Object extraction",
+  "required": ["mode"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "enum": ["structured", "raw"],
+      "default": "structured",
+      "description": "Pick an object to extract, or write your own query",
+      "propertyOrder": 10,
+      "options": {
+        "enum_titles": ["Guided (pick an object)", "Raw GraphQL query"],
+        "tooltip": "Guided mode extracts one object with the fields you pick, over the date range you set. Raw mode runs a GraphQL query you write yourself and always loads everything."
+      }
+    },
+    "filters": {
+      "type": "string",
+      "title": "Filters",
+      "format": "editor",
+      "description": "Optional extra filter, written as JSON",
+      "propertyOrder": 20,
+      "options": {
+        "tooltip": "A filter tree in JSON, AND-joined with the date range. Example: `{\"fieldIds\": [\"e_creationdate\"], \"gte\": \"2026-01-01\"}`. Leave empty for no extra filtering.",
+        "documentation": {
+          "link": "https://docs.medallia.com/en/medallia-experience-cloud/integration/apis/query-api/data-queries/filter-and-sort-data",
+          "tooltip": "Filter grammar in the service's own documentation"
+        }
+      }
+    }
+  }
+}

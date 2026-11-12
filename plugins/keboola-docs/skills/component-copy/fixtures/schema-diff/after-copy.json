@@ -1,0 +1,1 @@
+{"type":"object","properties":{"a":{"type":"string","title":"A","propertyOrder":1,"options":{"tooltip":"Where the value comes from, with an example.","documentation":{"link":"https://example.com/grammar","tooltip":"Grammar"}}}}}

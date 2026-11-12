@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "required": ["host", "mode"],
+  "properties": {
+    "host": { "type": "string", "title": "Host", "propertyOrder": 1 },
+    "mode": {
+      "type": "string", "title": "Load mode", "propertyOrder": 2,
+      "enum": ["full", "incremental"],
+      "options": { "enum_titles": ["Full load", "Incremental load"], "tooltip": "Incremental load needs a primary key." }
+    }
+  }
+}

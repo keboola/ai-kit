@@ -12,7 +12,9 @@
 //
 // Exit 0: allow. Exit 1: deny, or no entry (the commit bypassed the gate: re-run the checks, e.g.
 // `git commit --amend --no-edit`, which the gate judges against HEAD's parent). Exit 3: skip
-// (DOCS_GATE=skip: name the skipped checks and get the author's ok again).
+// (DOCS_GATE=skip: name the skipped checks and get the author's ok again), or a page the gate let
+// through as a verbatim move (section-rework's first split commit) still fails D1, D3 or D5 at HEAD:
+// the rewrite commit is missing.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -34,20 +36,41 @@ if (process.env.CLAUDE_PLUGIN_DATA) logs.add(path.join(process.env.CLAUDE_PLUGIN
 if (fs.existsSync(base)) for (const d of fs.readdirSync(base)) if (d.startsWith('keboola-docs-')) logs.add(path.join(base, d, 'gate-log.jsonl'));
 const ofThisRepo = (e) => { try { return worktrees.has(fs.realpathSync.native(e.repo)); } catch { return false; } };
 
+// The trees of this branch's own commits: a verbatim move earlier on the branch must be rewritten by HEAD.
+const baseRef = ['keboola/main', 'origin/main', 'main'].find((r) => spawnSync('git', ['rev-parse', '-q', '--verify', r], { cwd: repo }).status === 0);
+const mb = baseRef ? git(['merge-base', 'HEAD', baseRef]) : '';
+const branchTrees = new Set(mb ? git(['log', '--format=%T', `${mb}..HEAD`]).split('\n').filter(Boolean) : [tree]);
+
 let best = null;
+const deferredPages = new Set();
 for (const log of logs) {
   if (!fs.existsSync(log)) continue;
   for (const line of fs.readFileSync(log, 'utf8').split('\n')) {
-    if (!line.includes(tree)) continue;
+    if (!line.trim()) continue;
     try {
       const e = JSON.parse(line);
-      if (e.tree === tree && (log === own || ofThisRepo(e)) && (!best || e.at > best.at)) best = { ...e, log };
+      if (!branchTrees.has(e.tree) || !(log === own || ofThisRepo(e))) continue;
+      for (const pg of e.deferred ?? []) deferredPages.add(pg);
+      if (e.tree === tree && (!best || e.at > best.at)) best = { ...e, log };
     } catch { /* a torn line */ }
   }
 }
 
-const verdict = best ? best.decision : 'none';
-if (JSON_OUT) console.log(JSON.stringify({ repo, tree, verdict, entry: best }, null, 2));
+// Verbatim-moved pages: what does HEAD say about their form?
+const unformed = [];
+if (deferredPages.size) {
+  const check = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'skills', 'docs-diataxis-check', 'scripts', 'check.mjs');
+  const live = [...deferredPages].filter((pg) => spawnSync('git', ['cat-file', '-e', `HEAD:${pg}`], { cwd: repo }).status === 0);
+  const r = live.length ? spawnSync(process.execPath, [check, '--root', repo, '--json', '--ref', 'HEAD', ...live], { cwd: repo, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }) : null;
+  let j = null; try { j = r && JSON.parse(r.stdout); } catch { /* no JSON: say so below */ }
+  if (r && !j) unformed.push(`diataxis check gave no JSON for ${live.join(', ')}`);
+  for (const pg of j?.pages ?? []) for (const f of pg.findings ?? []) if (f.level === 'FAIL' && ['D1', 'D3', 'D5'].includes(f.id)) unformed.push(`${pg.file} ${f.id} ${f.msg}`);
+}
+
+let verdict = best ? best.decision : 'none';
+if (verdict === 'allow' && unformed.length) verdict = 'unformed';
+if (JSON_OUT) console.log(JSON.stringify({ repo, tree, verdict, entry: best, unformed }, null, 2));
 else if (!best) console.log(`✗ no gate entry for HEAD^{tree} ${tree.slice(0, 9)} in ${[...logs].length} log(s): the commit bypassed the gate; re-run it (git commit --amend --no-edit)`);
+else if (verdict === 'unformed') console.log([`✗ gate allow for ${tree.slice(0, 9)}, but pages the gate let through as a verbatim move still lack their form (the rewrite commit is missing):`, ...unformed.map((u) => '  ' + u)].join('\n'));
 else console.log(`${verdict === 'allow' ? '✓' : '✗'} gate ${verdict} for ${tree.slice(0, 9)} at ${best.at} (${best.fails ?? 0} fail, ${best.warns ?? 0} warn) · ${best.log}`);
-process.exit(verdict === 'allow' ? 0 : verdict === 'skip' ? 3 : 1);
+process.exit(verdict === 'allow' ? 0 : verdict === 'skip' || verdict === 'unformed' ? 3 : 1);

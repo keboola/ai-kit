@@ -101,7 +101,12 @@ open a one-line PR against the other repo — but decide, don't discover it late
 ### 3. Split (after approval)
 
 - **One new page per type.** Move content **verbatim first**, rewrite second — a split and a
-  rewrite in one pass makes the diff unreviewable and loses content silently.
+  rewrite in one pass makes the diff unreviewable and loses content silently. Commit the move on
+  its own: the commit gate sees that the new pages' text comes from the page this commit shrinks,
+  and reports their missing description, lede and Next (D1, D3, D5) as WARN instead of refusing the
+  commit. Every other rule still blocks. The rewrite commit must fix those three:
+  `gate-verdict` (docs-ship's precondition) holds the push while any of them still fails at HEAD.
+  Don't reach for `DOCS_GATE=skip` for this; auto mode refuses it anyway.
 - Page = **folder + `index.md`** (co-locate images) for a topic with assets; a flat
   `<name>.md` next to its siblings is fine for a leaf page (`cli/`, `data-apps/` are flat).
 - Every retired slug: `redirect_from:` in the surviving page's frontmatter (list or string).
@@ -110,7 +115,16 @@ open a one-line PR against the other repo — but decide, don't discover it late
 - Repoint inbound links: `git grep -n "<old-slug>" -- src/content/docs/ _data/navigation.yml`
   → update every hit. A split that leaves the old URL as a competing overview has **not**
   been migrated (Jordan 07-30: the goal is de-duplication, not relocation).
-- Anchors count too: `git grep -n "<old-slug>#"` — a split usually breaks `#heading` targets.
+- Anchors count too: a split usually breaks `#heading` targets. After the rewrite, run
+  `node "${CLAUDE_PLUGIN_ROOT}/scripts/repoint-anchors.mjs" --page <old-slug> --dry-run`: it compares
+  the page's headings before the split (the merge-base with main) with where each heading lives now,
+  and rewrites `<old-slug>#id` links (absolute `help.keboola.com` ones too) to the page that holds it.
+  A heading renamed on the way, or a section that became a whole page, goes in `--map map.json`
+  (`{"#old-id": "/new/page/"}`). Its "unmapped" list is the hand work. Drop `--dry-run` to write.
+- **Two splits whose pages link to each other** (Tables and Mappings, 2026-11-12): each PR's build
+  is clean on its own, and the anchors break only once both merge. Stack the second branch on the
+  first, re-run `repoint-anchors` for both pages on the stacked branch, and run the link check
+  there. Say the merge order in both PR bodies.
 
 ### 4. Page shape (the observable standard)
 
@@ -197,6 +211,8 @@ earns ~0 clicks while users search "deprecated".
 npm run build                                   # clean, no fatal errors
 node scripts/audit-phase2.mjs                   # MISSING IMAGES 0, no new broken links
 node scripts/check-redirects.mjs                # when slugs moved (see AGENTS.md for flags)
+node "${CLAUDE_PLUGIN_ROOT}/skills/docs-link-redirect-check/scripts/check.mjs" --base keboola/main
+                                                # anchors: also every link INTO a changed page's #ids
 npm run check:cli                               # only if CLI pages changed
 git grep -n "<every-deleted-slug>" -- src/content/docs/ _data/navigation.yml   # → zero hits
 ```

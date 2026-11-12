@@ -11,6 +11,7 @@
 //   3. inbound links to retired slugs anywhere in src/ or the nav
 //   4. nav urls resolve to real pages (not stubs)
 //   5. changed pages: internal links + #anchors + media resolve in dist/
+//      and links from any page into a changed page's #anchors (a split drops headings others link to)
 //   6. src/sidebar.mjs matches what convert-nav.mjs generates
 // Exit 1 on any blocker. Never edits anything.
 
@@ -132,17 +133,39 @@ if (SITE) (function walk(d) { for (const e of fs.readdirSync(d, { withFileTypes:
 else for (const f of changedFiles) { const u = pageUrlOf(f, fs.readFileSync(f, 'utf8')); const df = distFile(u); if (df) htmlFiles.push(df); }
 const idsOf = (file) => { const t = fs.readFileSync(file, 'utf8'); const ids = new Set(); for (const m of t.matchAll(/\s(?:id|name)="([^"]+)"/g)) ids.add(m[1]); return ids; };
 const idCache = new Map();
+const SITE_ORIGIN = /^https?:\/\/help\.keboola\.com(?=\/)/;
 for (const hf of htmlFiles) {
   const html = fs.readFileSync(hf, 'utf8'); const pageUrl = norm('/' + path.relative(DIST, path.dirname(hf)).replace(/\\/g, '/') + '/');
   const main = html.match(/<main[\s\S]*?<\/main>/i)?.[0] ?? html;
   for (const m of main.matchAll(/<a\s[^>]*href="([^"]+)"/gi)) {
-    const href = m[1]; if (!href.startsWith('/') && !href.startsWith('#')) continue; if (href.startsWith('/_astro/') || href.startsWith('/pagefind/')) continue;
+    const href = m[1].replace(SITE_ORIGIN, ''); if (!href.startsWith('/') && !href.startsWith('#')) continue; if (href.startsWith('/_astro/') || href.startsWith('/pagefind/')) continue;
     const [pathPart, frag] = href.split('#'); const target = pathPart ? norm(pathPart) : pageUrl; const tf = distFile(target);
     if (!tf) { report.brokenLinks.push(`${pageUrl}  →  ${href}`); continue; }
     if (isStub(tf) && !pathPart) continue;
     if (frag) { if (isStub(tf)) { report.brokenAnchors.push(`${pageUrl}  →  ${href}  (target is a redirect stub; anchors cannot survive)`); continue; } if (!idCache.has(tf)) idCache.set(tf, idsOf(tf)); if (!idCache.get(tf).has(decodeURIComponent(frag))) report.brokenAnchors.push(`${pageUrl}  →  ${href}`); }
   }
   for (const m of main.matchAll(/(?:<img[^>]*\ssrc|<source[^>]*\ssrc|\sposter)="([^"]+)"/gi)) { const src = m[1]; if (!src.startsWith('/') || src.startsWith('/_astro/')) continue; if (!fs.existsSync(path.join(DIST, src.split('?')[0]))) report.mediaMissing.push(`${pageUrl}  →  ${src}`); }
+}
+
+// 5b. every page's links into a changed page's #anchors. Splitting a page removes headings that pages
+// nobody touched still link to; only a check from the other side sees that (2026-11-12: the Tables and
+// Mappings splits each broke the other's anchors, and only a stacked build showed it).
+if (!SITE && changedFiles.length) {
+  const targets = new Map();
+  for (const f of changedFiles) { const u = pageUrlOf(f, fs.readFileSync(f, 'utf8')); const df = distFile(u); if (df && !isStub(df)) targets.set(u, df); }
+  const done = new Set(htmlFiles), all = [];
+  (function walk(d) { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (e.name === 'index.html' && !done.has(p)) all.push(p); } })(DIST);
+  if (targets.size) for (const hf of all) {
+    const html = fs.readFileSync(hf, 'utf8'); if (isStub(hf)) continue;
+    const pageUrl = norm('/' + path.relative(DIST, path.dirname(hf)).replace(/\\/g, '/') + '/');
+    const main = html.match(/<main[\s\S]*?<\/main>/i)?.[0] ?? html;
+    for (const m of main.matchAll(/<a\s[^>]*href="([^"]+#[^"]+)"/gi)) {
+      const href = m[1].replace(SITE_ORIGIN, ''); if (!href.startsWith('/')) continue;
+      const [pathPart, frag] = href.split('#'); const tf = targets.get(norm(pathPart)); if (!tf || !frag) continue;
+      if (!idCache.has(tf)) idCache.set(tf, idsOf(tf));
+      if (!idCache.get(tf).has(decodeURIComponent(frag))) report.brokenAnchors.push(`${pageUrl}  →  ${href}  (into a changed page)`);
+    }
+  }
 }
 
 // 6. sidebar in sync with the nav
