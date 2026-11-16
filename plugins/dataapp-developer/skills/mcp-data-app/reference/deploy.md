@@ -80,7 +80,7 @@ These tools are live today.
 
 Use this when the scaffolded server is already pushed to a GitHub repo (`github.com`, or a `*.ghe.com` host the stack is configured for; a GHE Server host on its own domain works through kbagent only). The platform reads it through the Keboola organization's GitHub App connection, so nothing is copied into Keboola git and no PAT is stored.
 
-Prerequisites: the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)). The URL must be `https://`. The app is prod-only, with no dev mode or preview yet. That is fine here, because an MCP server app is deployed rather than iterated on behind a preview.
+Prerequisites: the Keboola GitHub App installed on the GitHub organization and that organization connected to the Keboola organization, both done by someone who is a Keboola organization admin and an owner of the GitHub organization ([how](https://help.keboola.com/management/organization/#connect-github)). The URL must be `https://`. An MCP server app is deployed rather than iterated on behind a preview, so deploy prod directly.
 
 MCP tools:
 
