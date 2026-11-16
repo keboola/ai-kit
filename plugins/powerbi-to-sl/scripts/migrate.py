@@ -19,6 +19,7 @@ import argparse
 import json
 import re
 import sys
+import textwrap
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -61,6 +62,25 @@ _slug_re = re.compile(r"[^a-z0-9]+")
 
 def slugify(s: str) -> str:
     return _slug_re.sub("-", s.lower()).strip("-") or "unnamed"
+
+
+def _unique_stem(
+    base: str, used: dict[str, str], label: str, warnings: list[str]
+) -> str:
+    """Return a unique filename stem, appending a numeric suffix and warning on collision."""
+    if base not in used:
+        used[base] = label
+        return base
+    n = 2
+    while f"{base}-{n}" in used:
+        n += 1
+    candidate = f"{base}-{n}"
+    warnings.append(
+        f"slug collision: {label!r} shares slug {base!r} with {used[base]!r}; "
+        f"written as {candidate}.json"
+    )
+    used[candidate] = label
+    return candidate
 
 
 # ---- Intermediate representation ------------------------------------------
@@ -213,14 +233,66 @@ _TMDL_COLUMN_RE = re.compile(
     r"^\s+column\s+'?([^'\n]+?)'?\s*$\n((?:\s{2,}.*\n)*)",
     re.MULTILINE,
 )
-_TMDL_MEASURE_RE = re.compile(
-    r"^\s+measure\s+'?([^'\n=]+?)'?\s*=\s*(.*?)$\n((?:\s{2,}.*\n)*)",
-    re.MULTILINE | re.DOTALL,
+_TMDL_MEASURE_HEADER_RE = re.compile(r"^([ \t]+)measure\s+'?([^'\n=]+?)'?\s*=\s*(.*)$")
+_TMDL_MEASURE_PROP_RE = re.compile(
+    r"^\s*(?:formatString|displayFolder|lineageTag|description|dataCategory|"
+    r"changedProperty|annotation|extendedProperty|detailRowsDefinition|"
+    r"isHidden|isPrivate|isSimpleMeasure|summarizeBy)\b(?:\s*[:=]|\s+\S|$)"
 )
-_TMDL_RELATIONSHIP_RE = re.compile(
-    r"^relationship\s+\S+\s*$\n((?:\s+.*\n)+)",
-    re.MULTILINE,
-)
+_TMDL_RELATIONSHIP_HEADER_RE = re.compile(r"^relationship\s+\S+\s*$", re.MULTILINE)
+
+
+def _parse_tmdl_measures(body: str) -> Iterable[PbiMeasure]:
+    """Parse every `measure` block in a table body, including multi-line DAX expressions."""
+    lines = body.splitlines()
+    i = 0
+    while i < len(lines):
+        m = _TMDL_MEASURE_HEADER_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+
+        indent_len = len(m.group(1))
+        name = m.group(2).strip().strip("'\"")
+        inline_expr = m.group(3).strip()
+        i += 1
+
+        block_lines: list[str] = []
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+            if stripped and (len(line) - len(line.lstrip(" \t"))) <= indent_len:
+                break
+            block_lines.append(line)
+            i += 1
+
+        expr_lines: list[str] = []
+        prop_start = len(block_lines)
+        if inline_expr == "```":
+            for idx, bl in enumerate(block_lines):
+                if bl.strip() == "```":
+                    prop_start = idx + 1
+                    break
+                expr_lines.append(bl)
+            expression = textwrap.dedent("\n".join(expr_lines)).strip()
+        else:
+            for idx, bl in enumerate(block_lines):
+                if bl.strip() and _TMDL_MEASURE_PROP_RE.match(bl):
+                    prop_start = idx
+                    break
+                expr_lines.append(bl)
+            dedented = textwrap.dedent("\n".join(expr_lines)).strip()
+            if inline_expr and dedented:
+                expression = f"{inline_expr}\n{dedented}"
+            else:
+                expression = inline_expr or dedented
+
+        attrs = "\n".join(block_lines[prop_start:])
+        yield PbiMeasure(
+            name=name,
+            expression=expression,
+            description=_tmdl_attr(attrs, "description"),
+        )
 
 
 def _parse_tmdl_tables(text: str) -> Iterable[PbiTable]:
@@ -239,31 +311,38 @@ def _parse_tmdl_tables(text: str) -> Iterable[PbiTable]:
             t.columns.append(
                 PbiColumn(name=col_name, data_type=dt, description=desc)
             )
-        for me_m in _TMDL_MEASURE_RE.finditer(body):
-            t.measures.append(
-                PbiMeasure(
-                    name=me_m.group(1),
-                    expression=me_m.group(2).strip(),
-                    description=_tmdl_attr(me_m.group(3), "description"),
-                )
-            )
+        t.measures.extend(_parse_tmdl_measures(body))
         yield t
 
 
 def _parse_tmdl_relationships(text: str) -> Iterable[PbiRelationship]:
-    for m in _TMDL_RELATIONSHIP_RE.finditer(text):
-        body = m.group(1)
+    matches = list(_TMDL_RELATIONSHIP_HEADER_RE.finditer(text))
+    for i, m in enumerate(matches):
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        raw_body = text[start:end]
+        body_lines: list[str] = []
+        for line in raw_body.splitlines():
+            if line.strip() and not line[0].isspace():
+                break
+            body_lines.append(line)
+        body = "\n".join(body_lines)
         from_ = _tmdl_attr(body, "fromColumn") or ""
         to_ = _tmdl_attr(body, "toColumn") or ""
         if "." in from_ and "." in to_:
             ft, fc = from_.split(".", 1)
             tt, tc = to_.split(".", 1)
+            is_active_raw = _tmdl_attr(body, "isActive")
+            is_active = (
+                is_active_raw.lower() != "false" if is_active_raw is not None else True
+            )
             yield PbiRelationship(
                 from_table=ft.strip("'\""),
                 from_column=fc.strip("'\""),
                 to_table=tt.strip("'\""),
                 to_column=tc.strip("'\""),
                 cardinality=_tmdl_attr(body, "cardinality") or "manyToOne",
+                is_active=is_active,
             )
 
 
@@ -355,6 +434,7 @@ def emit_keboola_sl(
         )
 
     # Metrics
+    used_metric_slugs: dict[str, str] = {}
     for t in pbi.tables:
         for me in t.measures:
             metric = {
@@ -364,7 +444,7 @@ def emit_keboola_sl(
                 "sql": me.expression,  # DAX preserved verbatim
                 "dataset": name_to_table_id[t.name],
             }
-            slug = slugify(me.name)
+            slug = _unique_stem(slugify(me.name), used_metric_slugs, me.name, warnings)
             (out_dir / "semantic-metric" / f"{slug}.json").write_text(
                 json.dumps(metric, indent=2, ensure_ascii=False)
             )
@@ -375,7 +455,14 @@ def emit_keboola_sl(
                 )
 
     # Relationships
+    used_rel_stems: dict[str, str] = {}
     for r in pbi.relationships:
+        if not r.is_active:
+            warnings.append(
+                f"skipped inactive relationship: "
+                f"{r.from_table}.{r.from_column} → {r.to_table}.{r.to_column}"
+            )
+            continue
         ft = name_to_table_id.get(r.from_table)
         tt = name_to_table_id.get(r.to_table)
         if not ft or not tt:
@@ -399,8 +486,14 @@ def emit_keboola_sl(
             "on": f'from."{r.from_column}" = to."{r.to_column}"',
             "type": PBI_CARDINALITY_TO_JOIN.get(r.cardinality, "left"),
         }
-        fname = f"{slugify(r.from_table)}__{slugify(r.to_table)}.json"
-        (out_dir / "semantic-relationship" / fname).write_text(
+        base_rel = f"{slugify(r.from_table)}__{slugify(r.to_table)}"
+        rel_stem = _unique_stem(
+            base_rel,
+            used_rel_stems,
+            f"{r.from_table}.{r.from_column} → {r.to_table}.{r.to_column}",
+            warnings,
+        )
+        (out_dir / "semantic-relationship" / f"{rel_stem}.json").write_text(
             json.dumps(rel_payload, indent=2, ensure_ascii=False)
         )
 
