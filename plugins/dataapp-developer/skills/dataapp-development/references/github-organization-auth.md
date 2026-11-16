@@ -49,7 +49,7 @@ Both buttons are on the organization's GitHub tab: `https://connection.<stack>/c
 | github.com or a GitHub Enterprise host the stack is configured for | The MCP accepts only `github.com` and `*.ghe.com`. A GHE Server host on its own domain works through kbagent, not the MCP. GitLab, Bitbucket and other hosts still need a PAT or SSH key. The stack checks the host at deploy time |
 | Short-lived push token | `create_python_js_data_app_git_credential` returns a token valid for about an hour (`expires_at`), for that one repository. On a 401/403, mint a new one and `git remote set-url`. It needs the GitHub organization owner to approve the GitHub App's write access |
 | The draft flow assumes prod on `main` | Drafts and their preview links work as on a managed repo, branched off `main`, and promote pushes back to `main`. For an app on another branch, push to its branch and redeploy prod |
-| `main` may be protected | When the push to `main` at promote is refused, the customer's team merges the draft branch through a pull request; then redeploy prod |
+| `main` may move and may be protected | Before promote, merge `origin/main` into the draft branch. When the push to `main` is refused, open a pull request with the push token and redeploy prod once it is merged |
 | Not for an app on a Keboola-managed repo | The managed repo is fixed when the app is created. That app can't be switched to org auth (see below) |
 | Exclusive with credentials | A `git` block with `authType: organization` and a `username` / `#password` / `#sshKey` is rejected |
 
@@ -108,7 +108,13 @@ It sets `authType` and removes `username` / `#password` / `#sshKey` in one write
 
 ## Changing the code of an org-auth app
 
-Through the MCP, an org-auth app on `main` takes the draft flow in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): `create_python_js_data_app_git_credential` gives the push token, the draft serves your branch, and promote merges it into `main`. The customer's team sees the draft branches: name them after the change. Never ask the user for a GitHub token.
+Through the MCP, an org-auth app on `main` takes the draft flow in [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md): `create_python_js_data_app_git_credential` gives the push token, the draft serves your branch, and promote merges it into `main`. The customer's team sees the draft branches: name them after the change. Commits carry your own git identity, never the user's: the pull request description names who asked for the change. Never ask the user for a GitHub token.
+
+Promote on such a repo:
+
+1. `git fetch --prune origin`, merge `origin/main` into the draft branch and push it: the customer's team may have pushed since the draft started. On a conflict, abort the merge, tell the user what each side changed, and ask which to keep.
+2. Push the draft branch to `main` as a fast-forward (`git push origin <branch>:main`). Never force it.
+3. Refused by branch protection or a ruleset (`GH006`, `GH013`): open a pull request from the draft branch into `main` with the push token, which carries Pull requests: write (`POST https://api.github.com/repos/<owner>/<repo>/pulls`, `Authorization: Bearer <token>`). When GitHub refuses that too, give the user `https://github.com/<owner>/<repo>/compare/main...<branch>?expand=1` to open it themselves. Hand the user the link, keep the draft and its branch, and redeploy prod only once the pull request is merged.
 
 Without the MCP (kbagent has no draft command), or for an app on another branch:
 
