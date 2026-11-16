@@ -48,12 +48,12 @@ Both buttons are on the organization's GitHub tab: `https://connection.<stack>/c
 | `https://` URL only | `git@github.com:org/repo.git` is refused. Use `https://github.com/org/repo` |
 | github.com or a GitHub Enterprise host the stack is configured for | The MCP accepts only `github.com` and `*.ghe.com`. A GHE Server host on its own domain works through kbagent, not the MCP. GitLab, Bitbucket and other hosts still need a PAT or SSH key. The stack checks the host at deploy time |
 | Short-lived push token | `create_python_js_data_app_git_credential` returns a token valid for about an hour (`expires_at`), for that one repository. On a 401/403, mint a new one and `git remote set-url`. It needs the GitHub organization owner to approve the GitHub App's write access |
-| Drafts need prod on `main` | Drafts and their preview links work as on a managed repo, branched off `main`. An app that deploys from another branch has none |
+| The draft flow assumes prod on `main` | Drafts and their preview links work as on a managed repo, branched off `main`, and promote pushes back to `main`. For an app on another branch, push to its branch and redeploy prod |
 | `main` may be protected | When the push to `main` at promote is refused, the customer's team merges the draft branch through a pull request; then redeploy prod |
 | Not for an app on a Keboola-managed repo | The managed repo is fixed when the app is created. That app can't be switched to org auth (see below) |
 | Exclusive with credentials | A `git` block with `authType: organization` and a `username` / `#password` / `#sshKey` is rejected |
 
-When one of these rules it out (GitLab repo, prod on a branch other than `main`), fall back to the Keboola-managed repo (`keboola-git` skill) or to a PAT or SSH key.
+When one of these rules it out (a GitLab repo, say), fall back to the Keboola-managed repo (`keboola-git` skill) or to a PAT or SSH key.
 
 ## Create or switch an app
 
@@ -122,6 +122,7 @@ The **When** column says where each error shows up:
 
 - **Create / rebind:** `modify_python_js_data_app`, `kbagent data-app create` or `git-auth-set`. These refuse the request before anything is written.
 - **Deploy:** `deploy_data_app`, the deploy inside `kbagent data-app create --wait`, `deploy --wait`, or `kbagent data-app runs`.
+- **Push token:** `create_python_js_data_app_git_credential`, before a draft or a promote.
 
 | When | What the error says | What to tell the user |
 |---|---|---|
@@ -130,7 +131,10 @@ The **When** column says where each error shows up:
 | Create / rebind | URL not `https://HOST/OWNER/REPO`, or (MCP only) a host other than `github.com` / `*.ghe.com`. kbagent doesn't check the host; a host the stack has no GitHub App for fails at deploy (the HTTP 412 row) | Use the `https://github.com/<org>/<repo>` form. Other hosts need a PAT or SSH key |
 | Create / rebind | Org auth combined with credentials | Remove `username` / `#password` / `#sshKey` (kbagent `data-app git-auth-set` does it in one write) |
 | Create / rebind | Rebind or `git-auth-set` refused for a managed repo | Expected: an app on a Keboola-managed repo can't switch. Stay on the managed repo, or create a new app with the user's agreement |
-| Deploy | `deploy_data_app(mode='dev')` refused | Expected: dev mode isn't supported for org auth yet. Deploy in prod mode |
+| Deploy | `deploy_data_app(mode='dev')` refused | Expected for every app: deploy prod without `mode`, and preview a change in a draft (`create_python_js_data_app_draft`) |
+| Push token | Write access is waiting for approval (HTTP 400 "not approved") | An owner of the GitHub organization approves the Keboola GitHub App's write access in the organization's GitHub Apps settings. No draft until then |
+| Push token | Read-only role, or a broken organization connection (other HTTP 400) | A read-only role can't push: someone with a write role does it. For a broken connection, the Prerequisites again |
+| Push token | The stack cannot issue push tokens (`supports_access_token: false` on an org-auth app, or HTTP 502/503) | No admin can fix it: tell the user to contact Keboola support, and don't retry in a loop. Until then, change the code through the customer's own process and redeploy prod |
 
 ## Side note: Custom Python and dbt use the same connection
 

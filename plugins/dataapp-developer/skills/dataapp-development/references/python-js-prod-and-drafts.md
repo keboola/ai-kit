@@ -131,7 +131,7 @@ modify_python_js_data_app(
 create_python_js_data_app_git_credential(configuration_id=PROD)
 ```
 
-**Always against `PROD`.** It returns a `git_clone_url` carrying a one-time secret: hold it in a shell variable, never commit, echo to a file, or log it.
+**Always against `PROD`.** It returns a `git_clone_url` carrying a secret: a one-time credential on a managed repo, a token that expires in about an hour on an org-auth repo (see the last section). Hold it in a shell variable, never commit, echo to a file, or log it.
 
 ### 4. Push the source to the draft branch
 
@@ -216,7 +216,7 @@ Otherwise the draft stays on the app as one more to choose from, still running. 
 2. **Delete the draft** — `delete_python_js_data_app_draft(configuration_id=PROD, draft_id=DRAFT_ID)`. It stops the draft and never touches the branch.
 3. **Delete the branch** — `git push origin --delete <branch>`, unless another entry in `drafts` or `legacy_drafts` still has that `git_branch`: then keep it. The repo refuses deleting only its default branch, which is `main` when §4 pushed it first.
 
-The push credential from §3 stays valid. The MCP tools cannot revoke it: tell the user it can be revoked under the app's Git settings in Keboola if they want it gone.
+On a managed repo, the push credential from §3 stays valid. The MCP tools cannot revoke it: tell the user it can be revoked under the app's Git settings in Keboola if they want it gone. On an org-auth repo, skip this: the token is not stored and expires by itself.
 
 ## Creating a prod app (only when `get_data_apps` returns none)
 
@@ -247,4 +247,4 @@ Returns `configuration_id`, `data_app_id`, `repo_url`. Then go back to §2–§5
 
 ## Apps on organization auth
 
-A prod app on the customer's GitHub repo with `git_auth="organization"` takes this draft flow when it deploys from `main`. `create_python_js_data_app_git_credential` returns a push token that expires in about an hour (`expires_at`): on a 401/403, mint a new one and `git remote set-url`. Never ask the user for a GitHub token. The customer's `main` may be protected: when the promote push is refused, the customer's team merges the draft branch through a pull request, then redeploy prod. An app on another branch has no drafts: push to its branch, then redeploy prod. Rebinding works only for an app already on an external repo (`get_data_apps`: `is_managed_git_repo: false`). A prod app on the managed repo can't be rebound, and a new org-auth app next to it is a second app: create it only when the user agrees. Otherwise stay on the managed repo and its drafts. Details: [github-organization-auth.md](github-organization-auth.md).
+A prod app on the customer's GitHub repo with `git_auth="organization"` takes this draft flow when it deploys from `main`. `create_python_js_data_app_git_credential` returns a push token that expires in about an hour (`expires_at`): on a 401/403, mint a new one and `git remote set-url`. Never ask the user for a GitHub token. The customer's `main` may be protected: when the promote push is refused, the customer's team merges the draft branch through a pull request, then redeploy prod. The flow assumes prod deploys from `main`: for an app on another branch, push to its branch, then redeploy prod. Rebinding works only for an app already on an external repo (`get_data_apps`: `is_managed_git_repo: false`). A prod app on the managed repo can't be rebound, and a new org-auth app next to it is a second app: create it only when the user agrees. Otherwise stay on the managed repo and its drafts. Details: [github-organization-auth.md](github-organization-auth.md).
