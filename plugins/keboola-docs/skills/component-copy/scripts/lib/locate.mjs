@@ -1,12 +1,14 @@
 // Where a component's copy lives: one repository and, in a monorepo, one folder.
 //
-// In November 2026 the Component Factory moved most components into the private
-// monorepo keboola/components and archived the old keboola/component-* repos (see
-// the keboola/component-ci README, "Monorepo workflows"). A component can now be
-// in its own repo (repo root), in a monorepo folder, or in both while a move is
-// half done. component-facts.mjs gathers the evidence through gh; the functions
-// here only decide, so they can be tested without the network.
-export const MONOREPO = 'keboola/components';
+// In November 2026 the Component Factory moved most components into monorepos and
+// archived the old keboola/component-* repos (see the keboola/component-ci README,
+// "Monorepo workflows"). There are two: keboola/components and
+// keboola/components-private (both named in Matyáš Jirát's GitHub App request in
+// #ask-access, 2026-11-04). A component can now be in its own repo (repo root), in
+// a monorepo folder, or in both while a move is half done. component-facts.mjs
+// gathers the evidence through gh; the functions here only decide, so they can be
+// tested without the network.
+export const MONOREPOS = ['keboola/components', 'keboola/components-private'];
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -49,8 +51,8 @@ export function parseGithubUrl(url) {
   return { repo, path };
 }
 
-// Which folders of the monorepo hold the component, from search hits
-// ({ path, fragments }) and the component roots of the tree. Declaring hits win;
+// Which folders of one monorepo hold the component, from search hits
+// ({ path, fragments }) and the component roots of its tree. Declaring hits win;
 // mentions only count when nothing declares the id.
 export function monorepoCandidates(hits, roots, id) {
   const declared = new Set();
@@ -65,74 +67,90 @@ export function monorepoCandidates(hits, roots, id) {
   return { declared: [...declared].sort(), mentioned: [...mentioned].filter((r) => !declared.has(r)).sort() };
 }
 
+const at = (repo, folder) => `${repo}/${folder}`;
+
 // The decision. Inputs:
 //   id
 //   standalone: [{ repo, archived }] repos whose workflows declare the id exactly
-//               (never the monorepo itself)
+//               (never a monorepo)
 //   docUrl:     parseGithubUrl(documentationUrl) or null
-//   docRepo:    { repo, archived } for docUrl's repo when it is not the monorepo and
+//   docRepo:    { repo, archived } for docUrl's repo when it is not a monorepo and
 //               no workflow declared the id, else null (the last-resort guess)
-//   mono:       { readable, error, searchError, truncated, roots, declared, mentioned }
-//               or null when the monorepo was not looked at
-//   folder:     a folder the operator passed with --folder, or null
+//   monos:      one entry per monorepo that was looked at:
+//               { repo, readable, error, searchError, truncated, roots, declared, mentioned }
+//   folder:     a folder the operator passed with --folder: `<folder>` or
+//               `<owner/monorepo>:<folder>`, or null
 // Returns { location, hard: [reason], notes: [reason], predecessor }; location is
 // { kind: 'repo'|'monorepo', repo, folder, source, predecessor } or null, and
 // predecessor names the archived repo(s) even when no new home was found.
-export function decideLocation({ id, standalone = [], docUrl = null, docRepo = null, mono = null, folder = null }) {
+export function decideLocation({ id, standalone = [], docUrl = null, docRepo = null, monos = [], folder = null }) {
   const hard = [];
   const notes = [];
   const live = standalone.filter((s) => !s.archived).map((s) => s.repo);
   const archived = standalone.filter((s) => s.archived).map((s) => s.repo);
   // An archived documentation repo is a predecessor too: it says the component moved.
   if (!standalone.length && docRepo?.archived) archived.push(docRepo.repo);
-  const predecessor = archived.length === 1 ? archived[0] : archived.length ? archived.join(', ') : null;
-  const docRoot = mono?.readable && docUrl?.repo === MONOREPO && docUrl.path
-    ? nearestRoot(docUrl.path, mono.roots || []) : null;
+  const predecessor = archived.length ? archived.join(', ') : null;
+  const readable = monos.filter((m) => m.readable);
+  const unreadable = monos.filter((m) => !m.readable);
 
-  // 1. The monorepo folder, when the monorepo was readable.
-  let monoFolder = null;
-  let monoSource = null;
-  if (mono?.readable) {
-    if (folder) {
-      if ((mono.roots || []).includes(folder)) { monoFolder = folder; monoSource = '--folder (operator)'; }
-      else hard.push(`--folder ${folder} is not a component folder of ${MONOREPO} (no component_config/ there).`);
-    } else if (mono.declared?.length === 1) {
-      monoFolder = mono.declared[0]; monoSource = 'monorepo file that declares the id';
-    } else if (mono.declared?.length > 1) {
-      hard.push(`${mono.declared.length} folders of ${MONOREPO} declare ${id} (${mono.declared.join(', ')}): confirm the right one with the owner and re-run with --folder <folder>.`);
+  // 1. The monorepo folder, from the readable monorepos together.
+  let pick = null;
+  if (folder) {
+    const [want, path] = folder.includes(':') ? folder.split(':', 2) : [null, folder];
+    const hits = readable.filter((m) => (!want || m.repo === want) && (m.roots || []).includes(path));
+    if (hits.length === 1) pick = { repo: hits[0].repo, folder: path, source: '--folder (operator)' };
+    else if (hits.length > 1) hard.push(`--folder ${path} is a component folder in ${hits.map((m) => m.repo).join(' and ')}: pass it as <owner/monorepo>:${path}.`);
+    else hard.push(`--folder ${folder} is not a component folder (no component_config/ there) of ${want || readable.map((m) => m.repo).join(' or ') || 'a readable monorepo'}.`);
+  } else {
+    const declared = readable.flatMap((m) => (m.declared || []).map((f) => ({ repo: m.repo, folder: f })));
+    const mentioned = readable.flatMap((m) => (m.mentioned || []).map((f) => ({ repo: m.repo, folder: f })))
+      .filter((x) => !declared.some((d) => d.repo === x.repo && d.folder === x.folder));
+    const docMono = docUrl && docUrl.path ? readable.find((m) => m.repo === docUrl.repo) : null;
+    const docRoot = docMono ? nearestRoot(docUrl.path, docMono.roots || []) : null;
+    if (declared.length === 1) {
+      pick = { ...declared[0], source: 'monorepo file that declares the id' };
+    } else if (declared.length > 1) {
+      hard.push(`${declared.length} monorepo folders declare ${id} (${declared.map((d) => at(d.repo, d.folder)).join(', ')}): confirm the right one with the owner and re-run with --folder <owner/monorepo>:<folder>.`);
     } else if (docRoot) {
-      monoFolder = docRoot; monoSource = 'documentationUrl folder';
-    } else if (mono.mentioned?.length) {
+      pick = { repo: docMono.repo, folder: docRoot, source: 'documentationUrl folder' };
+    } else if (mentioned.length) {
       // A mention is not a declaration: the successor's README naming its
       // predecessor is the usual case. Never pick a folder on that alone.
-      hard.push(`${id} is only mentioned, not declared, in ${MONOREPO} (${mono.mentioned.join(', ')}); that is often another component naming it. Confirm the folder with the owner and re-run with --folder <folder>.`);
+      hard.push(`${id} is only mentioned, not declared, in ${mentioned.map((d) => at(d.repo, d.folder)).join(', ')}; that is often another component naming it. Confirm the folder with the owner and re-run with --folder <owner/monorepo>:<folder>.`);
     }
-    if (mono.truncated) notes.push(`The ${MONOREPO} tree listing was truncated; a component folder may be missing from the roots.`);
+  }
+  for (const m of readable) {
+    if (m.truncated) notes.push(`The ${m.repo} tree or search was truncated; a component folder may be missing.`);
   }
 
   // 2. Pick, most specific first.
   let location = null;
-  if (monoFolder && live.length) {
-    hard.push(`Both ${live.join(', ')} and ${MONOREPO}/${monoFolder} hold ${id}: a move is half done. Ask the owner which one publishes before writing anything.`);
-  } else if (monoFolder) {
-    location = { kind: 'monorepo', repo: MONOREPO, folder: monoFolder, source: monoSource, predecessor };
-    if (predecessor) notes.push(`${predecessor} is archived; ${id} now lives in ${MONOREPO}/${monoFolder}.`);
+  if (pick && live.length) {
+    hard.push(`Both ${live.join(', ')} and ${at(pick.repo, pick.folder)} hold ${id}: a move is half done. Ask the owner which one publishes before writing anything.`);
+  } else if (pick) {
+    location = { kind: 'monorepo', repo: pick.repo, folder: pick.folder, source: pick.source, predecessor };
+    if (predecessor) notes.push(`${predecessor} is archived; ${id} now lives in ${at(pick.repo, pick.folder)}.`);
+    // A monorepo nobody could read may hold the same id: say so instead of guessing.
+    if (unreadable.length) notes.push(`${unreadable.map((m) => m.repo).join(', ')} could not be read, so a second copy there was not ruled out.`);
   } else if (live.length === 1) {
     location = { kind: 'repo', repo: live[0], folder: '', source: 'workflow KBC_DEVELOPERPORTAL_APP', predecessor };
   } else if (live.length > 1) {
     hard.push(`${live.length} repositories declare ${id} in a workflow (${live.join(', ')}): pick the component's own repo by hand before anything else.`);
   } else if (!hard.length && !archived.length && docRepo) {
-    // Last resort, as before the monorepo: the documentation link's repo. The caller
-    // checks that it holds a component_config/.
+    // Last resort, as before the monorepos: the documentation link's repo. The
+    // caller checks that it holds a component_config/.
     location = { kind: 'repo', repo: docRepo.repo, folder: '', source: 'documentationUrl (unverified: may be a docs repo, not the component repo)', predecessor: null };
   }
 
-  // 3. Nothing found: say why, with the error that caused it when there was one.
+  // 3. Nothing found: say why, with the error behind each failed lookup.
   if (!location && !hard.length) {
-    const why = !mono ? ''
-      : !mono.readable ? ` ${MONOREPO} could not be read${mono.error ? ` (gh said: ${mono.error})` : ''}; a 404 means this gh account has no access, a 403 often means the token is not authorized for the organization's SSO.`
-      : mono.searchError ? ` The search in ${MONOREPO} failed (gh said: ${mono.searchError}); re-run in a minute before concluding anything.`
-      : ` ${MONOREPO} has no folder that declares ${id}.`;
+    const why = [
+      ...unreadable.map((m) => ` ${m.repo} could not be read${m.error ? ` (gh said: ${m.error})` : ''}.`),
+      ...(unreadable.length ? [' A 404 means this gh account has no access; a 403 often means the token is not authorized for the organization\'s SSO.'] : []),
+      ...readable.filter((m) => m.searchError).map((m) => ` The search in ${m.repo} failed (gh said: ${m.searchError}); re-run in a minute before concluding anything.`),
+      ...readable.filter((m) => !m.searchError).map((m) => ` ${m.repo} has no folder that declares ${id}.`),
+    ].join('');
     if (archived.length) hard.push(`${predecessor} is archived and the component's new home was not found.${why} Ask the Component Factory owner where ${id} lives now.`);
     else hard.push(`Could not resolve the component's repository: nothing to open a PR against.${why}`);
   }

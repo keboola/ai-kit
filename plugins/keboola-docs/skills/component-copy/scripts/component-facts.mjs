@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isVisible } from './lib/visible.mjs';
-import { MONOREPO, declaresExactly, parseGithubUrl, monorepoCandidates, decideLocation } from './lib/locate.mjs';
+import { MONOREPOS, declaresExactly, parseGithubUrl, monorepoCandidates, decideLocation } from './lib/locate.mjs';
 
 const SKILL_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
 // COMPONENT_COPY_REFS points at a checkout of the plugin repo, so a --write lands where it
@@ -154,46 +154,45 @@ const repoMeta = (r) => {
 
 const wf = searchCode(`org:keboola org:keboola-rnd "KBC_DEVELOPERPORTAL_APP" "${id}" path:.github/workflows`);
 const metaOf = {};
-const standalone = [...new Set(wf.items.filter((h) => h.repo !== MONOREPO && hitDeclares(h)).map((h) => h.repo))]
+const standalone = [...new Set(wf.items.filter((h) => !MONOREPOS.includes(h.repo) && hitDeclares(h)).map((h) => h.repo))]
   .map((r) => { metaOf[r] = repoMeta(r); return { repo: r, archived: metaOf[r].archived === true }; });
 
 const docUrl = parseGithubUrl(copy.documentationUrl);
 let docRepo = null;
-if (!standalone.length && docUrl && docUrl.repo !== MONOREPO) {
+if (!standalone.length && docUrl && !MONOREPOS.includes(docUrl.repo)) {
   metaOf[docUrl.repo] = repoMeta(docUrl.repo);
   // An unreadable documentation repo (404: deleted, private) is no evidence either way.
   if (!metaOf[docUrl.repo].error) docRepo = { repo: docUrl.repo, archived: metaOf[docUrl.repo].archived };
 }
 
-// The monorepo: readable at all, its component folders (those with a
+// Each monorepo: readable at all, its component folders (those with a
 // component_config/), and the folders whose files declare or mention the id.
-let mono = null;
-const monoMeta = gh(['api', `repos/${MONOREPO}`, '--jq', '{b:.default_branch,push:(.permissions.push // false)}']);
-if (monoMeta === null) {
-  mono = { readable: false, error: lastGhError };
-} else {
-  let monoBranch = 'main', push = false;
-  try { ({ b: monoBranch, push } = JSON.parse(monoMeta)); } catch { /* keep the defaults */ }
-  mono = { readable: true, defaultBranch: monoBranch, push, roots: [], declared: [], mentioned: [], truncated: false, searchError: null };
-  const tree = gh(['api', `repos/${MONOREPO}/git/trees/${monoBranch}?recursive=1`, '--jq',
+const probeMonorepo = (repo) => {
+  const meta = gh(['api', `repos/${repo}`, '--jq', '{b:.default_branch,push:(.permissions.push // false)}']);
+  if (meta === null) return { repo, readable: false, error: lastGhError };
+  let branch = 'main', push = false;
+  try { ({ b: branch, push } = JSON.parse(meta)); } catch { /* keep the defaults */ }
+  const m = { repo, readable: true, defaultBranch: branch, push, roots: [], declared: [], mentioned: [], truncated: false, searchError: null };
+  const tree = gh(['api', `repos/${repo}/git/trees/${branch}?recursive=1`, '--jq',
     '{truncated, roots: [.tree[] | select(.type == "tree" and (.path | test("(^|/)component_config$"))) | .path | sub("/?component_config$"; "")] }']);
-  if (tree === null) mono.searchError = `tree listing failed: ${lastGhError}`;
+  if (tree === null) { m.searchError = `tree listing failed: ${lastGhError}`; return m; }
+  const t = JSON.parse(tree);
+  // A component_config/ at the monorepo root is the kit's own, not a component.
+  m.roots = t.roots.filter(Boolean);
+  m.truncated = t.truncated === true;
+  const s = searchCode(`repo:${repo} "${id}"`);
+  if (s.error) m.searchError = s.error;
   else {
-    const t = JSON.parse(tree);
-    // A component_config/ at the monorepo root is the kit's own, not a component.
-    mono.roots = t.roots.filter(Boolean);
-    mono.truncated = t.truncated === true;
-    const s = searchCode(`repo:${MONOREPO} "${id}"`);
-    if (s.error) mono.searchError = s.error;
-    else {
-      if (s.incomplete) mono.truncated = true;
-      Object.assign(mono, monorepoCandidates(s.items, mono.roots, id));
-    }
+    if (s.incomplete) m.truncated = true;
+    Object.assign(m, monorepoCandidates(s.items, m.roots, id));
   }
-}
+  return m;
+};
+const monos = MONOREPOS.map(probeMonorepo);
 
-const decision = decideLocation({ id, standalone, docUrl, docRepo, mono, folder: opt('--folder') });
+const decision = decideLocation({ id, standalone, docUrl, docRepo, monos, folder: opt('--folder') });
 const location = decision.location;
+const mono = location?.kind === 'monorepo' ? monos.find((m) => m.repo === location.repo) : null;
 const repo = location?.repo ?? null;
 const repoSource = location?.source ?? null;
 
@@ -276,13 +275,13 @@ if (location?.kind === 'repo') {
 // rather than assume it runs (its PUBLISH_ENABLED switch can turn releases off).
 if (location?.kind === 'monorepo') {
   publish.defaultBranch = mono.defaultBranch;
-  const files = gh(['api', `repos/${MONOREPO}/contents/${location.folder}/component_config`, '--jq', '[.[].name]']);
+  const files = gh(['api', `repos/${repo}/contents/${location.folder}/component_config`, '--jq', '[.[].name]']);
   if (files) { try { publish.componentConfigDir = JSON.parse(files); } catch {} }
   else configListError = lastGhError;
-  const names = gh(['api', `repos/${MONOREPO}/contents/.github/workflows`, '--jq', '[.[].name]']);
+  const names = gh(['api', `repos/${repo}/contents/.github/workflows`, '--jq', '[.[].name]']);
   let caller = null;
   for (const n of (names ? JSON.parse(names) : []).filter((x) => /\.ya?ml$/.test(x))) {
-    const wf = gh(['api', `repos/${MONOREPO}/contents/.github/workflows/${n}`, '--jq', '.content']);
+    const wf = gh(['api', `repos/${repo}/contents/.github/workflows/${n}`, '--jq', '.content']);
     const text = wf ? Buffer.from(wf, 'base64').toString('utf8') : '';
     if (/keboola\/component-ci\/\.github\/workflows\/monorepo-publish\.ya?ml/.test(text)) { caller = { file: n, text }; break; }
   }
@@ -294,7 +293,7 @@ if (location?.kind === 'monorepo') {
     publish.triggerVia = `${caller.file}: calls component-ci monorepo-publish.yml (releases raised versions on push to ${mono.defaultBranch})` +
       (value ? `; PUBLISH_ENABLED: ${value}` : '; no PUBLISH_ENABLED line found');
   } else {
-    publish.triggerVia = `no caller of component-ci monorepo-publish.yml found in ${MONOREPO}/.github/workflows`;
+    publish.triggerVia = `no caller of component-ci monorepo-publish.yml found in ${repo}/.github/workflows`;
   }
 }
 if (location?.kind === 'repo' && !publish.archived) {
@@ -373,10 +372,10 @@ if (location?.kind === 'repo' && !publish.archived && !metaError && publish.comp
   block('hard', `${repo} has no component_config/ directory: this component's copy is portal-only. File the proposal and stop; the portal write needs vendor credentials.`);
 }
 if (location?.kind === 'monorepo' && publish.componentConfigDir === null) {
-  block('hard', `Could not list ${MONOREPO}/${location.folder}/component_config${configListError ? ` (gh said: ${configListError})` : ''}. Re-run before anything else.`);
+  block('hard', `Could not list ${repo}/${location.folder}/component_config${configListError ? ` (gh said: ${configListError})` : ''}. Re-run before anything else.`);
 }
 if (location?.kind === 'monorepo' && !mono.push) {
-  gate.reasons.push(`This gh account cannot push to ${MONOREPO}: open the PR from a fork, if the organization allows forking it, or ask the owner for push access to branches.`);
+  gate.reasons.push(`This gh account cannot push to ${repo}: open the PR from a fork, if the organization allows forking it, or ask the owner for push access to branches.`);
 }
 if (!map.reviewed && !confirmed) {
   block('soft', 'Neither the category map (reviewed=false, PRDCT-587) nor this component (not under `confirmed` in overrides.json) is owner-approved. Draft a proposal for the owner; do not open a PR.');
@@ -420,16 +419,17 @@ const facts = {
   folder: location?.folder ?? null,
   repoSource,
   predecessor: decision.predecessor,
-  monorepo: mono && {
-    readable: mono.readable,
-    error: mono.error ?? null,
-    push: mono.push ?? null,
-    declared: mono.declared ?? [],
-    mentioned: mono.mentioned ?? [],
-    searchError: mono.searchError ?? null,
-    truncated: mono.truncated ?? false,
-    components: mono.roots?.length ?? 0,
-  },
+  monorepos: monos.map((m) => ({
+    repo: m.repo,
+    readable: m.readable,
+    error: m.error ?? null,
+    push: m.push ?? null,
+    declared: m.declared ?? [],
+    mentioned: m.mentioned ?? [],
+    searchError: m.searchError ?? null,
+    truncated: m.truncated ?? false,
+    components: m.roots?.length ?? 0,
+  })),
   publish,
   gate,
   fetchedAt: new Date().toISOString(),

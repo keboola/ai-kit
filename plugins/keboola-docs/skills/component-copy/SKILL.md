@@ -51,7 +51,7 @@ The repo's workflow pushes `component_config` to the Developer Portal, and the p
 every stack within about five minutes. When that workflow runs differs per repo:
 `component-facts.mjs` reads it as `publish.trigger`. On `tag` (the standard template and
 `keboola/component-ci`) nothing changes until someone cuts a semver release; on `every-push` or
-`push-default` the merge is live in minutes; in the `keboola/components` monorepo (`monorepo`) it
+`push-default` the merge is live in minutes; in a component monorepo (`monorepo`) it
 goes out with the folder's next release, if the monorepo's publish caller has publishing on.
 Never report a component as fixed on the strength of a merge, and never assume which kind of
 repo it is.
@@ -97,12 +97,14 @@ repo it is.
   `extend/publish/index.md`, `extend/publish/checklist/index.md`,
   `extend/component/ui-options/configuration-schema/index.md`.
 - **Where a component lives** is a repo plus a folder: `facts.repo` and `facts.folder` (`''` is
-  the repo root). Since November 2026 most components are folders of the private monorepo
-  **`keboola/components`**, and their old `keboola/component-*` repos are archived (seen
+  the repo root). Since November 2026 most components are folders of the private monorepos
+  **`keboola/components`** and **`keboola/components-private`**, and their old
+  `keboola/component-*` repos are archived (seen
   2026-11-18: `component-hubspot-v2` archived on 10 Nov, most others between 3 and 10 Nov). The
   rest still have their own repo in the **`keboola`** org (kds-team ones included) or
   **`keboola-rnd`**. GitHub code search never returns archived repos, so a moved component is
-  visible only through its `documentationUrl` and the monorepo.
+  visible only through its `documentationUrl` and the monorepos. Both monorepos are checked on
+  every run; each one this gh account cannot read is named in the facts (`monorepos[]`).
 - How `component-facts.mjs` decides (`scripts/lib/locate.mjs`): a workflow that declares the id
   exactly in `KBC_DEVELOPERPORTAL_APP`; a file in the monorepo that declares it (`KEY: "<id>"`),
   mapped to the component folder above it (a folder with a `component_config/`); the folder of a
@@ -149,7 +151,8 @@ node $SKILL_DIR/scripts/component-facts.mjs <component.id>  # one JSON blob
 
 `component-facts.mjs` finds where the component lives (`repo`, `folder`, and `predecessor` when
 its old repo is archived), reads the live copy, finds the bucket, and reports the publish path.
-`--folder <folder>` passes a monorepo folder the owner confirmed. **Exit 1 means gated; read
+`--folder <folder>` (or `<owner/monorepo>:<folder>` when both monorepos have that folder) passes a
+monorepo folder the owner confirmed. **Exit 1 means gated; read
 `gate.level`:**
 
 - `hard`: nothing a `component_config` PR can fix (no repo, portal-only copy, custom UI), or the
@@ -229,8 +232,8 @@ gh pr create --draft --title "PRDCT-586: component copy for <component id>" --bo
 
 In the monorepo the paths stay relative to the component's folder, and `git diff --cached --stat`
 must show files under `<folder>/` only. When the facts say this gh account cannot push to
-`keboola/components`, push the branch to a fork and open the PR with
-`--repo keboola/components --head <you>:<branch>`; if the organization does not allow forking the
+`facts.repo`, push the branch to a fork and open the PR with
+`--repo <facts.repo> --head <you>:<branch>`; if the organization does not allow forking the
 monorepo, stop and ask the owner for push access to branches.
 
 PR body must carry the propagation caveat for the repo's `publish.trigger`:
@@ -243,7 +246,8 @@ PR body must carry the propagation caveat for the repo's `publish.trigger`:
   > Copy-only change to `component_config`. This repo publishes to the Developer Portal on
   > merge, and the portal syncs to every stack within about five minutes, so the text is live
   > shortly after merging. No code paths touched.
-- `monorepo` (`facts.repo` is `keboola/components`, the change sits in `facts.folder`):
+- `monorepo` (`facts.repo` is `keboola/components` or `keboola/components-private`, the change sits
+  in `facts.folder`):
   > Copy-only change to `<folder>/component_config`. In this monorepo the copy reaches the
   > Developer Portal when `monorepo-publish.yml` releases the folder on push to `main`. I could
   > not tell whether a copy-only change needs a raised version to be released: please say if it

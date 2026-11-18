@@ -48,7 +48,7 @@ the repo, folder and publish path. Read a `hard` gate's reason before choosing t
   which writes `component_config/` to the portal.
 
 An archived repo is no sign of deprecation: since November 2026 most component repos are archived
-because the code moved to `keboola/components`.
+because the code moved to `keboola/components` or `keboola/components-private`.
 
 ### 2. Draft into a proposal directory
 

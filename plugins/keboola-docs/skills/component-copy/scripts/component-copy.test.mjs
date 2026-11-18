@@ -194,7 +194,8 @@ test('drift exits 2 when the index cannot be read', () => {
   assert.equal(r.status, 2, r.stderr);
 });
 
-import { mentionsExactly, declaresExactly, nearestRoot, parseGithubUrl, monorepoCandidates, decideLocation, MONOREPO } from './lib/locate.mjs';
+import { mentionsExactly, declaresExactly, nearestRoot, parseGithubUrl, monorepoCandidates, decideLocation, MONOREPOS } from './lib/locate.mjs';
+const [MONOREPO, PRIVATE] = MONOREPOS;
 
 test('an id matches exactly, never inside a longer id', () => {
   assert.ok(mentionsExactly('cd kds-team.ex-hubspot-v2', 'kds-team.ex-hubspot-v2'));
@@ -238,51 +239,51 @@ test('monorepo candidates: one component counts once, mentions never beat declar
   assert.deepEqual(v1, { declared: [], mentioned: ['components/hubspot-v2'] });
 });
 
-const readable = (over = {}) => ({ readable: true, roots: ROOTS, declared: [], mentioned: [], truncated: false, searchError: null, ...over });
+const readable = (over = {}) => ({ repo: MONOREPO, readable: true, roots: ROOTS, declared: [], mentioned: [], truncated: false, searchError: null, ...over });
 const levels = (d) => ({ kind: d.location?.kind ?? null, folder: d.location?.folder ?? null, hard: d.hard.length });
 
 test('decideLocation: moved, declared once, goes to the monorepo folder', () => {
-  const d = decideLocation({ id: ID, docRepo: { repo: 'keboola/component-hubspot-v2', archived: true }, mono: readable({ declared: ['components/hubspot-v2'] }) });
+  const d = decideLocation({ id: ID, docRepo: { repo: 'keboola/component-hubspot-v2', archived: true }, monos: [readable({ declared: ['components/hubspot-v2'] })] });
   assert.deepEqual(levels(d), { kind: 'monorepo', folder: 'components/hubspot-v2', hard: 0 });
   assert.equal(d.location.predecessor, 'keboola/component-hubspot-v2');
 });
 
 test('decideLocation: a mention alone never picks a folder; --folder does, if it is a component folder', () => {
-  const mono = readable({ mentioned: ['components/hubspot-v2'] });
-  const d = decideLocation({ id: 'kds-team.ex-hubspot', docRepo: { repo: 'keboola/component-hubspot', archived: true }, mono });
+  const monos = [readable({ mentioned: ['components/hubspot-v2'] })];
+  const d = decideLocation({ id: 'kds-team.ex-hubspot', docRepo: { repo: 'keboola/component-hubspot', archived: true }, monos });
   assert.deepEqual(levels(d), { kind: null, folder: null, hard: 1 });
   assert.match(d.hard[0], /only mentioned/);
-  assert.equal(levels(decideLocation({ id: ID, mono, folder: 'components/hubspot-v2' })).kind, 'monorepo');
-  assert.match(decideLocation({ id: ID, mono, folder: 'docs' }).hard[0], /not a component folder/);
+  assert.equal(levels(decideLocation({ id: ID, monos, folder: 'components/hubspot-v2' })).kind, 'monorepo');
+  assert.match(decideLocation({ id: ID, monos, folder: 'docs' }).hard[0], /not a component folder/);
 });
 
 test('decideLocation: the documentation folder settles it when nothing declares the id', () => {
-  const d = decideLocation({ id: ID, docUrl: parseGithubUrl('https://github.com/keboola/components/tree/main/components/hubspot-v2'), mono: readable() });
+  const d = decideLocation({ id: ID, docUrl: parseGithubUrl('https://github.com/keboola/components/tree/main/components/hubspot-v2'), monos: [readable()] });
   assert.deepEqual(levels(d), { kind: 'monorepo', folder: 'components/hubspot-v2', hard: 0 });
 });
 
 test('decideLocation: failures are reported as failures, not as answers', () => {
   const pred = { repo: 'keboola/component-hubspot-v2', archived: true };
-  const noAccess = decideLocation({ id: ID, docRepo: pred, mono: { readable: false, error: 'HTTP 403: Resource protected by organization SAML enforcement' } });
+  const noAccess = decideLocation({ id: ID, docRepo: pred, monos: [{ repo: MONOREPO, readable: false, error: 'HTTP 403: Resource protected by organization SAML enforcement' }] });
   assert.match(noAccess.hard[0], /SAML/);
   assert.equal(noAccess.predecessor, 'keboola/component-hubspot-v2');
-  const searchDown = decideLocation({ id: ID, docRepo: pred, mono: readable({ searchError: 'HTTP 403: API rate limit exceeded' }) });
+  const searchDown = decideLocation({ id: ID, docRepo: pred, monos: [readable({ searchError: 'HTTP 403: API rate limit exceeded' })] });
   assert.match(searchDown.hard[0], /search .* failed .*rate limit.*re-run/);
-  assert.match(decideLocation({ id: ID, docRepo: pred, mono: readable() }).hard[0], /has no folder that declares/);
+  assert.match(decideLocation({ id: ID, docRepo: pred, monos: [readable()] }).hard[0], /has no folder that declares/);
 });
 
 test('decideLocation: several declaring folders or a half-done move stop hard', () => {
-  assert.match(decideLocation({ id: ID, mono: readable({ declared: ROOTS }) }).hard[0], /2 folders/);
-  const half = decideLocation({ id: ID, standalone: [{ repo: 'keboola/component-hubspot-v2', archived: false }], mono: readable({ declared: ['components/hubspot-v2'] }) });
+  assert.match(decideLocation({ id: ID, monos: [readable({ declared: ROOTS })] }).hard[0], /2 monorepo folders/);
+  const half = decideLocation({ id: ID, standalone: [{ repo: 'keboola/component-hubspot-v2', archived: false }], monos: [readable({ declared: ['components/hubspot-v2'] })] });
   assert.match(half.hard[0], /half done/);
 });
 
 test('decideLocation: a live standalone repo, or the documentation repo as a last resort', () => {
-  const live = decideLocation({ id: 'x.ex-y', standalone: [{ repo: 'keboola/component-y', archived: false }], mono: { readable: false, error: 'HTTP 404' } });
+  const live = decideLocation({ id: 'x.ex-y', standalone: [{ repo: 'keboola/component-y', archived: false }], monos: [{ repo: MONOREPO, readable: false, error: 'HTTP 404' }] });
   assert.deepEqual(levels(live), { kind: 'repo', folder: '', hard: 0 });
-  const doc = decideLocation({ id: 'x.ex-y', docRepo: { repo: 'keboola/docs-y', archived: false }, mono: { readable: false, error: 'HTTP 404' } });
+  const doc = decideLocation({ id: 'x.ex-y', docRepo: { repo: 'keboola/docs-y', archived: false }, monos: [{ repo: MONOREPO, readable: false, error: 'HTTP 404' }] });
   assert.match(doc.location.source, /unverified/);
-  const none = decideLocation({ id: 'x.ex-y', mono: { readable: false, error: 'HTTP 404' } });
+  const none = decideLocation({ id: 'x.ex-y', monos: [{ repo: MONOREPO, readable: false, error: 'HTTP 404' }] });
   assert.match(none.hard[0], /Could not resolve.*404/);
 });
 
@@ -345,4 +346,40 @@ test('facts: a failed monorepo search or an SSO refusal is reported as such', ()
 test('facts: PUBLISH_ENABLED false is not reported as a publishing monorepo', () => {
   const off = factsRun({ ...MOVED, 'repos/keboola/components/contents/.github/workflows/publish.yml': b64('    uses: keboola/component-ci/.github/workflows/monorepo-publish.yml@master\n    with:\n      PUBLISH_ENABLED: false\n') });
   assert.equal(off.facts.publish.trigger, 'unknown');
+});
+
+test('decideLocation: two monorepos, the folder can be in either, and an unreadable one is named', () => {
+  const pub = readable();
+  const priv = readable({ repo: PRIVATE, roots: ['components/hubspot-v2'], declared: ['components/hubspot-v2'] });
+  const d = decideLocation({ id: ID, monos: [pub, priv] });
+  assert.deepEqual([d.location.repo, d.location.folder], [PRIVATE, 'components/hubspot-v2']);
+  const both = decideLocation({ id: ID, monos: [readable({ declared: ['components/hubspot-v2'] }), priv] });
+  assert.match(both.hard[0], /2 monorepo folders.*keboola\/components\/components\/hubspot-v2.*keboola\/components-private/);
+  const sameName = decideLocation({ id: ID, monos: [pub, priv], folder: 'components/hubspot-v2' });
+  assert.match(sameName.hard[0], /<owner\/monorepo>:components\/hubspot-v2/);
+  assert.equal(decideLocation({ id: ID, monos: [pub, priv], folder: `${PRIVATE}:components/hubspot-v2` }).location.repo, PRIVATE);
+  const half = decideLocation({ id: ID, monos: [readable({ declared: ['components/hubspot-v2'] }), { repo: PRIVATE, readable: false, error: 'HTTP 404' }] });
+  assert.ok(half.notes.some((n) => /components-private could not be read/.test(n)));
+  const none = decideLocation({ id: ID, docRepo: { repo: 'keboola/component-hubspot-v2', archived: true }, monos: [pub, { repo: PRIVATE, readable: false, error: 'HTTP 404' }] });
+  assert.match(none.hard[0], /components-private could not be read.*keboola\/components has no folder/);
+});
+
+test('facts: a component that lives in the private monorepo resolves there', () => {
+  const priv = {
+    ...MOVED,
+    [`search:repo:keboola/components "${ID}"`]: { total: 0, incomplete: false, items: [] },
+    'repos/keboola/components-private': { b: 'main', push: true },
+    'repos/keboola/components-private/git/trees/main?recursive=1': { truncated: false, roots: ['hubspot-v2'] },
+    [`search:repo:keboola/components-private "${ID}"`]: { total: 1, incomplete: false, items: [
+      { repo: PRIVATE, path: 'hubspot-v2/component.yaml', fragments: [`id: ${ID}`] },
+    ] },
+    'repos/keboola/components-private/contents/hubspot-v2/component_config': ['component_long_description.md'],
+    'repos/keboola/components-private/contents/.github/workflows': ['publish.yml'],
+    'repos/keboola/components-private/contents/.github/workflows/publish.yml': MOVED['repos/keboola/components/contents/.github/workflows/publish.yml'],
+  };
+  const { facts, stderr } = factsRun(priv);
+  assert.ok(facts, stderr);
+  assert.deepEqual([facts.repo, facts.folder], [PRIVATE, 'hubspot-v2']);
+  assert.equal(facts.publish.trigger, 'monorepo');
+  assert.ok(!facts.gate.reasons.some((r) => /cannot push/.test(r)));
 });
