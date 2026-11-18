@@ -193,3 +193,26 @@ test('drift exits 2 when the index cannot be read', () => {
   const r = run('drift.mjs', 'x.ex-good', '--repo', 'x/y', '--index', join(tmpdir(), 'no-such-index.json'));
   assert.equal(r.status, 2, r.stderr);
 });
+
+import { monorepoFolders, archivedVerdict } from './lib/repo-state.mjs';
+
+test('an archived repo is a hard stop unless the monorepo holds exactly one folder', () => {
+  const base = { id: 'x.ex-y', repo: 'keboola/component-y', archived: true };
+  assert.deepEqual(archivedVerdict({ ...base, archived: false, monorepo: null }), []);
+  assert.equal(archivedVerdict({ ...base, monorepo: null })[0][0], 'hard');
+  assert.match(archivedVerdict({ ...base, monorepo: { access: false, folders: [] } })[0][1], /cannot read it/);
+  assert.match(archivedVerdict({ ...base, monorepo: { access: true, folders: [] } })[0][1], /not found/);
+  assert.equal(archivedVerdict({ ...base, monorepo: { access: true, folders: ['a', 'b'] } })[0][0], 'hard');
+  const one = archivedVerdict({ ...base, monorepo: { access: true, folders: ['components/ex-y'] } });
+  assert.deepEqual(one.map(([l]) => l), ['note']);
+  assert.match(one[0][1], /components\/ex-y\//);
+});
+
+test('monorepo folders come from the component_config parent or the hit folder', () => {
+  assert.deepEqual(monorepoFolders([
+    'components/ex-y/component_config/component_long_description.md',
+    'components/ex-y/component_config/configSchema.json',
+    'components/ex-y/README.md',
+  ]), ['components/ex-y']);
+  assert.deepEqual(monorepoFolders(['top.json']), ['.']);
+});

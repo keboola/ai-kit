@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isVisible } from './lib/visible.mjs';
+import { MONOREPO, monorepoFolders, archivedVerdict } from './lib/repo-state.mjs';
 
 const SKILL_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
 // COMPONENT_COPY_REFS points at a checkout of the plugin repo, so a --write lands where it
@@ -201,12 +202,28 @@ function detectTrigger(texts) {
   return { trigger: 'unknown', via: 'no Developer Portal properties step found in .github/workflows', ifLine: null };
 }
 
-let publish = { componentConfigDir: null, propertiesJob: false, trigger: 'unknown', triggerVia: null, defaultBranch: null, latestTag: null, pushedAt: null };
+let publish = { componentConfigDir: null, propertiesJob: false, trigger: 'unknown', triggerVia: null, defaultBranch: null, latestTag: null, pushedAt: null, archived: false };
+let monorepo = null;
 if (repo) {
-  const meta = gh(['api', `repos/${repo}`, '--jq', '{b:.default_branch,p:.pushed_at}']);
+  const meta = gh(['api', `repos/${repo}`, '--jq', '{b:.default_branch,p:.pushed_at,a:.archived}']);
   if (meta) {
-    try { const m = JSON.parse(meta); publish.defaultBranch = m.b; publish.pushedAt = m.p; } catch {}
+    try { const m = JSON.parse(meta); publish.defaultBranch = m.b; publish.pushedAt = m.p; publish.archived = m.a === true; } catch {}
   }
+}
+// An archived repo's workflows describe how it used to publish, not how it does
+// now: look for the component in the monorepo instead of reading them.
+if (repo && publish.archived) {
+  const access = gh(['api', `repos/${MONOREPO}`, '--jq', '.full_name']) === MONOREPO;
+  let folders = [];
+  if (access) {
+    const paths = gh(['api', '-X', 'GET', 'search/code', '-f', `q=repo:${MONOREPO} "${id}"`, '--jq', '[.items[].path]']);
+    try { folders = monorepoFolders(JSON.parse(paths || '[]')); } catch {}
+  }
+  monorepo = { repo: MONOREPO, access, folders };
+  publish.trigger = 'monorepo';
+  publish.triggerVia = `${repo} is archived; ${MONOREPO} publishes through keboola/component-ci monorepo-publish.yml (releases raised versions on push to main)`;
+}
+if (repo && !publish.archived) {
   const files = gh(['api', `repos/${repo}/contents/component_config`, '--jq', '[.[].name]']);
   if (files) { try { publish.componentConfigDir = JSON.parse(files); } catch {} }
   const names = gh(['api', `repos/${repo}/contents/.github/workflows`, '--jq', '[.[].name]']);
@@ -266,9 +283,13 @@ if (genericUI === false && ['extractor', 'writer', 'application'].includes(c.typ
 if (ambiguous) {
   block('hard', `${ambiguous.length} repositories declare ${id} in a workflow (${ambiguous.join(', ')}): pick the component's own repo by hand before anything else.`);
 } else if (!repo) {
-  block('hard', `Could not resolve the component repository: nothing to open a PR against.${ghError ? ` gh said: ${ghError}` : ''}`);
+  block('hard', `Could not resolve the component repository: nothing to open a PR against. Since November 2026 most components live in the private monorepo ${MONOREPO}; look there if you have access.${ghError ? ` gh said: ${ghError}` : ''}`);
 }
-if (repo && publish.componentConfigDir === null) {
+for (const [level, reason] of archivedVerdict({ id, repo, archived: publish.archived, monorepo })) {
+  if (level === 'hard') block('hard', reason);
+  else gate.reasons.push(reason);
+}
+if (repo && !publish.archived && publish.componentConfigDir === null) {
   block('hard', `${repo} has no component_config/ directory: this component's copy is portal-only. File the proposal and stop; the portal write needs vendor credentials.`);
 }
 if (!map.reviewed && !confirmed) {
@@ -282,6 +303,9 @@ if (!map.reviewed && confirmed && row && confirmed.bucket === row.bucket) {
 }
 if (repo && publish.componentConfigDir && !publish.propertiesJob) {
   gate.reasons.push(`${repo} has component_config/ but no update_developer_portal_properties job was found: the publish path is unverified. Say so in the PR body.`);
+}
+if (publish.trigger === 'monorepo' && monorepo?.folders.length === 1) {
+  gate.reasons.push(`Publish trigger is "monorepo" (${publish.triggerVia}). Whether a copy-only change needs a raised version to go live is unverified: use the monorepo caveat and ask the reviewer.`);
 }
 if (repo && publish.propertiesJob && publish.trigger !== 'tag') {
   gate.reasons.push(`Publish trigger is "${publish.trigger}" (${publish.triggerVia}). Use the matching caveat in the PR body; on every-push or push-default the merge goes live within minutes.`);
@@ -308,6 +332,7 @@ const facts = {
   repo,
   repoSource,
   ambiguousRepos: ambiguous,
+  monorepo,
   publish,
   gate,
   fetchedAt: new Date().toISOString(),

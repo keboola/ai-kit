@@ -38,7 +38,8 @@ node $CC/scripts/component-facts.mjs <successor.id>            # when there is o
 
 `--include-hidden` is needed because a deprecated component is no longer public. The facts give
 the repo and publish path; a `hard` gate (no repo, portal-only copy) means the owner changes the
-copy in the portal and you hand him the text.
+copy in the portal and you hand him the text. An archived repo is no sign of deprecation: since
+November 2026 most component repos are archived because the code moved to `keboola/components`.
 
 ### 2. Draft into a proposal directory
 

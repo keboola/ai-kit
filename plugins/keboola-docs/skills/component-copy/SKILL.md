@@ -50,8 +50,9 @@ The repo's workflow pushes `component_config` to the Developer Portal, and the p
 every stack within about five minutes. When that workflow runs differs per repo:
 `component-facts.mjs` reads it as `publish.trigger`. On `tag` (the standard template and
 `keboola/component-ci`) nothing changes until someone cuts a semver release; on `every-push` or
-`push-default` the merge is live in minutes. Never report a component as fixed on the strength
-of a merge, and never assume which kind of repo it is.
+`push-default` the merge is live in minutes; in the `keboola/components` monorepo (`monorepo`) it
+goes out with the folder's next release. Never report a component as fixed on the strength of a
+merge, and never assume which kind of repo it is.
 
 ## When to use
 
@@ -96,6 +97,14 @@ of a merge, and never assume which kind of repo it is.
 - Component repos live in the **`keboola`** org (kds-team ones included) and a few in
   **`keboola-rnd`**; `component-facts.mjs` searches both. A component whose id appears in no
   workflow has no findable repo: its copy is portal-only, and the gate stops hard.
+- **The monorepo (November 2026):** the Component Factory moved most components into the private
+  monorepo **`keboola/components`** and archived the old `component-*` repos (seen 2026-11-18:
+  `component-hubspot-v2` archived on 10 Nov, most others between 3 and 10 Nov). An archived repo
+  takes no PR, and its old `push.yml` no longer says how the copy publishes. `component-facts.mjs`
+  checks `archived`, then looks for the component in the monorepo: no access or no folder means a
+  hard stop, one folder means the PR goes there (`monorepo.folders`). Publishing from the monorepo
+  goes through `keboola/component-ci`'s `monorepo-publish.yml`, which releases raised versions on
+  push to `main`; whether a copy-only change needs a raised version is unverified.
 - **Public only** (owner's rule): not expired, not `excludeFromNewList`, not `deprecated`, as
   `scripts/lib/visible.mjs` defines it. That is a proxy read off the Storage index; when in
   doubt, check the component in the Developer Portal's public listing.
@@ -131,6 +140,8 @@ publish path. **Exit 1 means gated; read `gate.level`:**
 
 - `hard`: nothing a `component_config` PR can fix (no repo, portal-only copy, custom UI), or
   several repos declare the id and the right one must be picked by hand. Stop; no draft.
+  An archived repo is `hard` too until the component is found in `keboola/components`; without
+  access to the monorepo, the owner has to grant it first.
 - `soft`: the owner has not signed off. Draft the proposal (steps 2 and 3) so he has something
   to review, but stop at step 4; no branch, no PR.
 
@@ -198,6 +209,13 @@ git commit -m "PRDCT-586: <what changed> for <component id>"
 gh pr create --draft --title "PRDCT-586: component copy for <component id>" --body "<see below>"
 ```
 
+In the monorepo (`publish.trigger` is `monorepo`), clone `keboola/components` instead and run the
+same lines from the component's folder (`cd <monorepo.folders[0]>`), so the paths stay relative to
+it; `git diff --cached --stat` must show that folder only. Without push access, push the branch to
+a fork and open the PR with `--repo keboola/components --head <you>:<branch>`. Check
+`gh api repos/<repo> --jq .archived` right before `gh pr create` if the facts are more than a day
+old: an archived repo refuses the PR only at that step.
+
 PR body must carry the propagation caveat for the repo's `publish.trigger`:
 
 - `tag`:
@@ -208,6 +226,11 @@ PR body must carry the propagation caveat for the repo's `publish.trigger`:
   > Copy-only change to `component_config`. This repo publishes to the Developer Portal on
   > merge, and the portal syncs to every stack within about five minutes, so the text is live
   > shortly after merging. No code paths touched.
+- `monorepo` (the PR goes to `keboola/components`, into the folder `monorepo.folders` names):
+  > Copy-only change to `<folder>/component_config`. In this monorepo the copy reaches the
+  > Developer Portal when `monorepo-publish.yml` releases the folder on push to `main`. I could
+  > not tell whether a copy-only change needs a raised version to be released: please say if it
+  > does, or bump it as part of the merge. No code paths touched.
 - `unknown`: say that the publish path could not be read from the workflows, quote
   `publish.triggerVia`, and ask the reviewer when it goes live.
 
