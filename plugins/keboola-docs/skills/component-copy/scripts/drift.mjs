@@ -2,10 +2,11 @@
 // What in one component's live copy is out of date or out of rule: the input for
 // component-update. Read-only.
 //
-//   node drift.mjs <component.id> --repo <owner/name>
+//   node drift.mjs <component.id> --repo <owner/name> [--folder <path>]
 //   node drift.mjs <component.id> --repo <owner/name> --index <storage.json> --readme <README.md>
 //
-// The repo comes from component-facts.mjs (`repo`); --index and --readme replace the live
+// The repo and folder come from component-facts.mjs (`repo`, `folder`; a folder only in
+// the keboola/components monorepo, where the README is the folder's own); --index and --readme replace the live
 // fetches (tests, offline runs). Prints one JSON blob:
 //   lint        house-rule findings on the live copy and the README's Prerequisites section (the
 //               same rules as lint-copy.mjs)
@@ -30,7 +31,7 @@ const val = (name) => { const i = argv.indexOf(name); const v = i > -1 ? argv[i 
 const id = argv[0];
 const repo = val('--repo');
 if (!id || id.startsWith('--')) {
-  console.error('usage: drift.mjs <component.id> --repo <owner/name> [--index <storage.json>] [--readme <README.md>] [--retired]');
+  console.error('usage: drift.mjs <component.id> --repo <owner/name> [--folder <path>] [--index <storage.json>] [--readme <README.md>] [--retired]');
   process.exit(2);
 }
 
@@ -54,8 +55,11 @@ if (!c) { console.error(`RESULT: ${id} is not in the Storage component index`); 
 let readme = null;
 if (val('--readme')) readme = readFileSync(val('--readme'), 'utf8');
 else if (repo) {
+  // GET /repos/{repo}/readme/{dir} is the README of one folder; without --folder in a
+  // monorepo this would read the monorepo's own README.
+  const folder = val('--folder');
   try {
-    readme = execFileSync('gh', ['api', `repos/${repo}/readme`, '-H', 'Accept: application/vnd.github.raw'],
+    readme = execFileSync('gh', ['api', folder ? `repos/${repo}/readme/${folder}` : `repos/${repo}/readme`, '-H', 'Accept: application/vnd.github.raw'],
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch { readme = null; }
 }

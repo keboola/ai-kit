@@ -37,9 +37,18 @@ node $CC/scripts/component-facts.mjs <successor.id>            # when there is o
 ```
 
 `--include-hidden` is needed because a deprecated component is no longer public. The facts give
-the repo and publish path; a `hard` gate (no repo, portal-only copy) means the owner changes the
-copy in the portal and you hand him the text. An archived repo is no sign of deprecation: since
-November 2026 most component repos are archived because the code moved to `keboola/components`.
+the repo, folder and publish path. Read a `hard` gate's reason before choosing the way out:
+
+- portal-only copy (the repo has no `component_config/`, or there is no repo, workflow or
+  monorepo folder at all and the monorepo was readable): the owner changes the copy in the portal
+  and you hand him the text;
+- the location is unsettled (the monorepo could not be read, the new home was not found, several
+  folders, a mention only): stop and hand the text to the owner to apply in the component's
+  `component_config/`. A portal edit would be overwritten by the folder's next monorepo release,
+  which writes `component_config/` to the portal.
+
+An archived repo is no sign of deprecation: since November 2026 most component repos are archived
+because the code moved to `keboola/components`.
 
 ### 2. Draft into a proposal directory
 

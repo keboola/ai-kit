@@ -194,25 +194,155 @@ test('drift exits 2 when the index cannot be read', () => {
   assert.equal(r.status, 2, r.stderr);
 });
 
-import { monorepoFolders, archivedVerdict } from './lib/repo-state.mjs';
+import { mentionsExactly, declaresExactly, nearestRoot, parseGithubUrl, monorepoCandidates, decideLocation, MONOREPO } from './lib/locate.mjs';
 
-test('an archived repo is a hard stop unless the monorepo holds exactly one folder', () => {
-  const base = { id: 'x.ex-y', repo: 'keboola/component-y', archived: true };
-  assert.deepEqual(archivedVerdict({ ...base, archived: false, monorepo: null }), []);
-  assert.equal(archivedVerdict({ ...base, monorepo: null })[0][0], 'hard');
-  assert.match(archivedVerdict({ ...base, monorepo: { access: false, folders: [] } })[0][1], /cannot read it/);
-  assert.match(archivedVerdict({ ...base, monorepo: { access: true, folders: [] } })[0][1], /not found/);
-  assert.equal(archivedVerdict({ ...base, monorepo: { access: true, folders: ['a', 'b'] } })[0][0], 'hard');
-  const one = archivedVerdict({ ...base, monorepo: { access: true, folders: ['components/ex-y'] } });
-  assert.deepEqual(one.map(([l]) => l), ['note']);
-  assert.match(one[0][1], /components\/ex-y\//);
+test('an id matches exactly, never inside a longer id', () => {
+  assert.ok(mentionsExactly('cd kds-team.ex-hubspot-v2', 'kds-team.ex-hubspot-v2'));
+  assert.ok(mentionsExactly('see kds-team.ex-hubspot.', 'kds-team.ex-hubspot'));
+  assert.ok(!mentionsExactly('cd kds-team.ex-hubspot-v2', 'kds-team.ex-hubspot'));
+  assert.ok(!mentionsExactly('x.kds-team.ex-hubspot', 'kds-team.ex-hubspot'));
+  assert.ok(declaresExactly('KBC_DEVELOPERPORTAL_APP: "kds-team.ex-hubspot-v2"', 'kds-team.ex-hubspot-v2'));
+  assert.ok(declaresExactly('"componentId": "x.ex-y"', 'x.ex-y'));
+  assert.ok(!declaresExactly('KBC_DEVELOPERPORTAL_APP: "x.ex-y-v2"', 'x.ex-y'));
+  assert.ok(!declaresExactly('This replaces x.ex-y.', 'x.ex-y'));
 });
 
-test('monorepo folders come from the component_config parent or the hit folder', () => {
-  assert.deepEqual(monorepoFolders([
-    'components/ex-y/component_config/component_long_description.md',
-    'components/ex-y/component_config/configSchema.json',
-    'components/ex-y/README.md',
-  ]), ['components/ex-y']);
-  assert.deepEqual(monorepoFolders(['top.json']), ['.']);
+test('a hit belongs to the deepest component folder above it, or to none', () => {
+  const roots = ['components/a', 'components/a/sub', 'components/b'];
+  assert.equal(nearestRoot('components/a/README.md', roots), 'components/a');
+  assert.equal(nearestRoot('components/a/.github/workflows/push.yml', roots), 'components/a');
+  assert.equal(nearestRoot('components/a/sub/x.json', roots), 'components/a/sub');
+  assert.equal(nearestRoot('README.md', roots), null);
+  assert.equal(nearestRoot('components/ab/README.md', roots), null);
+});
+
+test('documentation URLs give the repo and the folder', () => {
+  assert.deepEqual(parseGithubUrl('https://github.com/keboola/component-x/blob/main/README.md'), { repo: 'keboola/component-x', path: '' });
+  assert.deepEqual(parseGithubUrl('https://github.com/keboola/components/tree/main/components/x'), { repo: MONOREPO, path: 'components/x' });
+  assert.deepEqual(parseGithubUrl('https://github.com/keboola/components/blob/main/components/x/README.md#setup'), { repo: MONOREPO, path: 'components/x' });
+  assert.equal(parseGithubUrl('https://help.keboola.com/x'), null);
+});
+
+const ID = 'kds-team.ex-hubspot-v2';
+const ROOTS = ['components/hubspot', 'components/hubspot-v2'];
+const hit = (path, fragment) => ({ path, fragments: [fragment] });
+
+test('monorepo candidates: one component counts once, mentions never beat declarations', () => {
+  const c = monorepoCandidates([
+    hit('components/hubspot-v2/README.md', 'cd kds-team.ex-hubspot-v2'),
+    hit('components/hubspot-v2/.github/workflows/push.yml', 'KBC_DEVELOPERPORTAL_APP: "kds-team.ex-hubspot-v2"'),
+    hit('README.md', '| kds-team.ex-hubspot-v2 |'),
+  ], ROOTS, ID);
+  assert.deepEqual(c, { declared: ['components/hubspot-v2'], mentioned: [] });
+  const v1 = monorepoCandidates([hit('components/hubspot-v2/README.md', 'replaces kds-team.ex-hubspot and adds')], ROOTS, 'kds-team.ex-hubspot');
+  assert.deepEqual(v1, { declared: [], mentioned: ['components/hubspot-v2'] });
+});
+
+const readable = (over = {}) => ({ readable: true, roots: ROOTS, declared: [], mentioned: [], truncated: false, searchError: null, ...over });
+const levels = (d) => ({ kind: d.location?.kind ?? null, folder: d.location?.folder ?? null, hard: d.hard.length });
+
+test('decideLocation: moved, declared once, goes to the monorepo folder', () => {
+  const d = decideLocation({ id: ID, docRepo: { repo: 'keboola/component-hubspot-v2', archived: true }, mono: readable({ declared: ['components/hubspot-v2'] }) });
+  assert.deepEqual(levels(d), { kind: 'monorepo', folder: 'components/hubspot-v2', hard: 0 });
+  assert.equal(d.location.predecessor, 'keboola/component-hubspot-v2');
+});
+
+test('decideLocation: a mention alone never picks a folder; --folder does, if it is a component folder', () => {
+  const mono = readable({ mentioned: ['components/hubspot-v2'] });
+  const d = decideLocation({ id: 'kds-team.ex-hubspot', docRepo: { repo: 'keboola/component-hubspot', archived: true }, mono });
+  assert.deepEqual(levels(d), { kind: null, folder: null, hard: 1 });
+  assert.match(d.hard[0], /only mentioned/);
+  assert.equal(levels(decideLocation({ id: ID, mono, folder: 'components/hubspot-v2' })).kind, 'monorepo');
+  assert.match(decideLocation({ id: ID, mono, folder: 'docs' }).hard[0], /not a component folder/);
+});
+
+test('decideLocation: the documentation folder settles it when nothing declares the id', () => {
+  const d = decideLocation({ id: ID, docUrl: parseGithubUrl('https://github.com/keboola/components/tree/main/components/hubspot-v2'), mono: readable() });
+  assert.deepEqual(levels(d), { kind: 'monorepo', folder: 'components/hubspot-v2', hard: 0 });
+});
+
+test('decideLocation: failures are reported as failures, not as answers', () => {
+  const pred = { repo: 'keboola/component-hubspot-v2', archived: true };
+  const noAccess = decideLocation({ id: ID, docRepo: pred, mono: { readable: false, error: 'HTTP 403: Resource protected by organization SAML enforcement' } });
+  assert.match(noAccess.hard[0], /SAML/);
+  assert.equal(noAccess.predecessor, 'keboola/component-hubspot-v2');
+  const searchDown = decideLocation({ id: ID, docRepo: pred, mono: readable({ searchError: 'HTTP 403: API rate limit exceeded' }) });
+  assert.match(searchDown.hard[0], /search .* failed .*rate limit.*re-run/);
+  assert.match(decideLocation({ id: ID, docRepo: pred, mono: readable() }).hard[0], /has no folder that declares/);
+});
+
+test('decideLocation: several declaring folders or a half-done move stop hard', () => {
+  assert.match(decideLocation({ id: ID, mono: readable({ declared: ROOTS }) }).hard[0], /2 folders/);
+  const half = decideLocation({ id: ID, standalone: [{ repo: 'keboola/component-hubspot-v2', archived: false }], mono: readable({ declared: ['components/hubspot-v2'] }) });
+  assert.match(half.hard[0], /half done/);
+});
+
+test('decideLocation: a live standalone repo, or the documentation repo as a last resort', () => {
+  const live = decideLocation({ id: 'x.ex-y', standalone: [{ repo: 'keboola/component-y', archived: false }], mono: { readable: false, error: 'HTTP 404' } });
+  assert.deepEqual(levels(live), { kind: 'repo', folder: '', hard: 0 });
+  const doc = decideLocation({ id: 'x.ex-y', docRepo: { repo: 'keboola/docs-y', archived: false }, mono: { readable: false, error: 'HTTP 404' } });
+  assert.match(doc.location.source, /unverified/);
+  const none = decideLocation({ id: 'x.ex-y', mono: { readable: false, error: 'HTTP 404' } });
+  assert.match(none.hard[0], /Could not resolve.*404/);
+});
+
+// component-facts end to end, offline: a stub gh on PATH and a one-component index.
+import { chmodSync } from 'node:fs';
+const factsRun = (answers, id = ID) => {
+  const dir = mkdtempSync(join(tmpdir(), 'facts-'));
+  writeFileSync(join(dir, 'answers.json'), JSON.stringify(answers));
+  writeFileSync(join(dir, 'gh'), `#!/bin/sh\nexec "${process.execPath}" "${join(FIX, 'facts', 'gh-stub.mjs')}" "$@"\n`);
+  chmodSync(join(dir, 'gh'), 0o755);
+  writeFileSync(join(dir, 'index.json'), JSON.stringify({ components: [{
+    id, name: 'HubSpot v2', type: 'extractor', flags: ['genericDockerUI', 'genericDockerUI-rows'],
+    description: 'CRM platform.', longDescription: 'Loads CRM data.', configurationDescription: '',
+    documentationUrl: 'https://github.com/keboola/component-hubspot-v2/blob/main/README.md', configurationSchema: { a: 1 },
+  }] }));
+  const r = spawnSync(process.execPath, [join(HERE, 'component-facts.mjs'), id, '--index', join(dir, 'index.json')], {
+    encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GH_STUB_ANSWERS: join(dir, 'answers.json') },
+  });
+  return { status: r.status, facts: r.stdout ? JSON.parse(r.stdout) : null, stderr: r.stderr };
+};
+const b64 = (s) => Buffer.from(s).toString('base64');
+const MOVED = {
+  [`search:org:keboola org:keboola-rnd "KBC_DEVELOPERPORTAL_APP" "${ID}" path:.github/workflows`]: { total: 0, incomplete: false, items: [] },
+  'repos/keboola/component-hubspot-v2': { b: 'main', p: '2026-08-13T12:34:37Z', a: true },
+  'repos/keboola/components': { b: 'main', push: false },
+  'repos/keboola/components/git/trees/main?recursive=1': { truncated: false, roots: ['', 'components/hubspot', 'components/hubspot-v2'] },
+  [`search:repo:keboola/components "${ID}"`]: { total: 3, incomplete: false, items: [
+    { repo: MONOREPO, path: 'components/hubspot-v2/README.md', fragments: [`cd ${ID}`] },
+    { repo: MONOREPO, path: 'components/hubspot-v2/.github/workflows/push.yml', fragments: [`KBC_DEVELOPERPORTAL_APP: "${ID}"`] },
+    { repo: MONOREPO, path: 'README.md', fragments: [`| ${ID} |`] },
+  ] },
+  'repos/keboola/components/contents/components/hubspot-v2/component_config': ['component_long_description.md', 'configSchema.json'],
+  'repos/keboola/components/contents/.github/workflows': ['ci.yml', 'publish.yml'],
+  'repos/keboola/components/contents/.github/workflows/ci.yml': b64('jobs:\n  ci:\n    uses: keboola/component-ci/.github/workflows/monorepo-ci.yml@master\n'),
+  'repos/keboola/components/contents/.github/workflows/publish.yml': b64('jobs:\n  publish:\n    uses: keboola/component-ci/.github/workflows/monorepo-publish.yml@master\n    with:\n      PUBLISH_ENABLED: true\n'),
+};
+
+test('facts: a moved component resolves to its monorepo folder and reads the publish caller', () => {
+  const { facts, stderr } = factsRun(MOVED);
+  assert.ok(facts, stderr);
+  assert.equal(facts.repo, MONOREPO);
+  assert.equal(facts.folder, 'components/hubspot-v2');
+  assert.equal(facts.predecessor, 'keboola/component-hubspot-v2');
+  assert.equal(facts.publish.trigger, 'monorepo');
+  assert.match(facts.publish.triggerVia, /publish\.yml.*PUBLISH_ENABLED: true/);
+  assert.deepEqual(facts.publish.componentConfigDir, ['component_long_description.md', 'configSchema.json']);
+  assert.equal(facts.gate.level, 'soft', facts.gate.reasons.join('\n'));
+  assert.ok(facts.gate.reasons.some((r) => /cannot push/.test(r)));
+});
+
+test('facts: a failed monorepo search or an SSO refusal is reported as such', () => {
+  const down = factsRun({ ...MOVED, [`search:repo:keboola/components "${ID}"`]: { __error: 'gh: API rate limit exceeded (HTTP 403)' } });
+  assert.equal(down.facts.gate.level, 'hard');
+  assert.ok(down.facts.gate.reasons.some((r) => /search in keboola\/components failed.*rate limit/.test(r)), down.facts.gate.reasons.join('\n'));
+  const sso = factsRun({ ...MOVED, 'repos/keboola/components': { __error: 'gh: Resource protected by organization SAML enforcement (HTTP 403)' } });
+  assert.ok(sso.facts.gate.reasons.some((r) => /SAML/.test(r)));
+  assert.equal(sso.facts.predecessor, 'keboola/component-hubspot-v2');
+});
+
+test('facts: PUBLISH_ENABLED false is not reported as a publishing monorepo', () => {
+  const off = factsRun({ ...MOVED, 'repos/keboola/components/contents/.github/workflows/publish.yml': b64('    uses: keboola/component-ci/.github/workflows/monorepo-publish.yml@master\n    with:\n      PUBLISH_ENABLED: false\n') });
+  assert.equal(off.facts.publish.trigger, 'unknown');
 });

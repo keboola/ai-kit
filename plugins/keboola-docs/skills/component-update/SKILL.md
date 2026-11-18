@@ -38,9 +38,13 @@ being deprecated or replaced (`component-retire`), help.keboola.com pages (`docs
 ### 1. Facts and drift
 
 ```bash
-node $CC/scripts/component-facts.mjs <component.id>        # repo, bucket, publish path, gate
-node $CC/scripts/drift.mjs <component.id> --repo <repo from the facts>
+node $CC/scripts/component-facts.mjs <component.id>        # repo, folder, bucket, publish path, gate
+node $CC/scripts/drift.mjs <component.id> --repo <facts.repo> --folder <facts.folder>   # drop --folder when it is ''
 ```
+
+In the monorepo the README is the component folder's own; without `--folder` drift would read the
+monorepo's README. Never point drift at `facts.predecessor`: an archived repo's README stopped
+changing when the code moved.
 
 `drift.mjs` prints `lint` (house-rule findings on the live copy and the README), `verify` (open owner
 questions), `readmeItems` (things the README lists under an endpoints or objects heading that
@@ -72,9 +76,13 @@ Field titles, descriptions, tooltips and enum titles go in their own PR, never m
 markdown files. Write the edits as JSON and apply them with the guard:
 
 ```bash
-node $CC/scripts/schema-copy.mjs <repo>/component_config/configRowSchema.json edits.json          # dry run
-node $CC/scripts/schema-copy.mjs <repo>/component_config/configRowSchema.json edits.json --write  # after the yes
+node $CC/scripts/schema-copy.mjs <clone>/<folder>/component_config/configRowSchema.json edits.json          # dry run
+node $CC/scripts/schema-copy.mjs <clone>/<folder>/component_config/configRowSchema.json edits.json --write  # after the yes
 ```
+
+`<clone>` is a fresh clone of `facts.repo` and `<folder>` is `facts.folder` (empty for a repo of its
+own). Never edit a schema from the archived `facts.predecessor` and carry it over: the monorepo's
+schema may have changed since the move, and the copy would revert it on every stack.
 
 It sets only `title`, `description`, `options.tooltip`, `options.documentation`,
 `options.enum_titles`, refuses anything else, refuses a file whose formatting it cannot keep,

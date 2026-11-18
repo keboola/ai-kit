@@ -7,8 +7,9 @@ description: Use when a Keboola component's user-facing copy needs to match the 
 
 ## Working Directory Context
 
-Run the scripts from the directory you work in (a scratch folder, or the component repo's root
-when step 5 applies a change), never from the skill directory: they find their own references
+Run the scripts from the directory you work in (a scratch folder, or, when step 5 applies a
+change, the component's own directory in the clone: the repo root, or `facts.folder` in the
+monorepo), never from the skill directory: they find their own references
 through their location, `$SKILL_DIR` = `${CLAUDE_PLUGIN_ROOT}/skills/component-copy`. Proposals go to
 `$COMPONENT_COPY_PROPOSALS` (default `./proposals/` under the current directory). The scripts that
 read a component repo do it through `gh`, so no local checkout is needed until the apply step,
@@ -51,8 +52,9 @@ every stack within about five minutes. When that workflow runs differs per repo:
 `component-facts.mjs` reads it as `publish.trigger`. On `tag` (the standard template and
 `keboola/component-ci`) nothing changes until someone cuts a semver release; on `every-push` or
 `push-default` the merge is live in minutes; in the `keboola/components` monorepo (`monorepo`) it
-goes out with the folder's next release. Never report a component as fixed on the strength of a
-merge, and never assume which kind of repo it is.
+goes out with the folder's next release, if the monorepo's publish caller has publishing on.
+Never report a component as fixed on the strength of a merge, and never assume which kind of
+repo it is.
 
 ## When to use
 
@@ -94,17 +96,28 @@ merge, and never assume which kind of repo it is.
 - The rules are published docs, not opinions — cite them in the PR:
   `extend/publish/index.md`, `extend/publish/checklist/index.md`,
   `extend/component/ui-options/configuration-schema/index.md`.
-- Component repos live in the **`keboola`** org (kds-team ones included) and a few in
-  **`keboola-rnd`**; `component-facts.mjs` searches both. A component whose id appears in no
-  workflow has no findable repo: its copy is portal-only, and the gate stops hard.
-- **The monorepo (November 2026):** the Component Factory moved most components into the private
-  monorepo **`keboola/components`** and archived the old `component-*` repos (seen 2026-11-18:
-  `component-hubspot-v2` archived on 10 Nov, most others between 3 and 10 Nov). An archived repo
-  takes no PR, and its old `push.yml` no longer says how the copy publishes. `component-facts.mjs`
-  checks `archived`, then looks for the component in the monorepo: no access or no folder means a
-  hard stop, one folder means the PR goes there (`monorepo.folders`). Publishing from the monorepo
-  goes through `keboola/component-ci`'s `monorepo-publish.yml`, which releases raised versions on
-  push to `main`; whether a copy-only change needs a raised version is unverified.
+- **Where a component lives** is a repo plus a folder: `facts.repo` and `facts.folder` (`''` is
+  the repo root). Since November 2026 most components are folders of the private monorepo
+  **`keboola/components`**, and their old `keboola/component-*` repos are archived (seen
+  2026-11-18: `component-hubspot-v2` archived on 10 Nov, most others between 3 and 10 Nov). The
+  rest still have their own repo in the **`keboola`** org (kds-team ones included) or
+  **`keboola-rnd`**. GitHub code search never returns archived repos, so a moved component is
+  visible only through its `documentationUrl` and the monorepo.
+- How `component-facts.mjs` decides (`scripts/lib/locate.mjs`): a workflow that declares the id
+  exactly in `KBC_DEVELOPERPORTAL_APP`; a file in the monorepo that declares it (`KEY: "<id>"`),
+  mapped to the component folder above it (a folder with a `component_config/`); the folder of a
+  `documentationUrl` that points into the monorepo. A file that only mentions the id ("replaces
+  x.ex-foo") never picks a folder: a successor's README names its predecessor. When the evidence
+  is a mention or several folders, the gate stops hard; confirm the folder with the owner and
+  re-run with `--folder <folder>`. Every failed lookup (no access, an SSO refusal, a search rate
+  limit) is reported with gh's own message, never as "not found".
+- Publishing from the monorepo goes through the root workflow that calls `keboola/component-ci`'s
+  `monorepo-publish.yml`; the facts read that caller and its `PUBLISH_ENABLED` switch. It releases
+  raised versions on push to `main`; whether a copy-only change needs a raised version is
+  unverified, so the PR asks.
+- A component with no repo at all (no workflow, no monorepo folder, no GitHub `documentationUrl`)
+  stops hard. Its copy may be portal-only, or the monorepo may be unreadable for this gh account:
+  the reason says which.
 - **Public only** (owner's rule): not expired, not `excludeFromNewList`, not `deprecated`, as
   `scripts/lib/visible.mjs` defines it. That is a proxy read off the Storage index; when in
   doubt, check the component in the Developer Portal's public listing.
@@ -134,14 +147,16 @@ node $SKILL_DIR/scripts/fetch-inventory.mjs                 # fleet drift: infor
 node $SKILL_DIR/scripts/component-facts.mjs <component.id>  # one JSON blob
 ```
 
-`component-facts.mjs` resolves the repo authoritatively (the component id appears in the
-workflow's `KBC_DEVELOPERPORTAL_APP`), reads the live copy, finds the bucket, and reports the
-publish path. **Exit 1 means gated; read `gate.level`:**
+`component-facts.mjs` finds where the component lives (`repo`, `folder`, and `predecessor` when
+its old repo is archived), reads the live copy, finds the bucket, and reports the publish path.
+`--folder <folder>` passes a monorepo folder the owner confirmed. **Exit 1 means gated; read
+`gate.level`:**
 
-- `hard`: nothing a `component_config` PR can fix (no repo, portal-only copy, custom UI), or
-  several repos declare the id and the right one must be picked by hand. Stop; no draft.
-  An archived repo is `hard` too until the component is found in `keboola/components`; without
-  access to the monorepo, the owner has to grant it first.
+- `hard`: nothing a `component_config` PR can fix (no repo, portal-only copy, custom UI), or the
+  location is unsettled: several repos or folders declare the id, a folder only mentions it, the
+  old repo is archived and the new home was not found, or the monorepo could not be read (no
+  access, or the token is not authorized for the organization's SSO). Stop; no draft. The reason
+  carries gh's message; a rate-limited search says to re-run.
 - `soft`: the owner has not signed off. Draft the proposal (steps 2 and 3) so he has something
   to review, but stop at step 4; no branch, no PR.
 
@@ -160,8 +175,9 @@ Write files named exactly like their `component_config/` targets into
 `$COMPONENT_COPY_PROPOSALS/<id>/`. Fill the bucket's template from
 `$SKILL_DIR/references/templates/`.
 
-**Sources allowed:** the current portal copy, the repo README, the config schema, the service's
-own linked documentation. Nothing else. You are reshaping facts that exist, not writing
+**Sources allowed:** the current portal copy, the README and config schema at `facts.repo` /
+`facts.folder` (never the archived `facts.predecessor`, frozen since the move), the service's own
+linked documentation. Nothing else. You are reshaping facts that exist, not writing
 marketing. Anything you cannot source gets `VERIFY(owner)` inline — a guess that reads well is
 the worst possible output here, because nobody downstream can tell it from a fact.
 
@@ -196,8 +212,10 @@ the PR manually until PRDCT-590's bot exists.
 ### 5. Apply, only after an explicit yes
 
 ```bash
-gh repo clone <repo> /tmp/cc-<id> -- --depth 1
+node $SKILL_DIR/scripts/component-facts.mjs <component.id>   # again if the facts are older than today: repos get archived and moved
+gh repo clone <repo> /tmp/cc-<id> -- --depth 1               # <repo> = facts.repo
 cd /tmp/cc-<id> && git checkout -b PRDCT-586-copy-<id>
+cd ./<folder>                                                # facts.folder; '' (the repo root) for a component with its own repo
 # copy ONLY the approved markdown files; schemas never ride along in the first cut
 for f in component_short_description.md component_long_description.md configuration_description.md; do
   [ -f "<proposal-dir>/$f" ] && cp "<proposal-dir>/$f" component_config/
@@ -209,12 +227,11 @@ git commit -m "PRDCT-586: <what changed> for <component id>"
 gh pr create --draft --title "PRDCT-586: component copy for <component id>" --body "<see below>"
 ```
 
-In the monorepo (`publish.trigger` is `monorepo`), clone `keboola/components` instead and run the
-same lines from the component's folder (`cd <monorepo.folders[0]>`), so the paths stay relative to
-it; `git diff --cached --stat` must show that folder only. Without push access, push the branch to
-a fork and open the PR with `--repo keboola/components --head <you>:<branch>`. Check
-`gh api repos/<repo> --jq .archived` right before `gh pr create` if the facts are more than a day
-old: an archived repo refuses the PR only at that step.
+In the monorepo the paths stay relative to the component's folder, and `git diff --cached --stat`
+must show files under `<folder>/` only. When the facts say this gh account cannot push to
+`keboola/components`, push the branch to a fork and open the PR with
+`--repo keboola/components --head <you>:<branch>`; if the organization does not allow forking the
+monorepo, stop and ask the owner for push access to branches.
 
 PR body must carry the propagation caveat for the repo's `publish.trigger`:
 
@@ -226,11 +243,13 @@ PR body must carry the propagation caveat for the repo's `publish.trigger`:
   > Copy-only change to `component_config`. This repo publishes to the Developer Portal on
   > merge, and the portal syncs to every stack within about five minutes, so the text is live
   > shortly after merging. No code paths touched.
-- `monorepo` (the PR goes to `keboola/components`, into the folder `monorepo.folders` names):
+- `monorepo` (`facts.repo` is `keboola/components`, the change sits in `facts.folder`):
   > Copy-only change to `<folder>/component_config`. In this monorepo the copy reaches the
   > Developer Portal when `monorepo-publish.yml` releases the folder on push to `main`. I could
   > not tell whether a copy-only change needs a raised version to be released: please say if it
   > does, or bump it as part of the merge. No code paths touched.
+  If `publish.triggerVia` shows `PUBLISH_ENABLED` off, or no caller was found (`unknown`), say
+  that instead and ask how the copy will reach the portal.
 - `unknown`: say that the publish path could not be read from the workflows, quote
   `publish.triggerVia`, and ask the reviewer when it goes live.
 
@@ -306,9 +325,9 @@ Factory owner's call.
   wording and links are preserved or moved, never dropped. Proposed deletions go to the
   proposal file for a human.
 - **Idempotent.** A second run on an already-conformant component produces an empty diff.
-- **One open PR per repo. At most five open at a time**, and the next batch waits until the
-  previous one is merged *and visible in `/v2/storage`*. Skip repos with red CI on the default
-  branch — they will not get a tag.
+- **One open PR per component (its repo, or its folder in the monorepo). At most five open at a
+  time**, and the next batch waits until the previous one is merged *and visible in
+  `/v2/storage`*. Skip repos with red CI on the default branch — they will not get a tag.
 - Never tag a release, never write to the developer portal API, never push to a default branch.
 
 ## Common mistakes

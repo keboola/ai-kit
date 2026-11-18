@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isVisible } from './lib/visible.mjs';
-import { MONOREPO, monorepoFolders, archivedVerdict } from './lib/repo-state.mjs';
+import { MONOREPO, declaresExactly, parseGithubUrl, monorepoCandidates, decideLocation } from './lib/locate.mjs';
 
 const SKILL_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
 // COMPONENT_COPY_REFS points at a checkout of the plugin repo, so a --write lands where it
@@ -66,25 +66,33 @@ if (!id || id.startsWith('--')) {
   process.exit(2);
 }
 
-// The first gh failure is kept, so an unauthenticated CLI or a search 403 shows
-// up in the gate reason instead of as a silent "could not resolve".
-let ghError = null;
+// lastGhError is the failure of the most recent call. Each lookup keeps its own,
+// so a search 403 or an SSO refusal shows up in the reason it caused instead of
+// reading as "not found" or "no access".
+let lastGhError = null;
 const gh = (args) => {
   try {
+    lastGhError = null;
     return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch (e) {
-    if (!ghError) ghError = String(e.stderr || e.message || '').split('\n').find(Boolean)?.slice(0, 200) || null;
+    lastGhError = String(e.stderr || e.message || '').split('\n').find(Boolean)?.slice(0, 200) || 'gh failed';
     return null;
   }
 };
 
 // --- live copy -------------------------------------------------------------
-const res = await fetch(STORAGE, { headers: { accept: 'application/json' } });
-if (!res.ok) {
-  console.error(`RESULT: ${STORAGE} answered ${res.status}`);
-  process.exit(2);
+// --index <storage.json> replaces the live fetch (tests, offline runs).
+let index;
+if (opt('--index')) index = JSON.parse(readFileSync(opt('--index'), 'utf8'));
+else {
+  const res = await fetch(STORAGE, { headers: { accept: 'application/json' } });
+  if (!res.ok) {
+    console.error(`RESULT: ${STORAGE} answered ${res.status}`);
+    process.exit(2);
+  }
+  index = await res.json();
 }
-const c = ((await res.json()).components || []).find((x) => x.id === id);
+const c = (index.components || []).find((x) => x.id === id);
 if (!c) {
   console.error(`RESULT: ${id} is not in the Storage component index`);
   process.exit(2);
@@ -114,30 +122,80 @@ const gaps = ['longDescription', 'configurationDescription'].filter((k) => !copy
 const map = JSON.parse(readFileSync(join(REFS, 'category-map.json'), 'utf8'));
 const row = map.rows.find((r) => r.id === id);
 
-// --- repo resolution -------------------------------------------------------
-// The workflow declares the component id in KBC_DEVELOPERPORTAL_APP, which makes
-// code search authoritative. documentationUrl is only a fallback: it points at
-// whatever the vendor chose, which is often not the component's own repo.
-let repo = null, repoSource = null;
+// --- location: one repo and, in the monorepo, one folder ---------------------
+// Evidence, strongest first: a workflow that declares the id in
+// KBC_DEVELOPERPORTAL_APP, a file in keboola/components that declares it, the
+// documentationUrl. Code search never returns archived repos (checked 2026-11-18:
+// `repo:keboola/component-hubspot-v2 KBC_DEVELOPERPORTAL_APP` finds nothing), so a
+// component whose old repo was archived is visible only through its
+// documentationUrl and the monorepo. lib/locate.mjs makes the decision.
 // `gh search code` returns nothing here even for queries the REST endpoint
-// answers, so go through the endpoint directly.
-const hit = gh(['api', '-X', 'GET', 'search/code',
-  '-f', `q=org:keboola org:keboola-rnd "KBC_DEVELOPERPORTAL_APP" "${id}" path:.github/workflows`,
-  '--jq', '[.items[].repository.full_name]']);
-let ambiguous = null;
-if (hit) {
-  try {
-    const repos = [...new Set(JSON.parse(hit))];
-    if (repos.length === 1) { repo = repos[0]; repoSource = 'workflow KBC_DEVELOPERPORTAL_APP'; }
-    // Several repos declare it (a fork, a test pipeline): do not pick one.
-    else if (repos.length > 1) ambiguous = repos;
-  } catch { /* fall through to the URL guess */ }
+// answers, so go through the endpoint directly. The text-match fragments say
+// whether a hit declares exactly this id: the search matches a token phrase, so
+// `x.ex-foo` also hits `x.ex-foo-v2`.
+const searchCode = (q) => {
+  const out = gh(['api', '-X', 'GET', 'search/code', '-f', `q=${q}`, '-f', 'per_page=100',
+    '-H', 'Accept: application/vnd.github.text-match+json',
+    '--jq', '{total: .total_count, incomplete: .incomplete_results, items: [.items[] | {repo: .repository.full_name, path, fragments: [.text_matches[]?.fragment]}]}']);
+  if (out === null) return { error: lastGhError, items: [] };
+  try { return JSON.parse(out); } catch { return { error: 'unreadable search result', items: [] }; }
+};
+// A hit without fragments (the media type was ignored) is read in full before it counts.
+const hitDeclares = (h) => {
+  if (h.fragments?.length) return h.fragments.some((f) => declaresExactly(f, id));
+  const raw = gh(['api', `repos/${h.repo}/contents/${h.path}`, '-H', 'Accept: application/vnd.github.raw']);
+  return raw !== null && declaresExactly(raw, id);
+};
+const repoMeta = (r) => {
+  const out = gh(['api', `repos/${r}`, '--jq', '{b:.default_branch,p:.pushed_at,a:.archived}']);
+  if (out === null) return { error: lastGhError };
+  try { const m = JSON.parse(out); return { defaultBranch: m.b, pushedAt: m.p, archived: m.a === true }; } catch { return { error: 'unreadable repo metadata' }; }
+};
+
+const wf = searchCode(`org:keboola org:keboola-rnd "KBC_DEVELOPERPORTAL_APP" "${id}" path:.github/workflows`);
+const metaOf = {};
+const standalone = [...new Set(wf.items.filter((h) => h.repo !== MONOREPO && hitDeclares(h)).map((h) => h.repo))]
+  .map((r) => { metaOf[r] = repoMeta(r); return { repo: r, archived: metaOf[r].archived === true }; });
+
+const docUrl = parseGithubUrl(copy.documentationUrl);
+let docRepo = null;
+if (!standalone.length && docUrl && docUrl.repo !== MONOREPO) {
+  metaOf[docUrl.repo] = repoMeta(docUrl.repo);
+  // An unreadable documentation repo (404: deleted, private) is no evidence either way.
+  if (!metaOf[docUrl.repo].error) docRepo = { repo: docUrl.repo, archived: metaOf[docUrl.repo].archived };
 }
-if (!repo && !ambiguous && /github\.com\/([^/]+)\/([^/#?]+)/.test(copy.documentationUrl)) {
-  const [, owner, name] = copy.documentationUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
-  repo = `${owner}/${name.replace(/\.git$/, '')}`;
-  repoSource = 'documentationUrl (unverified — may be a docs repo, not the component repo)';
+
+// The monorepo: readable at all, its component folders (those with a
+// component_config/), and the folders whose files declare or mention the id.
+let mono = null;
+const monoMeta = gh(['api', `repos/${MONOREPO}`, '--jq', '{b:.default_branch,push:(.permissions.push // false)}']);
+if (monoMeta === null) {
+  mono = { readable: false, error: lastGhError };
+} else {
+  let monoBranch = 'main', push = false;
+  try { ({ b: monoBranch, push } = JSON.parse(monoMeta)); } catch { /* keep the defaults */ }
+  mono = { readable: true, defaultBranch: monoBranch, push, roots: [], declared: [], mentioned: [], truncated: false, searchError: null };
+  const tree = gh(['api', `repos/${MONOREPO}/git/trees/${monoBranch}?recursive=1`, '--jq',
+    '{truncated, roots: [.tree[] | select(.type == "tree" and (.path | test("(^|/)component_config$"))) | .path | sub("/?component_config$"; "")] }']);
+  if (tree === null) mono.searchError = `tree listing failed: ${lastGhError}`;
+  else {
+    const t = JSON.parse(tree);
+    // A component_config/ at the monorepo root is the kit's own, not a component.
+    mono.roots = t.roots.filter(Boolean);
+    mono.truncated = t.truncated === true;
+    const s = searchCode(`repo:${MONOREPO} "${id}"`);
+    if (s.error) mono.searchError = s.error;
+    else {
+      if (s.incomplete) mono.truncated = true;
+      Object.assign(mono, monorepoCandidates(s.items, mono.roots, id));
+    }
+  }
 }
+
+const decision = decideLocation({ id, standalone, docUrl, docRepo, mono, folder: opt('--folder') });
+const location = decision.location;
+const repo = location?.repo ?? null;
+const repoSource = location?.source ?? null;
 
 // --- publish path ----------------------------------------------------------
 // When does a merged component_config change reach the Developer Portal? Read it
@@ -173,6 +231,9 @@ function jobBlock(text, name) {
 function detectTrigger(texts) {
   for (const { file, text } of texts) {
     const ci = text.match(/uses:\s*(keboola\/component-ci\/\S+)/);
+    if (ci && /\/monorepo-/.test(ci[1])) {
+      return { trigger: 'monorepo', via: `${file}: ${ci[1]} (a monorepo caller: the component is a folder, not this repo's root)`, ifLine: null };
+    }
     if (ci) {
       return { trigger: 'tag', via: `${file}: ${ci[1]} (by the reusable workflow's convention: default branch, tag ref, bare semver; check that ref)`, ifLine: null };
     }
@@ -203,27 +264,40 @@ function detectTrigger(texts) {
 }
 
 let publish = { componentConfigDir: null, propertiesJob: false, trigger: 'unknown', triggerVia: null, defaultBranch: null, latestTag: null, pushedAt: null, archived: false };
-let monorepo = null;
-if (repo) {
-  const meta = gh(['api', `repos/${repo}`, '--jq', '{b:.default_branch,p:.pushed_at,a:.archived}']);
-  if (meta) {
-    try { const m = JSON.parse(meta); publish.defaultBranch = m.b; publish.pushedAt = m.p; publish.archived = m.a === true; } catch {}
+let metaError = null;
+let configListError = null;
+if (location?.kind === 'repo') {
+  const meta = metaOf[repo] || repoMeta(repo);
+  if (meta.error) metaError = meta.error;
+  else Object.assign(publish, { defaultBranch: meta.defaultBranch, pushedAt: meta.pushedAt, archived: meta.archived });
+}
+// In the monorepo the folder's component_config/ is the copy, and the root
+// workflows publish it: read the caller of component-ci's monorepo-publish.yml
+// rather than assume it runs (its PUBLISH_ENABLED switch can turn releases off).
+if (location?.kind === 'monorepo') {
+  publish.defaultBranch = mono.defaultBranch;
+  const files = gh(['api', `repos/${MONOREPO}/contents/${location.folder}/component_config`, '--jq', '[.[].name]']);
+  if (files) { try { publish.componentConfigDir = JSON.parse(files); } catch {} }
+  else configListError = lastGhError;
+  const names = gh(['api', `repos/${MONOREPO}/contents/.github/workflows`, '--jq', '[.[].name]']);
+  let caller = null;
+  for (const n of (names ? JSON.parse(names) : []).filter((x) => /\.ya?ml$/.test(x))) {
+    const wf = gh(['api', `repos/${MONOREPO}/contents/.github/workflows/${n}`, '--jq', '.content']);
+    const text = wf ? Buffer.from(wf, 'base64').toString('utf8') : '';
+    if (/keboola\/component-ci\/\.github\/workflows\/monorepo-publish\.ya?ml/.test(text)) { caller = { file: n, text }; break; }
+  }
+  if (caller) {
+    publish.propertiesJob = true;
+    const sw = caller.text.match(/PUBLISH_ENABLED\s*:\s*([^\n#]+)/);
+    const value = sw ? sw[1].trim() : null;
+    publish.trigger = value && /^(false|'false'|"false"|0)$/i.test(value) ? 'unknown' : 'monorepo';
+    publish.triggerVia = `${caller.file}: calls component-ci monorepo-publish.yml (releases raised versions on push to ${mono.defaultBranch})` +
+      (value ? `; PUBLISH_ENABLED: ${value}` : '; no PUBLISH_ENABLED line found');
+  } else {
+    publish.triggerVia = `no caller of component-ci monorepo-publish.yml found in ${MONOREPO}/.github/workflows`;
   }
 }
-// An archived repo's workflows describe how it used to publish, not how it does
-// now: look for the component in the monorepo instead of reading them.
-if (repo && publish.archived) {
-  const access = gh(['api', `repos/${MONOREPO}`, '--jq', '.full_name']) === MONOREPO;
-  let folders = [];
-  if (access) {
-    const paths = gh(['api', '-X', 'GET', 'search/code', '-f', `q=repo:${MONOREPO} "${id}"`, '--jq', '[.items[].path]']);
-    try { folders = monorepoFolders(JSON.parse(paths || '[]')); } catch {}
-  }
-  monorepo = { repo: MONOREPO, access, folders };
-  publish.trigger = 'monorepo';
-  publish.triggerVia = `${repo} is archived; ${MONOREPO} publishes through keboola/component-ci monorepo-publish.yml (releases raised versions on push to main)`;
-}
-if (repo && !publish.archived) {
+if (location?.kind === 'repo' && !publish.archived) {
   const files = gh(['api', `repos/${repo}/contents/component_config`, '--jq', '[.[].name]']);
   if (files) { try { publish.componentConfigDir = JSON.parse(files); } catch {} }
   const names = gh(['api', `repos/${repo}/contents/.github/workflows`, '--jq', '[.[].name]']);
@@ -280,17 +354,29 @@ const genericUI = row ? row.genericUI : (c.flags || []).includes('genericDockerU
 if (genericUI === false && ['extractor', 'writer', 'application'].includes(c.type)) {
   block('hard', 'Not a generic-UI component: its fields may be hard-coded in the Keboola UI monorepo, which needs a monorepo PR, not a config change.');
 }
-if (ambiguous) {
-  block('hard', `${ambiguous.length} repositories declare ${id} in a workflow (${ambiguous.join(', ')}): pick the component's own repo by hand before anything else.`);
-} else if (!repo) {
-  block('hard', `Could not resolve the component repository: nothing to open a PR against. Since November 2026 most components live in the private monorepo ${MONOREPO}; look there if you have access.${ghError ? ` gh said: ${ghError}` : ''}`);
+for (const reason of decision.hard) block('hard', reason);
+for (const reason of decision.notes) gate.reasons.push(reason);
+if (wf.error && !location) {
+  gate.reasons.push(`The workflow search failed (gh said: ${wf.error}); re-run in a minute before trusting "could not resolve".`);
 }
-for (const [level, reason] of archivedVerdict({ id, repo, archived: publish.archived, monorepo })) {
-  if (level === 'hard') block('hard', reason);
-  else gate.reasons.push(reason);
+if (location?.kind === 'repo' && metaError) {
+  // Without the metadata the archived flag is unknown, and an archived repo refuses the PR.
+  block('hard', `Could not read ${repo}'s metadata (gh said: ${metaError}), so whether it is archived is unknown. Re-run before anything else.`);
 }
-if (repo && !publish.archived && publish.componentConfigDir === null) {
+if (location?.kind === 'repo' && publish.archived) {
+  // Code search skips archived repos and decideLocation treats an archived
+  // documentation repo as a predecessor, so this is a repo archived between the
+  // two lookups of this run.
+  block('hard', `${repo} is archived: no PR can go there. Ask the Component Factory owner where ${id} lives now.`);
+}
+if (location?.kind === 'repo' && !publish.archived && !metaError && publish.componentConfigDir === null) {
   block('hard', `${repo} has no component_config/ directory: this component's copy is portal-only. File the proposal and stop; the portal write needs vendor credentials.`);
+}
+if (location?.kind === 'monorepo' && publish.componentConfigDir === null) {
+  block('hard', `Could not list ${MONOREPO}/${location.folder}/component_config${configListError ? ` (gh said: ${configListError})` : ''}. Re-run before anything else.`);
+}
+if (location?.kind === 'monorepo' && !mono.push) {
+  gate.reasons.push(`This gh account cannot push to ${MONOREPO}: open the PR from a fork, if the organization allows forking it, or ask the owner for push access to branches.`);
 }
 if (!map.reviewed && !confirmed) {
   block('soft', 'Neither the category map (reviewed=false, PRDCT-587) nor this component (not under `confirmed` in overrides.json) is owner-approved. Draft a proposal for the owner; do not open a PR.');
@@ -304,10 +390,10 @@ if (!map.reviewed && confirmed && row && confirmed.bucket === row.bucket) {
 if (repo && publish.componentConfigDir && !publish.propertiesJob) {
   gate.reasons.push(`${repo} has component_config/ but no update_developer_portal_properties job was found: the publish path is unverified. Say so in the PR body.`);
 }
-if (publish.trigger === 'monorepo' && monorepo?.folders.length === 1) {
-  gate.reasons.push(`Publish trigger is "monorepo" (${publish.triggerVia}). Whether a copy-only change needs a raised version to go live is unverified: use the monorepo caveat and ask the reviewer.`);
+if (location?.kind === 'monorepo') {
+  gate.reasons.push(`Publish trigger is "${publish.trigger}" (${publish.triggerVia}). Whether a copy-only change needs a raised version to go live is unverified: use the monorepo caveat and ask the reviewer.`);
 }
-if (repo && publish.propertiesJob && publish.trigger !== 'tag') {
+if (location?.kind === 'repo' && publish.propertiesJob && publish.trigger !== 'tag') {
   gate.reasons.push(`Publish trigger is "${publish.trigger}" (${publish.triggerVia}). Use the matching caveat in the PR body; on every-push or push-default the merge goes live within minutes.`);
 }
 if (!gaps.length) {
@@ -329,10 +415,21 @@ const facts = {
     : row?.bucket === 'application' ? 'references/templates/application.md (stub: confirm with the owner)' : null,
   copy,
   gaps,
+  // Where the PR goes: `repo`, and inside it `folder` ('' = the repo root).
   repo,
+  folder: location?.folder ?? null,
   repoSource,
-  ambiguousRepos: ambiguous,
-  monorepo,
+  predecessor: decision.predecessor,
+  monorepo: mono && {
+    readable: mono.readable,
+    error: mono.error ?? null,
+    push: mono.push ?? null,
+    declared: mono.declared ?? [],
+    mentioned: mono.mentioned ?? [],
+    searchError: mono.searchError ?? null,
+    truncated: mono.truncated ?? false,
+    components: mono.roots?.length ?? 0,
+  },
   publish,
   gate,
   fetchedAt: new Date().toISOString(),
