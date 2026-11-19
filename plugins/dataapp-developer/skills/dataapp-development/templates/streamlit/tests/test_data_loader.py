@@ -209,3 +209,58 @@ def test_an_expired_sign_in_tells_the_user(query_service):
     assert df.empty
     query_service.client.execute_query.assert_not_called()
     query_service.error.assert_called_once_with("Your sign-in to this app has expired. Reload the page.")
+
+
+def _manifest(monkeypatch, tmp_path, content):
+    path = tmp_path / "manifest.json"
+    path.write_text(content)
+    monkeypatch.setenv("KBC_WORKSPACE_MANIFEST_PATH", str(path))
+    monkeypatch.delenv("WORKSPACE_ID", raising=False)
+
+
+def test_a_governed_workspace_without_a_user_is_refused_before_query_service(query_service, monkeypatch, tmp_path):
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
+
+    df = data_loader.execute_aggregation_query("SELECT 1")
+
+    assert df.empty
+    query_service.client.execute_query.assert_not_called()
+    query_service.error.assert_called_once_with("This app's data needs a signed-in user.")
+
+
+def test_a_governed_workspace_never_serves_a_cached_no_user_result(query_service, monkeypatch, tmp_path):
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": false}')
+    data_loader.execute_aggregation_query("SELECT 1")
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
+
+    df = data_loader.execute_aggregation_query("SELECT 1")
+
+    assert df.empty
+    query_service.error.assert_called_once_with("This app's data needs a signed-in user.")
+
+
+def test_a_governed_workspace_with_a_user_runs_the_query(query_service, monkeypatch, tmp_path):
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
+    query_service.headers["X-Kbc-App-User-Token"] = _token()
+
+    df = data_loader.execute_aggregation_query("SELECT 1")
+
+    assert df["A"].tolist() == ["1"]
+    assert query_service.client.execute_query.call_args.kwargs["workspace_id"] == "12345"
+
+
+def test_a_workspace_not_governed_runs_the_query_without_a_user(query_service, monkeypatch, tmp_path):
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": false}')
+
+    df = data_loader.execute_aggregation_query("SELECT 1")
+
+    assert df["A"].tolist() == ["1"]
+
+
+def test_local_run_takes_the_workspace_from_secrets(query_service, monkeypatch):
+    monkeypatch.delenv("WORKSPACE_ID")
+    monkeypatch.setattr(data_loader.st, "secrets", {"WORKSPACE_ID": "777"})
+
+    data_loader.execute_aggregation_query("SELECT 1")
+
+    assert query_service.client.execute_query.call_args.kwargs["workspace_id"] == "777"

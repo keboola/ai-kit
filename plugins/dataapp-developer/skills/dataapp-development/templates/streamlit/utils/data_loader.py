@@ -14,9 +14,10 @@ from urllib.parse import urljoin
 import pandas as pd
 import streamlit as st
 from keboola_query_service import AppUserToken, Client, RowLevelSecurityError, StorageToken
-from keboola_streamlit import AppUserTokenError, get_app_user_key, get_app_user_token
+from keboola_streamlit import AppUserTokenError, Workspace, get_app_user_key, get_app_user_token, get_workspace
 
 NO_USER = ("no user",)
+NEEDS_SIGNED_IN_USER = "This app's data needs a signed-in user."
 
 
 def _get(name: str, default: str | None = None) -> str | None:
@@ -40,13 +41,16 @@ def _query_service_url_from_index(kbc_url: str | None) -> str | None:
     return next((service["url"] for service in services if service["id"] == "query"), None)
 
 
-def _resolve_workspace_id() -> str | None:
-    """Read workspace ID from the manifest file (preferred) or the env var fallback."""
-    manifest_path = _get("KBC_WORKSPACE_MANIFEST_PATH")
-    if manifest_path and os.path.exists(manifest_path):
-        with open(manifest_path) as f:
-            return json.load(f).get("workspaceId")
-    return _get("WORKSPACE_ID")
+def _workspace() -> Workspace:
+    """The app's workspace from `keboola-streamlit`, which reads the manifest again on every call.
+
+    A local run keeps WORKSPACE_ID in .streamlit/secrets.toml, which `get_workspace()` does not read.
+    """
+    if not os.environ.get("KBC_WORKSPACE_MANIFEST_PATH") and not os.environ.get("WORKSPACE_ID"):
+        local_workspace_id = _get("WORKSPACE_ID")
+        if local_workspace_id:
+            return Workspace(id=str(local_workspace_id), governed=None)
+    return get_workspace()
 
 
 def _user_key() -> tuple[str, ...] | None:
@@ -116,6 +120,9 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
     """
     user_key = _user_key()
     try:
+        # Checked before the cache, so a governed workspace never serves a result cached for no user.
+        if _workspace().governed is True and get_app_user_token() is None:
+            raise AppUserTokenError(NEEDS_SIGNED_IN_USER)
         if user_key is None:
             return _run_query(sql)
         return _cached_query(sql, user_key)
@@ -137,7 +144,6 @@ def _cached_query(sql: str, user_key: tuple[str, ...]) -> pd.DataFrame:
 
 def _run_query(sql: str) -> pd.DataFrame:
     branch_id = _get("BRANCH_ID")
-    workspace_id = _resolve_workspace_id()
 
     if not branch_id:
         raise RuntimeError(
@@ -146,15 +152,10 @@ def _run_query(sql: str) -> pd.DataFrame:
             "mcp__keboola__get_project_info (`branch_id` field) and paste into "
             ".streamlit/secrets.toml."
         )
-    if not workspace_id:
-        raise RuntimeError(
-            "Missing workspace ID. Set KBC_WORKSPACE_MANIFEST_PATH (Storage Access "
-            "production) or WORKSPACE_ID (local dev)."
-        )
 
     results = _client().execute_query(
         branch_id=str(branch_id),
-        workspace_id=str(workspace_id),
+        workspace_id=_workspace().id,
         statements=[sql],
         auth=_auth(),
     )
