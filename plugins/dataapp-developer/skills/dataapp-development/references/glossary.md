@@ -78,7 +78,7 @@ Python SDK: https://github.com/keboola/query-service-api-python-sdk
 
 JS/TS: `@keboola/api-client`'s `queryService` client + `queryService` SDK (https://github.com/keboola/ui, `packages/api-client`) — the formerly-standalone `query-service-api-js-sdk` repo is retired; `executeQuery`/`waitForJob`/pagination now live in `createQueryServiceSdk` (`@keboola/api-client/sdk/queryService`), composed on top of the plain `queryService` client (`@keboola/api-client/queryService`).
 
-Used when the app writes back to Storage tables via the Query Service (Snowflake projects with the **Storage Access** feature enabled). Provides authenticated `execute_query` against a permission-scoped workspace.
+Used when the app writes back to Storage tables via the Query Service (apps with Storage access on, `runtime.workspace.enabled: true`). Provides authenticated `execute_query` against a permission-scoped workspace.
 
 First-class SQL helpers (`SQL.literal()`, `SQL.ident()`, `sql.format()`) are in development for the Python SDK. Until released, use the manual sanitization pattern shown in `references/storage-access.md` (allowlists for strings, type-coercion for numbers).
 
@@ -117,7 +117,7 @@ When a reference mentions a UI navigation step, here's where to find it. The exa
 | Workspaces (provision a Snowflake/BigQuery workspace) | **Workspaces** (older UI: "Sandboxes" or "Transformations → Workspaces") |
 | API Tokens (create a scoped Storage API token) | **Settings → API Tokens** (or "Users & Settings → API Tokens") |
 | Data Apps (list, deploy, view logs, edit config) | **Apps** in the left nav |
-| Storage Access feature toggle | **Settings → Features → Storage Access** (must be enabled per project) |
+| Storage access of an app (per app, no project feature) | inside the data app config: **Advanced Settings → Storage Access** |
 | Storage tables and buckets | **Storage** in the left nav |
 | Development Branches (find numeric branch ID) | **Development Branches** in the left nav |
 | Data App Terminal Log | inside the data app config: **Terminal Log** tab |

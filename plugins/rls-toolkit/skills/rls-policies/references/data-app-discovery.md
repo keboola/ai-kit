@@ -10,7 +10,7 @@ Facts marked (?) are not verified against the platform docs: confirm with a test
 | App can use the user token | the app forwards `X-Kbc-App-User-Token`, per-user caches; supported app types: see the "Row-level security" section of the `dataapp-development` skill (`references/storage-access.md`) | Query Service refuses every query of an app that does not forward the token (HTTP 403 "Row-level security does not allow this query", logged as `ACCESS_DENIED`), so every user sees an error, not an empty page; tell the user |
 | Storage access on | `runtime.workspace.enabled: true` | RLS has nothing to govern; offer to enable it |
 | Every path requires SSO | `authorization.app_proxy.auth_rules[]`: `auth_required: true`, `auth[]` lists providers; providers in `auth_providers[]`, type oidc, gitlab, github or jumpcloud (provider list: `authentication.md` of `dataapp-development`) | the platform refuses the configuration with HTTP 400 on app update and on deployment when `rlsPolicies` is set and a path is public, has no provider, names an unknown provider or one of another type, or the app has no login rule at all |
-| Project features | `row-level-security` (policies, the RLS switch in the app settings) and `data-apps-storage-workspace` (Storage access of the app) | ask support or an admin |
+| Project feature | `row-level-security` (policies, the RLS switch in the app settings) | ask support or an admin |
 
 Show what you found. Never change an app's authentication silently.
 

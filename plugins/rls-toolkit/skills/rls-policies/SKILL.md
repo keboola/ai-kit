@@ -31,8 +31,8 @@ directory (`mktemp -d`), never into the user's repository.
 - Writing a policy needs a project-admin Storage token: a master token of a member with the role
   admin, productionManager or share. Grants and organization scope need an organization admin
   (`references/policy-model.md`).
-- A data app additionally needs Storage access (project feature `data-apps-storage-workspace`) and
-  SSO on every path.
+- A data app additionally needs Storage access (`runtime.workspace.enabled: true` in its
+  configuration) and SSO on every path.
 
 ## Rules that decide every conversation
 
