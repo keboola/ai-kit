@@ -63,10 +63,8 @@ than a passing mention:
 and a git merge moves source code, not config. See
 [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §2.
 
-Underneath, this sets `runtime.workspace.enabled`, or on projects without the
-`data-apps-storage-workspace` feature falls back to a deprecated
-`parameters.dataApp.secrets.WORKSPACE_ID` entry. You do not need to care which — the argument
-drives both and the response reports the outcome.
+Underneath, this sets `runtime.workspace.enabled` in the app's configuration. That per-app switch
+is the only thing that decides Storage access; no project feature is involved.
 
 ## Getting the env vars for local development
 
@@ -382,10 +380,8 @@ is created — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) 
 differently from forgetting Storage access: reads keep working and only the writes fail, because
 the workspace has no grant on the destination table.
 
-Setup (the first step is the project feature; the rest is about **writable tables** — the app's
-own read-only workspace is the separate `storage_access` argument covered in "Enabling Storage
-access on a deployed app" above):
-- Project Settings → Features → enable "Storage Access".
+Setup (this is about **writable tables** — the app's own read-only workspace is the separate
+`storage_access` argument covered in "Enabling Storage access on a deployed app" above):
 - App configuration → Advanced Settings → Storage Access section → add writable tables.
 - Or programmatically: set `storage.output.tables[].destination` to the table ID and `unload_strategy: "direct-grant"`:
   ```json
