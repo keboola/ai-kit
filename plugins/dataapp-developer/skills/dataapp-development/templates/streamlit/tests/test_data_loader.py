@@ -1,6 +1,7 @@
 import base64
 import json
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -12,14 +13,24 @@ from keboola_query_service import AppUserToken, RowLevelSecurityError, StorageTo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from keboola_streamlit import _app_user_token  # noqa: E402
 from utils import data_loader  # noqa: E402
 
 
-def _token(idp="https://idp.example.com", sub="user-1", nonce="1"):
+def _token(idp="https://idp.example.com", sub="user-1", nonce="1", exp=None):
     def part(data):
         return base64.urlsafe_b64encode(json.dumps(data).encode()).decode().rstrip("=")
 
-    return f"{part({'alg': 'RS256'})}.{part({'idp': idp, 'sub': sub, 'jti': nonce})}.signature"
+    claims = {"idp": idp, "sub": sub, "jti": nonce, "exp": exp if exp is not None else 4102444800}
+    return f"{part({'alg': 'RS256'})}.{part(claims)}.signature"
+
+
+def _refresh_headers(expires_in):
+    return {
+        "X-Kbc-App-User-Token": _token(nonce="handshake", exp=time.time() + expires_in),
+        "X-Kbc-App-User-Refresh-Token": _token(nonce="refresh", exp=time.time() + 3600),
+        "X-Kbc-App-Public-Url": "https://app-1.hub.example.com",
+    }
 
 
 def _result(rows):
@@ -35,6 +46,7 @@ def query_service(monkeypatch):
     monkeypatch.delenv("KBC_WORKSPACE_MANIFEST_PATH", raising=False)
     st.cache_data.clear()
     st.cache_resource.clear()
+    _app_user_token._REFRESHERS.clear()
     client = MagicMock(name="client")
     client.execute_query.return_value = _result([["1"]])
     context = SimpleNamespace(headers={})
@@ -173,3 +185,27 @@ def test_missing_branch_id_is_shown(query_service, monkeypatch):
     assert df.empty
     assert "BRANCH_ID" in query_service.error.call_args.args[0]
     assert isinstance(df, pd.DataFrame)
+
+
+def test_a_token_near_expiry_is_renewed_through_the_apps_proxy(query_service):
+    query_service.headers.update(_refresh_headers(expires_in=30))
+    renewed = _token(nonce="renewed")
+    answer = SimpleNamespace(status_code=200, json=lambda: {"token": renewed})
+
+    with patch("requests.post", return_value=answer) as post:
+        data_loader.execute_aggregation_query("SELECT 1")
+        headers = _auth(query_service).credential_headers()
+
+    assert headers["X-Kbc-App-User-Token"] == renewed
+    assert post.call_args.args[0] == "https://app-1.hub.example.com/_proxy/app-user-token"
+
+
+def test_an_expired_sign_in_tells_the_user(query_service):
+    query_service.headers.update(_refresh_headers(expires_in=-1))
+
+    with patch("requests.post", return_value=SimpleNamespace(status_code=401)):
+        df = data_loader.execute_aggregation_query("SELECT 1")
+
+    assert df.empty
+    query_service.client.execute_query.assert_not_called()
+    query_service.error.assert_called_once_with("Your sign-in to this app has expired. Reload the page.")

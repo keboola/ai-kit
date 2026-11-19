@@ -6,7 +6,6 @@ Python SDK. The SDK handles submit + poll + paginate against
 to `/v2/storage/.../workspaces/.../query` (that's the legacy Storage API
 workspace-query endpoint; it 404s on most Snowflake projects).
 """
-import base64
 import json
 import os
 import urllib.request
@@ -15,6 +14,7 @@ from urllib.parse import urljoin
 import pandas as pd
 import streamlit as st
 from keboola_query_service import AppUserToken, Client, RowLevelSecurityError, StorageToken
+from keboola_streamlit import AppUserTokenError, get_app_user_key, get_app_user_token
 
 NO_USER = ("no user",)
 
@@ -49,32 +49,15 @@ def _resolve_workspace_id() -> str | None:
     return _get("WORKSPACE_ID")
 
 
-def app_user_token() -> str | None:
-    """The signed-in user's token, which Keboola's apps proxy adds after an OAuth/OIDC login.
-
-    The only place that reads it: every query gets it through this function.
-    """
-    return st.context.headers.get("X-Kbc-App-User-Token") or None
-
-
 def _user_key() -> tuple[str, ...] | None:
     """The cache key of the signed-in user: the token's `idp` and `sub`, the same for every token of that user.
 
-    The token is not verified: only the apps proxy sets the header, and it drops copies sent by the browser.
     None for a token that cannot be read: such a query is not cached.
     """
-    token = app_user_token()
-    if token is None:
-        return NO_USER
     try:
-        payload = token.split(".")[1]
-        claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
-        idp, sub = claims["idp"], claims["sub"]
-    except (IndexError, ValueError, KeyError, TypeError):
+        return get_app_user_key() or NO_USER
+    except AppUserTokenError:
         return None
-    if not (isinstance(idp, str) and isinstance(sub, str) and idp and sub):
-        return None
-    return (idp, sub)
 
 
 @st.cache_resource
@@ -104,10 +87,19 @@ def _client() -> Client:
 
 def _auth() -> AppUserToken | StorageToken:
     """The user's token with the app's Storage token, or only the Storage token when no user is signed in."""
-    if app_user_token() is None:
+    if get_app_user_token() is None:
         return _storage_token()
-    # A callable: the SDK reads the current token before every request of the query.
-    return AppUserToken(app_user_token, storage_token=_storage_token())
+    # A callable: the SDK reads the current token before every request of the query, and keboola-streamlit renews it
+    # through the apps proxy before it expires.
+    return AppUserToken(_current_app_user_token, storage_token=_storage_token())
+
+
+def _current_app_user_token() -> str:
+    token = get_app_user_token()
+    if token is None:
+        # The headers are empty once the websocket of the session has closed.
+        raise AppUserTokenError("Your sign-in to this app could not be renewed. Try again in a moment.")
+    return token
 
 
 def execute_aggregation_query(sql: str) -> pd.DataFrame:
@@ -129,6 +121,8 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
         return _cached_query(sql, user_key)
     except RowLevelSecurityError:
         st.error("You have no access to this data.")
+    except AppUserTokenError as exc:
+        st.error(str(exc))
     except Exception as exc:
         st.error(f"Query Service call failed: {exc}")
     return pd.DataFrame()
