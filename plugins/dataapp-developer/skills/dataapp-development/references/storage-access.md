@@ -770,6 +770,6 @@ On a workspace without row-level security the app answers as before.
 - The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables; a table without one reads as empty. The config is refused unless the app also has an OAuth/OIDC login on every path, so set both in one config change, then redeploy; the redeploy gives the app a new governed workspace.
 - Only the prod app is governed. A draft gets no `rlsPolicies`, so the filtering shows only after promote, with a real login.
 
-**Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
+**Streamlit** needs `keboola-streamlit` 0.4.0 or newer to keep the token valid, see [streamlit-apps.md](streamlit-apps.md) §Row-level security.
 
 Column-level permissions are not part of this.

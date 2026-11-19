@@ -2,13 +2,13 @@
 
 Minimal Keboola-deployable Streamlit data app.
 
-**Row-level security is not supported in this template yet.** The template sends the user token with every query and keys its cache per user, but Streamlit gets the token once per page load and it expires after 5 minutes. For per-user data or a governed workspace, use `templates/react-vite-app/`.
+Row-level security works: every query sends the signed-in user's token, which `keboola-streamlit` renews through the apps proxy before it expires, and the result cache is keyed per user. See `references/streamlit-apps.md` §Row-level security.
 
 ## Tests
 
 ```bash
 uv run --group dev pytest -q tests
-``` See `references/streamlit-apps.md` §Row-level security — not supported yet.
+```
 
 ## Local development
 

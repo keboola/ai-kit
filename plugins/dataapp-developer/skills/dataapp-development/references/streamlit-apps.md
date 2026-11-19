@@ -163,21 +163,21 @@ def load_recent_crashes() -> list[dict]:
 
 If you reach this question, you usually want both — `@st.cache_resource` for the client, `@st.cache_data` for the result data with a TTL appropriate to how stale the user can tolerate.
 
-### Row-level security — not supported yet
+### Row-level security
 
-In a workspace governed by row-level security, Query Service returns only the rows of the signed-in user. It needs the user token (`X-Kbc-App-User-Token`) that Keboola's apps proxy adds to the request. The Streamlit template sends it, but Streamlit cannot keep it valid yet:
+In a workspace governed by row-level security, Query Service returns only the rows of the signed-in user. It needs the user token (`X-Kbc-App-User-Token`) that Keboola's apps proxy adds to the request.
 
-- Streamlit holds one WebSocket open for the whole session, up to hours. The apps proxy signs the token once, when the socket opens, and the token lives 5 minutes. After that, Query Service refuses the queries until the user reloads the page. A refresh bound to the live connection is a follow-up.
+Streamlit holds one WebSocket open for the whole session and sees only its first request. The apps proxy signs the token once, when the socket opens, and the token lives 5 minutes. So it also adds a refresh token, and `get_app_user_token()` from `keboola-streamlit` 0.4.0 or newer gets a new user token from the proxy less than a minute before the old one expires. The proxy closes the socket after at most 1 hour; Streamlit reconnects at once and gets a new pair. When the sign-in ends (sign-out, lost access), the app shows "Your sign-in to this app has expired. Reload the page."
 
-What the template already does, and what to keep when you change `utils/data_loader.py`:
+What the template does, and what to keep when you change `utils/data_loader.py`:
 
-- `app_user_token()` is the only place that reads the token. Every query sends it through `auth=AppUserToken(app_user_token, storage_token=...)`, together with the app's Storage token; without a token, only the Storage token. The client (`@st.cache_resource`) is shared and never holds the user's token.
-- `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. The template's cached function takes `user_key`, the token's `idp` and `sub`. Streamlit leaves arguments whose name starts with `_` out of the key, so never rename it to `_user_key`: one user's rows would go to the next user. Key any new `@st.cache_data` of query results the same way.
-- A failed query raises inside the cached function, so it is not cached. A row-level security refusal (`RowLevelSecurityError`) shows "You have no access to this data."
+- The token comes only from `keboola-streamlit` (`get_app_user_token()`, `get_app_user_key()`); never read `X-Kbc-App-User-Token` from `st.context.headers` yourself, or the token stops working after 5 minutes. Every query sends it through `auth=AppUserToken(<callable>, storage_token=...)`, together with the app's Storage token; the SDK calls the callable before every request. Without a token, only the Storage token is sent. The client (`@st.cache_resource`) is shared and never holds the user's token.
+- `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. The template's cached function takes `user_key`, the token's `idp` and `sub` from `get_app_user_key()`. Streamlit leaves arguments whose name starts with `_` out of the key, so never rename it to `_user_key`: one user's rows would go to the next user. Key any new `@st.cache_data` of query results the same way.
+- A failed query raises inside the cached function, so it is not cached. A row-level security refusal (`RowLevelSecurityError`) shows "You have no access to this data."; an expired sign-in (`AppUserTokenError`) shows its own message.
 - The tests in `tests/` check this; run `uv run --group dev pytest -q tests`.
 - The shared DuckDB cache does not fit a governed workspace; `templates/duckdb-cache/python/cache.py` turns itself off when Query Service refuses its refresh (`enabled()` is then False).
 
-For per-user data today, build a Python/JS app from `templates/react-vite-app/`, which forwards the token by itself. See "Row-level security" in [storage-access.md](storage-access.md).
+See "Row-level security" in [storage-access.md](storage-access.md) for the governed workspace and its policies.
 
 ## Local development
 
