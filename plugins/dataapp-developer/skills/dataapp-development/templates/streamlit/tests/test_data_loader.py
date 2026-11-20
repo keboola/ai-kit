@@ -257,10 +257,20 @@ def test_a_workspace_not_governed_runs_the_query_without_a_user(query_service, m
     assert df["A"].tolist() == ["1"]
 
 
-def test_local_run_takes_the_workspace_from_secrets(query_service, monkeypatch):
-    monkeypatch.delenv("WORKSPACE_ID")
-    monkeypatch.setattr(data_loader.st, "secrets", {"WORKSPACE_ID": "777"})
+def test_local_run_takes_the_workspace_from_the_env(query_service, monkeypatch):
+    monkeypatch.setenv("WORKSPACE_ID", "777")
 
     data_loader.execute_aggregation_query("SELECT 1")
 
     assert query_service.client.execute_query.call_args.kwargs["workspace_id"] == "777"
+
+
+def test_workspace_id_in_secrets_is_not_read(query_service, monkeypatch):
+    monkeypatch.delenv("WORKSPACE_ID")
+    monkeypatch.setattr(data_loader.st, "secrets", {"WORKSPACE_ID": "777"})
+
+    df = data_loader.execute_aggregation_query("SELECT 1")
+
+    assert df.empty
+    query_service.client.execute_query.assert_not_called()
+    assert "KBC_WORKSPACE_MANIFEST_PATH" in query_service.error.call_args.args[0]

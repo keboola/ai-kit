@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 import pandas as pd
 import streamlit as st
 from keboola_query_service import AppUserToken, Client, RowLevelSecurityError, StorageToken
-from keboola_streamlit import AppUserTokenError, Workspace, get_app_user_key, get_app_user_token, get_workspace
+from keboola_streamlit import AppUserTokenError, get_app_user_key, get_app_user_token, get_workspace
 
 NO_USER = ("no user",)
 NEEDS_SIGNED_IN_USER = "This app's data needs a signed-in user."
@@ -39,18 +39,6 @@ def _query_service_url_from_index(kbc_url: str | None) -> str | None:
     with urllib.request.urlopen(index_url, timeout=10) as response:
         services = json.load(response)["services"]
     return next((service["url"] for service in services if service["id"] == "query"), None)
-
-
-def _workspace() -> Workspace:
-    """The app's workspace from `keboola-streamlit`, which reads the manifest again on every call.
-
-    A local run keeps WORKSPACE_ID in .streamlit/secrets.toml, which `get_workspace()` does not read.
-    """
-    if not os.environ.get("KBC_WORKSPACE_MANIFEST_PATH") and not os.environ.get("WORKSPACE_ID"):
-        local_workspace_id = _get("WORKSPACE_ID")
-        if local_workspace_id:
-            return Workspace(id=str(local_workspace_id), governed=None)
-    return get_workspace()
 
 
 def _user_key() -> tuple[str, ...] | None:
@@ -121,7 +109,7 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
     user_key = _user_key()
     try:
         # Checked before the cache, so a governed workspace never serves a result cached for no user.
-        if _workspace().governed is True and get_app_user_token() is None:
+        if get_workspace().governed is True and get_app_user_token() is None:
             raise AppUserTokenError(NEEDS_SIGNED_IN_USER)
         if user_key is None:
             return _run_query(sql)
@@ -155,7 +143,7 @@ def _run_query(sql: str) -> pd.DataFrame:
 
     results = _client().execute_query(
         branch_id=str(branch_id),
-        workspace_id=_workspace().id,
+        workspace_id=get_workspace().id,
         statements=[sql],
         auth=_auth(),
     )
