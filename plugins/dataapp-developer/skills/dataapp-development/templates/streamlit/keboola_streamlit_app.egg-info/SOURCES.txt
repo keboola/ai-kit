@@ -1,8 +1,0 @@
-README.md
-pyproject.toml
-keboola_streamlit_app.egg-info/PKG-INFO
-keboola_streamlit_app.egg-info/SOURCES.txt
-keboola_streamlit_app.egg-info/dependency_links.txt
-keboola_streamlit_app.egg-info/requires.txt
-keboola_streamlit_app.egg-info/top_level.txt
-tests/test_data_loader.py
