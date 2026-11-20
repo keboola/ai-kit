@@ -59,8 +59,8 @@
     },
     {
       "name": "rls-toolkit",
-      "description": "Row- and column-level security toolkit for Keboola — guided setup of rls/cls policies in bulk for the tables a data app reads, per IdP group, with binding to the app. Companion to the kbagent plugin (rls / cls commands).",
-      "version": "1.0.0",
+      "description": "Row- and column-level security toolkit for Keboola — guided setup of rls/cls policies in bulk for the tables a data app reads, per IdP group or attribute, with binding to the app. Companion to the kbagent plugin (rls / cls commands).",
+      "version": "1.1.0",
       "source": "./plugins/rls-toolkit",
       "category": "development"
     },

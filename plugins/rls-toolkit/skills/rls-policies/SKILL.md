@@ -41,9 +41,11 @@ directory (`mktemp -d`), never into the user's repository.
    later; before it both were refused). A cls-policy alone opens the table for the readers it names, with
    all rows and only the columns it allows; a cls-policy that does not name the reader refuses the table
    for them. With a policy on an app, EVERY table the app reads needs a policy (rls or cls).
-2. **Selectors.** Rules select readers by IdP `groups` or `subjects` (`<idp>|<sub>`), exactly one per
-   rule; `["*"]` is every signed-in reader. Never an email. Groups and `*` are the practical choice
-   for apps.
+2. **Selectors.** Rules select readers by IdP `groups`, `subjects` (`<idp>|<sub>`) or, on schema
+   1.3.0, `attributes` (claims of the IdP such as `department`, with the `issuers` they must come
+   from), exactly one per rule; `["*"]` is every signed-in reader (there is no wildcard for
+   `attributes`). Never an email. Groups and `*` are the practical choice for apps; offer
+   `attributes` when the IdP keeps the attribute and not a group (`references/policy-model.md`).
 3. **Always write a `default`** (`{"false":true}` = no rows). Unknown groups never match a group
    rule; a reader that no rule matches gets the `default`, and without one the policy refuses the
    read (an ordinary reader then sees no rows, an administrator gets an error).

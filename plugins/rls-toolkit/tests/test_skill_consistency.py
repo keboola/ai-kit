@@ -54,7 +54,8 @@ def test_example_policies_are_well_formed():
     for name, policy in seen:
         assert re.fullmatch(r"[A-Za-z0-9_.\-]+\.[A-Za-z0-9_\-]+", policy["table"]), name
         for rule in policy["rules"]:
-            assert ("groups" in rule) != ("subjects" in rule), f"{name}: exactly one selector per rule"
+            assert sum(key in rule for key in ("groups", "subjects", "attributes")) == 1, f"{name}: exactly one selector per rule"
+            assert ("attributes" in rule) == ("issuers" in rule), f"{name}: issuers go with attributes and only with them"
         rls = [r for r in policy["rules"] if "condition" in r]
         cls = [r for r in policy["rules"] if "visible_columns" in r]
         assert bool(rls) != bool(cls), f"{name}: a policy is either rls or cls"
@@ -84,16 +85,34 @@ def test_neutral_references_do_not_mention_kbagent_at_all(path):
     assert "kbagent" not in _text(path), path.name
 
 
-def test_example_policies_validate_against_schema_1_2_0():
-    """The examples must be valid under the metastore schemas (descriptions stripped; see tests/README.md)."""
+def test_example_policies_validate_against_their_schema():
+    """The examples must be valid under the metastore schemas (descriptions stripped; see tests/README.md).
+
+    A policy with an `attributes` rule is checked against 1.3.0, the others against 1.2.0, the default.
+    """
     jsonschema = pytest.importorskip("jsonschema")
-    schemas = {kind: json.loads((SCHEMAS / f"{kind}-policy_1.2.0.json").read_text()) for kind in ("rls", "cls")}
+    schemas = {
+        (version, kind): json.loads((SCHEMAS / f"{kind}-policy_{version}.json").read_text())
+        for version in ("1.2.0", "1.3.0")
+        for kind in ("rls", "cls")
+    }
     seen = list(_policies())
     assert seen
     for name, policy in seen:
         kind = "rls" if any("condition" in r for r in policy["rules"]) else "cls"
-        jsonschema.Draft202012Validator(schemas[kind]).validate(policy)
+        version = "1.3.0" if any("attributes" in r for r in policy["rules"]) else "1.2.0"
+        jsonschema.Draft202012Validator(schemas[(version, kind)]).validate(policy)
         assert policy["table"], name
+
+
+def test_attributes_example_is_rejected_by_schema_1_2_0():
+    """The 1.2.0 schema has no `attributes` selector: the docs must say a policy needs 1.3.0 for it."""
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = json.loads((SCHEMAS / "rls-policy_1.2.0.json").read_text())
+    policies = [p for _, p in _policies() if any("attributes" in r for r in p["rules"])]
+    assert policies, "the policy model carries an attributes example"
+    for policy in policies:
+        assert not jsonschema.Draft202012Validator(schema).is_valid(policy)
 
 
 def test_stale_refusal_wording_is_gone():
