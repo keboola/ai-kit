@@ -78,8 +78,14 @@ def _client() -> Client:
 
 
 def _auth() -> AppUserToken | StorageToken:
-    """The user's token with the app's Storage token, or only the Storage token when no user is signed in."""
+    """The credential of one query.
+
+    - Governed workspace: the signed-in user's token with the app's Storage token; with no user signed in, it raises.
+    - Other workspaces: the same when a user is signed in, else the app's Storage token alone.
+    """
     if get_app_user_token() is None:
+        if get_workspace().governed is True:
+            raise AppUserTokenError(NEEDS_SIGNED_IN_USER)
         return _storage_token()
     # A callable: the SDK reads the current token before every request of the query, and keboola-streamlit renews it
     # through the apps proxy before it expires.
@@ -108,12 +114,11 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
     """
     user_key = _user_key()
     try:
-        # Checked before the cache, so a governed workspace never serves a result cached for no user.
-        if get_workspace().governed is True and get_app_user_token() is None:
-            raise AppUserTokenError(NEEDS_SIGNED_IN_USER)
+        # Decided before the cache, so a governed workspace never serves a result cached for no user.
+        credential = _auth()
         if user_key is None:
-            return _run_query(sql)
-        return _cached_query(sql, user_key)
+            return _run_query(sql, credential)
+        return _cached_query(sql, user_key, credential)
     except RowLevelSecurityError:
         st.error("You have no access to this data.")
     except AppUserTokenError as exc:
@@ -125,12 +130,13 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
 
 # `user_key` is part of the cache key, so each user gets their own entry. It must not start with `_`:
 # st.cache_data leaves such arguments out of the key, and one user's rows would go to the next user.
+# `_credential` is left out of the key on purpose: it differs on every call, and `user_key` names its user.
 @st.cache_data(ttl=300)
-def _cached_query(sql: str, user_key: tuple[str, ...]) -> pd.DataFrame:
-    return _run_query(sql)
+def _cached_query(sql: str, user_key: tuple[str, ...], _credential: AppUserToken | StorageToken) -> pd.DataFrame:
+    return _run_query(sql, _credential)
 
 
-def _run_query(sql: str) -> pd.DataFrame:
+def _run_query(sql: str, credential: AppUserToken | StorageToken) -> pd.DataFrame:
     branch_id = _get("BRANCH_ID")
 
     if not branch_id:
@@ -145,7 +151,7 @@ def _run_query(sql: str) -> pd.DataFrame:
         branch_id=str(branch_id),
         workspace_id=get_workspace().id,
         statements=[sql],
-        auth=_auth(),
+        auth=credential,
     )
     result = results[0]
     cols = [c.name for c in result.columns]

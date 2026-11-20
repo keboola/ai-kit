@@ -13,7 +13,7 @@ from keboola_query_service import AppUserToken, RowLevelSecurityError, StorageTo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from keboola_streamlit import _app_user_token  # noqa: E402
+from keboola_streamlit import AppUserTokenError, _app_user_token  # noqa: E402
 from utils import data_loader  # noqa: E402
 
 
@@ -271,3 +271,21 @@ def test_workspace_id_in_secrets_is_not_read(query_service, monkeypatch):
     assert df.empty
     query_service.client.execute_query.assert_not_called()
     assert "KBC_WORKSPACE_MANIFEST_PATH" in query_service.error.call_args.args[0]
+
+
+def test_auth_of_a_governed_workspace_needs_a_signed_in_user(query_service, monkeypatch, tmp_path):
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
+
+    with pytest.raises(AppUserTokenError, match="needs a signed-in user"):
+        data_loader._auth()
+
+
+def test_auth_of_a_governed_workspace_sends_the_user_token(query_service, monkeypatch, tmp_path):
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
+    query_service.headers["X-Kbc-App-User-Token"] = _token()
+
+    assert isinstance(data_loader._auth(), AppUserToken)
+
+
+def test_auth_of_a_workspace_not_governed_without_a_user_is_the_storage_token(query_service):
+    assert isinstance(data_loader._auth(), StorageToken)
