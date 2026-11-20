@@ -145,10 +145,11 @@ Pointer: full reference template at `templates/duckdb-cache/nodejs/duck.js`.
 Analogous shape using the `duckdb` Python package. Module-level singleton.
 
 ```python
-import duckdb, threading, time, pandas as pd
+import contextlib, duckdb, threading, time, pandas as pd
 
 _con = duckdb.connect(":memory:")
 _lock = threading.Lock()
+_refresh_lock = threading.Lock()
 _last_refresh = None
 _row_count = 0
 _last_error = None
@@ -160,42 +161,52 @@ SNOWFLAKE_PULL_SQL = '''
 '''
 
 def init():
-    _con.execute('''
-        CREATE TABLE IF NOT EXISTS items (
-            id VARCHAR,
-            name VARCHAR,
-            value DOUBLE
-        )
-    ''')
+    with _con.cursor() as cur:
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS items (
+                id VARCHAR,
+                name VARCHAR,
+                value DOUBLE
+            )
+        ''')
 
 def refresh(run_snowflake, *, force=False):
     global _last_refresh, _row_count, _last_error, _refreshing
+    if not _refresh_lock.acquire(blocking=force):
+        return
     with _lock:
-        if _refreshing and not force:
-            return
         _refreshing = True
     try:
-        df = pd.DataFrame(list(run_snowflake(SNOWFLAKE_PULL_SQL)))
-        _con.execute("BEGIN")
-        _con.execute("DELETE FROM items")
-        if not df.empty:
-            _con.register("incoming", df)
-            _con.execute("INSERT INTO items SELECT id, name, TRY_CAST(value AS DOUBLE) FROM incoming")
-            _con.unregister("incoming")
-        _con.execute("COMMIT")
-        _row_count = int(_con.execute("SELECT COUNT(*) FROM items").fetchone()[0])
+        try:
+            df = pd.DataFrame(list(run_snowflake(SNOWFLAKE_PULL_SQL)))
+        except Exception as e:
+            _last_error = str(e)
+            raise
+        with _con.cursor() as cur:
+            try:
+                cur.execute("BEGIN")
+                cur.execute("DELETE FROM items")
+                if not df.empty:
+                    cur.register("incoming", df)
+                    cur.execute("INSERT INTO items SELECT id, name, TRY_CAST(value AS DOUBLE) FROM incoming")
+                    cur.unregister("incoming")
+                cur.execute("COMMIT")
+            except Exception as e:
+                _last_error = str(e)
+                with contextlib.suppress(duckdb.Error):
+                    cur.execute("ROLLBACK")
+                raise
+            _row_count = int(cur.execute("SELECT COUNT(*) FROM items").fetchall()[0][0])
         _last_refresh = time.time()
         _last_error = None
-    except Exception as e:
-        _con.execute("ROLLBACK")
-        _last_error = str(e)
-        raise
     finally:
         with _lock:
             _refreshing = False
+        _refresh_lock.release()
 
 def query(sql):
-    return _con.execute(sql).df()
+    with _con.cursor() as cur:
+        return cur.execute(sql).df()
 
 def status():
     return {
@@ -207,6 +218,8 @@ def status():
 ```
 
 Notes:
+- Streamlit runs reruns and fragments on several threads, and one DuckDB connection must not be used from two threads at once. `init()`, `refresh()` and `query()` each take their own `_con.cursor()` (a separate connection to the same database). Readers keep seeing the last committed rows until the refresh commits, so they never see an empty or half-filled table.
+- `refresh(force=True)` waits for a running refresh to end and then runs; without `force`, a call during a refresh returns at once. Give `run_snowflake` a query timeout: a pull that hangs keeps every later refresh from running and blocks every forced call.
 - `_con.register("name", df)` is the fastest way to load a DataFrame into DuckDB. No tmp file needed.
 - For very large pulls, write to a parquet file and `INSERT INTO ... FROM read_parquet(...)` instead.
 - Background refresh: use `threading.Timer` or APScheduler. For Streamlit apps, start it in a top-level guard `if "refresh_thread" not in st.session_state: ...`.

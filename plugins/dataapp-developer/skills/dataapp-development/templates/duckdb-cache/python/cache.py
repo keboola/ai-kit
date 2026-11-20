@@ -11,6 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 from typing import Callable, Iterable
@@ -20,6 +21,7 @@ import pandas as pd
 
 _con = duckdb.connect(":memory:")
 _lock = threading.Lock()
+_refresh_lock = threading.Lock()
 _last_refresh: float | None = None
 _row_count = 0
 _last_error: str | None = None
@@ -39,15 +41,16 @@ SNOWFLAKE_PULL_SQL = """
 def init() -> None:
     """Create the cached tables. Idempotent."""
     # EDIT THIS: define the cached schema.
-    _con.execute(
-        """
-        CREATE TABLE IF NOT EXISTS items (
-            id VARCHAR,
-            name VARCHAR,
-            value DOUBLE
+    with _con.cursor() as cur:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS items (
+                id VARCHAR,
+                name VARCHAR,
+                value DOUBLE
+            )
+            """
         )
-        """
-    )
 
 
 def refresh(run_snowflake: Callable[[str], Iterable[dict]], *, force: bool = False) -> None:
@@ -57,42 +60,51 @@ def refresh(run_snowflake: Callable[[str], Iterable[dict]], *, force: bool = Fal
     """
     global _last_refresh, _row_count, _last_error, _refreshing
 
+    if not _refresh_lock.acquire(blocking=force):
+        return
     with _lock:
-        if _refreshing and not force:
-            return
         _refreshing = True
 
     try:
         t0 = time.time()
-        rows = list(run_snowflake(SNOWFLAKE_PULL_SQL))
+        try:
+            rows = list(run_snowflake(SNOWFLAKE_PULL_SQL))
+        except Exception as e:
+            _last_error = str(e)
+            raise
         df = pd.DataFrame(rows)
 
-        _con.execute("BEGIN")
-        _con.execute("DELETE FROM items")
-        if not df.empty:
-            _con.register("incoming", df)
-            _con.execute(
-                "INSERT INTO items SELECT id, name, TRY_CAST(value AS DOUBLE) FROM incoming"
-            )
-            _con.unregister("incoming")
-        _con.execute("COMMIT")
+        with _con.cursor() as cur:
+            try:
+                cur.execute("BEGIN")
+                cur.execute("DELETE FROM items")
+                if not df.empty:
+                    cur.register("incoming", df)
+                    cur.execute(
+                        "INSERT INTO items SELECT id, name, TRY_CAST(value AS DOUBLE) FROM incoming"
+                    )
+                    cur.unregister("incoming")
+                cur.execute("COMMIT")
+            except Exception as e:
+                _last_error = str(e)
+                with contextlib.suppress(duckdb.Error):
+                    cur.execute("ROLLBACK")
+                raise
 
-        _row_count = int(_con.execute("SELECT COUNT(*) FROM items").fetchone()[0])
+            _row_count = int(cur.execute("SELECT COUNT(*) FROM items").fetchall()[0][0])
         _last_refresh = time.time()
         _last_error = None
         print(f"[duck] refreshed {_row_count} rows in {time.time() - t0:.1f}s")
-    except Exception as e:
-        _con.execute("ROLLBACK")
-        _last_error = str(e)
-        raise
     finally:
         with _lock:
             _refreshing = False
+        _refresh_lock.release()
 
 
 def query(sql: str) -> pd.DataFrame:
     """Run a SQL query against the cached DuckDB and return a DataFrame."""
-    return _con.execute(sql).df()
+    with _con.cursor() as cur:
+        return cur.execute(sql).df()
 
 
 def status() -> dict:
