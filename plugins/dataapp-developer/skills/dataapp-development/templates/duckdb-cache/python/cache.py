@@ -11,6 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 from typing import Callable, Iterable
@@ -85,8 +86,9 @@ def refresh(run_snowflake: Callable[[str], Iterable[dict]], *, force: bool = Fal
                     cur.unregister("incoming")
                 cur.execute("COMMIT")
             except Exception as e:
-                cur.execute("ROLLBACK")
                 _last_error = str(e)
+                with contextlib.suppress(duckdb.Error):
+                    cur.execute("ROLLBACK")
                 raise
 
             _row_count = int(cur.execute("SELECT COUNT(*) FROM items").fetchall()[0][0])

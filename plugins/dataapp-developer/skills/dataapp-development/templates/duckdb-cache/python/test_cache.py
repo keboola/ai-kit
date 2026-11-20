@@ -45,20 +45,21 @@ def _thread(target):
     return thread, errors
 
 
-class _PauseBeforeInsert:
-    def __init__(self, target, paused, resume):
+class _PauseBefore:
+    def __init__(self, statement, target, paused, resume):
+        self._statement = statement
         self._target = target
         self._paused = paused
         self._resume = resume
 
     def execute(self, sql, *args, **kwargs):
-        if sql.lstrip().upper().startswith("INSERT"):
+        if sql.lstrip().upper().startswith(self._statement):
             self._paused.set()
             assert self._resume.wait(TIMEOUT)
         return self._target.execute(sql, *args, **kwargs)
 
     def cursor(self):
-        return _PauseBeforeInsert(self._target.cursor(), self._paused, self._resume)
+        return _PauseBefore(self._statement, self._target.cursor(), self._paused, self._resume)
 
     def __enter__(self):
         return self
@@ -79,7 +80,7 @@ def test_refresh_fills_the_cache(cache):
 def test_a_reader_during_a_refresh_sees_the_old_rows(cache):
     cache.refresh(_named("old-1", "old-2"))
     paused, resume = threading.Event(), threading.Event()
-    cache._con = _PauseBeforeInsert(cache._con, paused, resume)
+    cache._con = _PauseBefore("INSERT", cache._con, paused, resume)
 
     refresh, errors = _thread(lambda: cache.refresh(_named("new-1", "new-2", "new-3")))
     assert paused.wait(TIMEOUT)
@@ -184,3 +185,24 @@ def test_a_failing_refresh_raises_its_error_and_ends(cache):
     assert cache.status()["refreshing"] is False
     assert cache.status()["last_error"] == "warehouse down"
     assert _names(cache) == ["a"]
+
+
+def test_a_failing_commit_reports_its_error(cache):
+    cache._con.execute("DROP TABLE items")
+    cache._con.execute("CREATE TABLE items (id VARCHAR PRIMARY KEY, name VARCHAR, value DOUBLE)")
+    paused, resume = threading.Event(), threading.Event()
+    con = cache._con
+    cache._con = _PauseBefore("COMMIT", con, paused, resume)
+
+    refresh, errors = _thread(lambda: cache.refresh(_named("new")))
+    assert paused.wait(TIMEOUT)
+    try:
+        with con.cursor() as other:
+            other.execute("INSERT INTO items VALUES ('0', 'other', 1)")
+    finally:
+        resume.set()
+        refresh.join(TIMEOUT)
+
+    assert [str(e) for e in errors] == [cache.status()["last_error"]]
+    assert "duplicate key" in cache.status()["last_error"]
+    assert cache.status()["refreshing"] is False

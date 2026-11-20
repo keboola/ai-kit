@@ -145,7 +145,7 @@ Pointer: full reference template at `templates/duckdb-cache/nodejs/duck.js`.
 Analogous shape using the `duckdb` Python package. Module-level singleton.
 
 ```python
-import duckdb, threading, time, pandas as pd
+import contextlib, duckdb, threading, time, pandas as pd
 
 _con = duckdb.connect(":memory:")
 _lock = threading.Lock()
@@ -192,8 +192,9 @@ def refresh(run_snowflake, *, force=False):
                     cur.unregister("incoming")
                 cur.execute("COMMIT")
             except Exception as e:
-                cur.execute("ROLLBACK")
                 _last_error = str(e)
+                with contextlib.suppress(duckdb.Error):
+                    cur.execute("ROLLBACK")
                 raise
             _row_count = int(cur.execute("SELECT COUNT(*) FROM items").fetchall()[0][0])
         _last_refresh = time.time()
@@ -218,7 +219,7 @@ def status():
 
 Notes:
 - Streamlit runs reruns and fragments on several threads, and one DuckDB connection must not be used from two threads at once. `init()`, `refresh()` and `query()` each take their own `_con.cursor()` (a separate connection to the same database). Readers keep seeing the last committed rows until the refresh commits, so they never see an empty or half-filled table.
-- `refresh(force=True)` waits for a running refresh to end and then runs; without `force`, a call during a refresh returns at once.
+- `refresh(force=True)` waits for a running refresh to end and then runs; without `force`, a call during a refresh returns at once. Give `run_snowflake` a query timeout: a pull that hangs keeps every later refresh from running and blocks every forced call.
 - `_con.register("name", df)` is the fastest way to load a DataFrame into DuckDB. No tmp file needed.
 - For very large pulls, write to a parquet file and `INSERT INTO ... FROM read_parquet(...)` instead.
 - Background refresh: use `threading.Timer` or APScheduler. For Streamlit apps, start it in a top-level guard `if "refresh_thread" not in st.session_state: ...`.
