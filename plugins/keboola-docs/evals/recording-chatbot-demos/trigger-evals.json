@@ -1,0 +1,34 @@
+[
+  {
+    "query": "record videos of Agnes answering the 7 prompts from the demo guide, no commentary",
+    "should_trigger": true
+  },
+  {
+    "query": "запиши видео, как KAiDE отвечает на промпты, каждый в новом чате",
+    "should_trigger": true
+  },
+  {
+    "query": "the demo recording of our chatbot is too fast, slow the thinking part down and re-cut it",
+    "should_trigger": true
+  },
+  {
+    "query": "make a screen recording of the AI assistant answering a sales question for the customer call",
+    "should_trigger": true
+  },
+  {
+    "query": "record a short clip of Kai building an app for the docs page",
+    "should_trigger": false
+  },
+  {
+    "query": "add a demo GIF of my CLI to its GitHub README",
+    "should_trigger": false
+  },
+  {
+    "query": "take a screenshot of the Apps list for the docs",
+    "should_trigger": false
+  },
+  {
+    "query": "write a how-to page about asking Kai questions",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "note": "Explicit exceptions to the derived classification, each with a reason. These are PROPOSALS, not decisions — an override lands in the 'needs your eye' list of the review page precisely because it is a human judgement call, not a signal read off the data. Signals lie in both directions: some ids look like a database or a file store and are not, and some vendors set a `categories` value that does not match what the component actually talks to.",
+  "overrides": {
+    "keboola.ex-money-s3":            { "bucket": "source/saas-api",      "reason": "Money S3 is Czech accounting software — the 's3' is a product name, not AWS S3" },
+    "keboola.wr-money-s3":            { "bucket": "destination/saas-api", "reason": "Money S3 is Czech accounting software — the 's3' is a product name, not AWS S3" },
+    "drive-cx.ex-drive-cx":           { "bucket": "source/saas-api",      "reason": "Drive CX is a customer-experience SaaS, unrelated to Google Drive" },
+    "keboola.ex-oracle-ebs":          { "bucket": "source/saas-api",      "reason": "Oracle E-Business Suite is an ERP application, not a database engine" },
+    "keboola.wr-oracle-ebs":          { "bucket": "destination/saas-api", "reason": "Oracle E-Business Suite is an ERP application, not a database engine" },
+    "keboola.ex-oracle-hyperion":     { "bucket": "source/saas-api",      "reason": "Oracle Hyperion is an EPM application, not a database engine" },
+    "keboola.wr-oracle-hyperion":     { "bucket": "destination/saas-api", "reason": "Oracle Hyperion is an EPM application, not a database engine" },
+    "keboola.wr-azure-table-storage": { "bucket": "destination/database", "reason": "Azure Table Storage is a NoSQL table store — matches how the vendor categorised ex-azure-storage-table (Database), not a file store" },
+    "bizztreat.ex-segment":           { "bucket": "source/saas-api",      "reason": "Segment is a CDP API; the component's `categories: File Storage` value is wrong" },
+    "keboola.wr-airtable":            { "bucket": "destination/saas-api", "reason": "Airtable is a SaaS API; the component's `categories: Database` value is misleading" },
+    "keboola.ex-storage":             { "bucket": "source/database",      "reason": "Keboola's own Storage — project-to-project transfer. Kept in database for now; ask whether platform-internal components deserve their own shape" },
+    "keboola.wr-storage":             { "bucket": "destination/database", "reason": "Keboola's own Storage — project-to-project transfer. Kept in database for now; ask whether platform-internal components deserve their own shape" }
+  },
+  "confirmedNote": "Per-component sign-off by the owner (Matyáš). A component listed here passes the soft gate in component-facts.mjs even while the whole map is reviewed=false, so the first PRs can go through his manual review one at a time. Shape: \"<id>\": {\"bucket\": \"source/saas-api\", \"by\": \"Matyáš\", \"on\": \"YYYY-MM-DD\"}.",
+  "confirmed": {}
+}

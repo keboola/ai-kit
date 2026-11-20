@@ -1,0 +1,47 @@
+{/* The two strips on data-apps/build-locally.mdx (29 Sep 2026), each placed after its
+section's intro paragraph and above its first H3. Every line under a title is made from
+sentences the page already has. The by-hand strip follows the terminal route only: the UI
+route pushes before it connects, so it keeps its own section (Sync to your project). */}
+
+import StageStrip from '../../../components/StageStrip.astro';
+
+## With an AI agent
+
+With the `dataapp-developer` plugin …, the agent reads your data, writes the code, creates the app …
+
+<StageStrip label="Building with an AI agent, in four stages">
+  <li><strong><a href="#set-up-your-client">Set up your client</a></strong> Connect your project and add the app-building plugin.</li>
+  <li><strong><a href="#describe-the-app">Describe the app</a></strong> One prompt: what it shows, which data, where the code goes.</li>
+  <li><strong>The agent builds it</strong> It reads your data, writes code and deploys; you approve its commands.</li>
+  <li><strong><a href="#check-the-app">Check the app</a></strong> On its page in Keboola, Open App has the URL and password.</li>
+</StageStrip>
+
+## By hand
+
+Write the code yourself, then create the app from a terminal with kbagent … or, in the Keboola UI, connect a repository you host.
+
+<StageStrip label="Building by hand from a terminal, in four stages" caption="From a terminal">
+  <li><strong><a href="#app-structure">Write the code</a></strong> A standard web app, plus a small configuration folder.</li>
+  <li><strong><a href="#from-a-terminal">Create the app</a></strong> kbagent creates it with a Keboola-managed repository.</li>
+  <li><strong>Push the code</strong> Commit and push it to the app's repository.</li>
+  <li><strong>Deploy and open</strong> Deploy, then click Open App on its page for the password.</li>
+</StageStrip>
+
+{/* What the markdown twin (dist/data-apps/build-locally/index.md) prints for the first strip:
+
+**Building with an AI agent, in four stages**
+
+1. **Set up your client (#set-up-your-client).** Connect your project and add the app-building plugin.
+2. **Describe the app (#describe-the-app).** One prompt: what it shows, which data, where the code goes.
+3. **The agent builds it.** It reads your data, writes code and deploys; you approve its commands.
+4. **Check the app (#check-the-app).** On its page in Keboola, Open App has the URL and password.
+
+And for the second strip (its caption shows on the page only):
+
+**Building by hand from a terminal, in four stages**
+
+1. **Write the code (#app-structure).** A standard web app, plus a small configuration folder.
+2. **Create the app (#from-a-terminal).** kbagent creates it with a Keboola-managed repository.
+3. **Push the code.** Commit and push it to the app's repository.
+4. **Deploy and open.** Deploy, then click Open App on its page for the password.
+*/}

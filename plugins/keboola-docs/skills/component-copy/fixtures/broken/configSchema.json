@@ -1,0 +1,7 @@
+{
+  "type": "object",
+  "properties": {
+    "token": { "type": "string", "title": "API token:" },
+    "mode": { "type": "string", "title": "Load mode", "propertyOrder": 2, "enum": ["full", "incremental"], "options": { "enum_titles": ["Full"] } }
+  }
+}

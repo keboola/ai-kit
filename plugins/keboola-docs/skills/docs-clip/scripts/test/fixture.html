@@ -1,0 +1,72 @@
+<!doctype html>
+<!-- Offline stand-in for the Keboola UI patterns that broke states GIFs in the field (V8–V12, G1–G7):
+     an autofocused dialog X, a translucent veil that WRAPS the dialog, a badge drawn above the dialog,
+     a dialog taller than the viewport (#tall), a hover-revealed menu, a side panel, a target below the
+     fold and a toast that disappears. capture-states.test.mjs drives it over CDP like a real page. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>capture-states fixture</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f9fafb; color: #111827; }
+  .top { height: 52px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+  .shell { display: grid; grid-template-columns: 140px 1fr; height: calc(100vh - 52px); }
+  nav { padding: 16px; border-right: 1px solid #e5e7eb; }
+  main { padding: 24px; display: grid; gap: 16px; align-content: start; overflow-y: auto; }   /* Keboola scrolls an inner box, not the window */
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
+  .row { display: flex; gap: 12px; align-items: center; padding: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+  .row .menu { display: none; }
+  .row:hover .menu { display: inline-block; }
+  .veil { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .veil.open { display: flex; }
+  [role=dialog] { position: relative; width: 600px; background: #fff; border-radius: 14px; padding: 40px 24px 24px; }
+  .scroll { max-height: calc(80vh - 64px); overflow-y: auto; }
+  .badge { position: absolute; top: -22px; left: 24px; width: 44px; height: 44px; border-radius: 50%; background: #22c55e; }
+  .tall-body { height: 1100px; background: linear-gradient(#fff, #eef2ff); }
+  .panel { position: fixed; top: 52px; right: 0; bottom: 0; width: 300px; background: #fff; border-left: 1px solid #e5e7eb; padding: 16px; display: none; }
+  .panel.open { display: block; }
+  .spacer { height: 1400px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 8px; display: none; }
+  .toast.show { display: block; }
+</style>
+</head>
+<body>
+<div class="top"></div>
+<div class="shell">
+<nav><a href="#c">Components</a><p id="crumb"><b>●</b> Jane Doe Org</p></nav>
+<main>
+  <div><button id="open">Create item</button> <button id="side">Add task</button> <button id="copy">Copy URL</button></div>
+  <div class="row" id="row">bucket-one <button class="menu" id="detail">Bucket detail</button></div>
+  <div class="row">bucket-two</div>
+  <div id="field" style="display:inline-flex;align-items:center;gap:6px;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;background:#fff;width:220px"><input role="combobox" aria-label="Status" style="border:0;outline:0;width:150px"><span>▾</span></div>
+  <table id="t" style="background:#fff;border:1px solid #e5e7eb;border-collapse:collapse">
+    <tr><td style="padding:8px">Alice Example</td><td><button>More actions</button></td></tr>
+    <tr><td style="padding:8px">Bob Example</td><td><button>More actions</button></td></tr>
+  </table>
+  <div class="spacer"></div>
+  <div class="row"><button id="far">Data retention</button></div>
+</main>
+</div>
+<div class="veil" id="veil">
+  <div role="dialog" aria-label="Create item">
+    <span class="badge"></span>
+    <button id="close" autofocus style="position:absolute;top:10px;right:10px;background:#fff;color:#111;border-color:#ccc">×</button>
+    <div class="scroll">
+      <p>Name</p><input id="name" value="my-item">
+      <div class="tall-body" id="tall-body" hidden></div>
+      <p><button id="create">Create</button></p>
+    </div>
+  </div>
+</div>
+<aside class="panel" id="panel"><p>Pick an action</p><button id="component">Component</button></aside>
+<div class="toast" id="toast">Copied to clipboard</div>
+<script>
+  if (location.hash === '#tall') document.getElementById('tall-body').hidden = false;
+  document.getElementById('open').onclick = () => { document.getElementById('veil').classList.add('open'); document.getElementById('close').focus(); };
+  document.getElementById('side').onclick = () => document.getElementById('panel').classList.add('open');
+  document.getElementById('copy').onclick = () => { const t = document.getElementById('toast'); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 600); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.getElementById('veil').classList.remove('open'); });
+</script>
+</body>
+</html>

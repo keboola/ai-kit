@@ -1,0 +1,38 @@
+[
+  {
+    "query": "the HubSpot v2 extractor has no configuration description, fill it in component_config",
+    "should_trigger": true
+  },
+  {
+    "query": "fix the short description of keboola.ex-db-impala, it describes the extractor instead of Impala",
+    "should_trigger": true
+  },
+  {
+    "query": "we are publishing a new writer component, make its component_config copy right before release",
+    "should_trigger": true
+  },
+  {
+    "query": "поправь описание компоненты на developer portal, long description пустой",
+    "should_trigger": true
+  },
+  {
+    "query": "audit all public component descriptions against the house rules and tell me what to fix first",
+    "should_trigger": true
+  },
+  {
+    "query": "write a new help.keboola.com page about the Snowflake writer",
+    "should_trigger": false
+  },
+  {
+    "query": "the screenshot on the transformations page is outdated",
+    "should_trigger": false
+  },
+  {
+    "query": "delete the old data-apps page and add a redirect",
+    "should_trigger": false
+  },
+  {
+    "query": "change the enum values of the incremental field in configSchema.json",
+    "should_trigger": false
+  }
+]
