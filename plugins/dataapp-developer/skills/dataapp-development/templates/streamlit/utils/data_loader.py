@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 import pandas as pd
 import streamlit as st
 from keboola_query_service import AppUserToken, Client, RowLevelSecurityError, StorageToken
-from keboola_streamlit import AppUserTokenError, get_app_user_key, get_app_user_token, get_workspace
+from keboola_streamlit import AppUserTokenError, Workspace, get_app_user_key, get_app_user_token, get_workspace
 
 NO_USER = ("no user",)
 NEEDS_SIGNED_IN_USER = "This app's data needs a signed-in user."
@@ -77,14 +77,14 @@ def _client() -> Client:
     return Client(base_url=query_service_url, auth=_storage_token())
 
 
-def _auth() -> AppUserToken | StorageToken:
-    """The credential of one query.
+def _auth(workspace: Workspace) -> AppUserToken | StorageToken:
+    """The credential of one query on `workspace`.
 
     - Governed workspace: the signed-in user's token with the app's Storage token; with no user signed in, it raises.
     - Other workspaces: the same when a user is signed in, else the app's Storage token alone.
     """
     if get_app_user_token() is None:
-        if get_workspace().governed is True:
+        if workspace.governed is True:
             raise AppUserTokenError(NEEDS_SIGNED_IN_USER)
         return _storage_token()
     # A callable: the SDK reads the current token before every request of the query, and keboola-streamlit renews it
@@ -114,11 +114,13 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
     """
     user_key = _user_key()
     try:
+        # Read once per query: the platform updates the manifest while the app runs.
+        workspace = get_workspace()
         # Decided before the cache, so a governed workspace never serves a result cached for no user.
-        credential = _auth()
+        credential = _auth(workspace)
         if user_key is None:
-            return _run_query(sql, credential)
-        return _cached_query(sql, user_key, credential)
+            return _run_query(sql, workspace.id, credential)
+        return _cached_query(sql, user_key, workspace.id, workspace.governed, credential)
     except RowLevelSecurityError:
         st.error("You have no access to this data.")
     except AppUserTokenError as exc:
@@ -130,13 +132,21 @@ def execute_aggregation_query(sql: str) -> pd.DataFrame:
 
 # `user_key` is part of the cache key, so each user gets their own entry. It must not start with `_`:
 # st.cache_data leaves such arguments out of the key, and one user's rows would go to the next user.
-# `_credential` is left out of the key on purpose: it differs on every call, and `user_key` names its user.
+# `workspace_id` and `governed` are part of the key too, so a result does not outlive a change of the workspace
+# or of its row-level security. `_credential` is left out of the key on purpose: it differs on every call, and
+# `user_key` names its user.
 @st.cache_data(ttl=300)
-def _cached_query(sql: str, user_key: tuple[str, ...], _credential: AppUserToken | StorageToken) -> pd.DataFrame:
-    return _run_query(sql, _credential)
+def _cached_query(
+    sql: str,
+    user_key: tuple[str, ...],
+    workspace_id: str,
+    governed: bool | None,
+    _credential: AppUserToken | StorageToken,
+) -> pd.DataFrame:
+    return _run_query(sql, workspace_id, _credential)
 
 
-def _run_query(sql: str, credential: AppUserToken | StorageToken) -> pd.DataFrame:
+def _run_query(sql: str, workspace_id: str, credential: AppUserToken | StorageToken) -> pd.DataFrame:
     branch_id = _get("BRANCH_ID")
 
     if not branch_id:
@@ -149,7 +159,7 @@ def _run_query(sql: str, credential: AppUserToken | StorageToken) -> pd.DataFram
 
     results = _client().execute_query(
         branch_id=str(branch_id),
-        workspace_id=get_workspace().id,
+        workspace_id=workspace_id,
         statements=[sql],
         auth=credential,
     )

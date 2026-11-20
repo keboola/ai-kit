@@ -277,15 +277,31 @@ def test_auth_of_a_governed_workspace_needs_a_signed_in_user(query_service, monk
     _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
 
     with pytest.raises(AppUserTokenError, match="needs a signed-in user"):
-        data_loader._auth()
+        data_loader._auth(data_loader.get_workspace())
 
 
 def test_auth_of_a_governed_workspace_sends_the_user_token(query_service, monkeypatch, tmp_path):
     _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
     query_service.headers["X-Kbc-App-User-Token"] = _token()
 
-    assert isinstance(data_loader._auth(), AppUserToken)
+    assert isinstance(data_loader._auth(data_loader.get_workspace()), AppUserToken)
 
 
 def test_auth_of_a_workspace_not_governed_without_a_user_is_the_storage_token(query_service):
-    assert isinstance(data_loader._auth(), StorageToken)
+    assert isinstance(data_loader._auth(data_loader.get_workspace()), StorageToken)
+
+
+@pytest.mark.parametrize(
+    "changed_manifest",
+    ['{"workspaceId": "12345", "governed": true}', '{"workspaceId": "67890", "governed": false}'],
+)
+def test_a_cached_result_is_not_served_after_the_workspace_changes(
+    query_service, monkeypatch, tmp_path, changed_manifest
+):
+    query_service.headers["X-Kbc-App-User-Token"] = _token()
+    data_loader.execute_aggregation_query("SELECT 1")
+
+    _manifest(monkeypatch, tmp_path, changed_manifest)
+    data_loader.execute_aggregation_query("SELECT 1")
+
+    assert query_service.client.execute_query.call_count == 2
