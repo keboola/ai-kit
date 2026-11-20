@@ -133,7 +133,7 @@ Without `enable_enterprise_modules=True` the license key is ignored and you fall
 
 For the full pattern -- which workspace gets mounted, how RO/RW differs across Snowflake and BigQuery, and which Keboola SDK to use -- see [storage-access.md](storage-access.md).
 
-Short version: by default a Streamlit data app gets a read-only workspace, which you query through the Query Service on both Snowflake and BigQuery projects (on BigQuery the SQL quoting and dataset names differ — see [storage-access.md](storage-access.md); a Storage API endpoint is also available there as an alternative). The runtime injects three environment variables that the SDKs consume directly: `KBC_URL`, `KBC_TOKEN`, and `WORKSPACE_ID`. In production these come from the platform; for local development you set them in `.streamlit/secrets.toml` and read them via the env-parity pattern below.
+Short version: by default a Streamlit data app gets a read-only workspace, which you query through the Query Service on both Snowflake and BigQuery projects (on BigQuery the SQL quoting and dataset names differ — see [storage-access.md](storage-access.md); a Storage API endpoint is also available there as an alternative). The runtime injects `KBC_URL` and `KBC_TOKEN`, and mounts the app's workspace manifest at `KBC_WORKSPACE_MANIFEST_PATH`, which `get_workspace()` from `keboola-streamlit` reads. In production these come from the platform; for local development you set `KBC_URL` and `KBC_TOKEN` in `.streamlit/secrets.toml` (read via the env-parity pattern below) and point `KBC_WORKSPACE_MANIFEST_PATH` to a small manifest file.
 
 ### Cache the Storage client across reruns
 
@@ -173,7 +173,7 @@ What the template does, and what to keep when you change `utils/data_loader.py`:
 
 - The token comes only from `keboola-streamlit` (`get_app_user_token()`, `get_app_user_key()`); never read `X-Kbc-App-User-Token` from `st.context.headers` yourself, or the token stops working after 5 minutes. Every query sends it through `auth=AppUserToken(<callable>, storage_token=...)`, together with the app's Storage token; the SDK calls the callable before every request. Without a token, only the Storage token is sent. The client (`@st.cache_resource`) is shared and never holds the user's token.
 - `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. The template's cached function takes `user_key`, the token's `idp` and `sub` from `get_app_user_key()`. Streamlit leaves arguments whose name starts with `_` out of the key, so never rename it to `_user_key`: one user's rows would go to the next user. Key any new `@st.cache_data` of query results the same way.
-- The workspace comes from `get_workspace()` (`keboola-streamlit` 0.5.0 or newer), which reads the workspace manifest on every call; a local run sets the `WORKSPACE_ID` environment variable (`get_workspace()` does not read `.streamlit/secrets.toml`). When `governed` is `True` and no user is signed in, the template shows "This app's data needs a signed-in user." and sends nothing, before the cache. Otherwise nothing changes; Query Service still refuses what the user may not read.
+- The workspace comes from `get_workspace()` (`keboola-streamlit` 0.5.0 or newer), which reads the workspace manifest on every call; a local run points `KBC_WORKSPACE_MANIFEST_PATH` to a small manifest file with the app's workspace ID. When `governed` is `True` and no user is signed in, the template shows "This app's data needs a signed-in user." and sends nothing, before the cache. Otherwise nothing changes; Query Service still refuses what the user may not read.
 - A failed query raises inside the cached function, so it is not cached. A row-level security refusal (`RowLevelSecurityError`) shows "You have no access to this data."; an expired sign-in (`AppUserTokenError`) shows its own message.
 - The tests in `tests/` check this; run `uv run --group dev pytest -q tests`.
 - The shared DuckDB cache does not fit a governed workspace; `templates/duckdb-cache/python/cache.py` turns itself off when the manifest says `"governed": true`, or when Query Service refuses its refresh (`enabled()` is then False).
@@ -195,8 +195,11 @@ uv sync
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 # Edit secrets.toml with real KBC_URL, KBC_TOKEN, BRANCH_ID
 
-# Run (keboola-streamlit takes the workspace ID only from the environment)
-WORKSPACE_ID=12345 streamlit run streamlit_app.py
+# The app's workspace: the platform mounts its manifest; locally, write one with the app's workspace ID
+echo '{"workspaceId": "12345", "governed": false}' > workspace-manifest.json
+
+# Run
+KBC_WORKSPACE_MANIFEST_PATH=workspace-manifest.json streamlit run streamlit_app.py
 ```
 
 Then open http://localhost:8501.
@@ -213,7 +216,7 @@ kbc_token = os.environ.get('KBC_TOKEN') or st.secrets.get('KBC_TOKEN')
 kbc_url = os.environ.get('KBC_URL') or st.secrets.get('KBC_URL')
 ```
 
-The workspace is the exception: `get_workspace()` from `keboola-streamlit` reads the workspace manifest, or the `WORKSPACE_ID` environment variable, never `st.secrets`. Locally, set `WORKSPACE_ID` in the environment.
+The workspace is the exception: `get_workspace()` from `keboola-streamlit` reads the app's workspace manifest (`KBC_WORKSPACE_MANIFEST_PATH`), never `st.secrets`. Locally, point it to a manifest file as shown above.
 
 In Keboola the env vars are populated from `dataApp.secrets` and the first lookup wins. Locally, env vars are typically unset, so the code falls through to `st.secrets`, which Streamlit loads from `.streamlit/secrets.toml`. Same module, both environments, no `if PRODUCTION:` branching.
 

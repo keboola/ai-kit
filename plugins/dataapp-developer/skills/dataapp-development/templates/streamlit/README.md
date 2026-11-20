@@ -16,7 +16,9 @@ uv run --group dev pytest -q tests
 uv sync
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 # Fill in KBC_URL, KBC_TOKEN, BRANCH_ID
-WORKSPACE_ID=12345 streamlit run streamlit_app.py
+# The app's workspace: the platform mounts its manifest; locally, write one with the app's workspace ID
+echo '{"workspaceId": "12345", "governed": false}' > workspace-manifest.json
+KBC_WORKSPACE_MANIFEST_PATH=workspace-manifest.json streamlit run streamlit_app.py
 ```
 
 Open http://localhost:8501.

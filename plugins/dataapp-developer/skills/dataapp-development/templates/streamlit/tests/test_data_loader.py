@@ -38,12 +38,11 @@ def _result(rows):
 
 
 @pytest.fixture
-def query_service(monkeypatch):
+def query_service(monkeypatch, tmp_path):
     monkeypatch.setenv("QUERY_SERVICE_URL", "https://query.example.com")
     monkeypatch.setenv("KBC_TOKEN", "storage-token")
     monkeypatch.setenv("BRANCH_ID", "678")
-    monkeypatch.setenv("WORKSPACE_ID", "12345")
-    monkeypatch.delenv("KBC_WORKSPACE_MANIFEST_PATH", raising=False)
+    _manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": false}')
     st.cache_data.clear()
     st.cache_resource.clear()
     _app_user_token._REFRESHERS.clear()
@@ -257,16 +256,14 @@ def test_a_workspace_not_governed_runs_the_query_without_a_user(query_service, m
     assert df["A"].tolist() == ["1"]
 
 
-def test_local_run_takes_the_workspace_from_the_env(query_service, monkeypatch):
-    monkeypatch.setenv("WORKSPACE_ID", "777")
-
+def test_workspace_comes_from_the_manifest(query_service):
     data_loader.execute_aggregation_query("SELECT 1")
 
-    assert query_service.client.execute_query.call_args.kwargs["workspace_id"] == "777"
+    assert query_service.client.execute_query.call_args.kwargs["workspace_id"] == "12345"
 
 
 def test_workspace_id_in_secrets_is_not_read(query_service, monkeypatch):
-    monkeypatch.delenv("WORKSPACE_ID")
+    monkeypatch.delenv("KBC_WORKSPACE_MANIFEST_PATH")
     monkeypatch.setattr(data_loader.st, "secrets", {"WORKSPACE_ID": "777"})
 
     df = data_loader.execute_aggregation_query("SELECT 1")
