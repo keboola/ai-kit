@@ -4,6 +4,7 @@ import threading
 from pathlib import Path
 
 import pytest
+from keboola_query_service import RowLevelSecurityError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -25,6 +26,11 @@ def _rows(sql):
 
 def _named(*names):
     return lambda sql: [{"id": str(i), "name": name, "value": "1"} for i, name in enumerate(names)]
+
+
+def _count(cache):
+    with cache._con.cursor() as cur:
+        return cur.execute("SELECT COUNT(*) FROM items").fetchall()[0][0]
 
 
 def _names(cache):
@@ -206,3 +212,127 @@ def test_a_failing_commit_reports_its_error(cache):
     assert [str(e) for e in errors] == [cache.status()["last_error"]]
     assert "duplicate key" in cache.status()["last_error"]
     assert cache.status()["refreshing"] is False
+
+
+def _refused(sql):
+    raise RowLevelSecurityError("Row-level security does not allow this query", status_code=403)
+
+
+def test_row_level_security_refusal_turns_the_cache_off(cache):
+    cache.refresh(_refused)
+
+    assert not cache.enabled()
+    assert cache.status()["governed"] is True
+    with pytest.raises(RuntimeError, match="row-level security"):
+        cache.query("SELECT name FROM items")
+
+
+def test_refusal_drops_rows_of_an_earlier_refresh(cache):
+    cache.refresh(_rows)
+    cache.refresh(_refused)
+
+    assert cache.status()["row_count"] == 0
+    assert _count(cache) == 0
+
+
+def test_no_refresh_after_the_cache_is_off(cache):
+    cache.refresh(_refused)
+    calls = []
+
+    cache.refresh(lambda sql: calls.append(sql) or [])
+
+    assert calls == []
+
+
+def test_other_errors_keep_the_cache_on(cache):
+    def failing(sql):
+        raise RuntimeError("warehouse down")
+
+    with pytest.raises(RuntimeError, match="warehouse down"):
+        cache.refresh(failing)
+
+    assert cache.enabled()
+
+
+def _cache_with_manifest(monkeypatch, tmp_path, content):
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(content)
+    monkeypatch.setenv("KBC_WORKSPACE_MANIFEST_PATH", str(manifest))
+    import cache as module
+
+    module = importlib.reload(module)
+    module.init()
+    return module, manifest
+
+
+@pytest.mark.parametrize("call", ["init", "refresh"])
+def test_a_governed_manifest_keeps_the_cache_off(monkeypatch, tmp_path, call):
+    module, _ = _cache_with_manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": true}')
+    calls = []
+    if call == "refresh":
+        module._governed = False
+    module.refresh(lambda sql: calls.append(sql) or _rows(sql))
+
+    assert calls == []
+    assert not module.enabled()
+    assert module.status()["governed"] is True
+    assert _count(module) == 0
+
+
+@pytest.mark.parametrize("content", ['{"workspaceId": "12345", "governed": false}', '{"workspaceId": "12345"}', ""])
+def test_a_manifest_not_known_as_governed_keeps_the_cache_on(monkeypatch, tmp_path, content):
+    module, _ = _cache_with_manifest(monkeypatch, tmp_path, content)
+    module.refresh(_rows)
+
+    assert module.enabled()
+    assert _names(module) == ["a"]
+
+
+def test_a_manifest_that_turns_governed_turns_a_filled_cache_off(monkeypatch, tmp_path):
+    module, manifest = _cache_with_manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": false}')
+    module.refresh(_rows)
+
+    manifest.write_text('{"workspaceId": "12345", "governed": true}')
+
+    assert not module.enabled()
+    with pytest.raises(RuntimeError, match="row-level security"):
+        module.query("SELECT name FROM items")
+    assert _count(module) == 0
+
+
+def test_a_manifest_that_turns_governed_during_a_refresh_keeps_its_rows_out(monkeypatch, tmp_path):
+    module, manifest = _cache_with_manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": false}')
+
+    def pull_then_flip(sql):
+        manifest.write_text('{"workspaceId": "12345", "governed": true}')
+        return _rows(sql)
+
+    module.refresh(pull_then_flip)
+
+    assert _count(module) == 0
+    assert module.status()["governed"] is True
+    assert module.status()["refreshing"] is False
+
+
+def test_the_governed_switch_uses_its_own_cursor(monkeypatch, tmp_path):
+    module, manifest = _cache_with_manifest(monkeypatch, tmp_path, '{"workspaceId": "12345", "governed": false}')
+    module.refresh(_rows)
+    entered, release = threading.Event(), threading.Event()
+
+    def slow(name):
+        entered.set()
+        release.wait(TIMEOUT)
+        return name
+
+    module._con.create_function("slow", slow, ["VARCHAR"], "VARCHAR", side_effects=True)
+    other, other_errors = _thread(lambda: module._con.execute("SELECT slow('x')").fetchall())
+    assert entered.wait(TIMEOUT)
+    manifest.write_text('{"workspaceId": "12345", "governed": true}')
+    try:
+        assert not module.enabled()
+    finally:
+        release.set()
+        other.join(TIMEOUT)
+
+    assert other_errors == []
+    assert _count(module) == 0

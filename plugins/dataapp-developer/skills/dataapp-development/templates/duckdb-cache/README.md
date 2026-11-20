@@ -6,6 +6,7 @@ Generic harness for caching Keboola Snowflake data in an in-memory DuckDB so the
 
 - Read-only apps where data refresh interval is minutes, not seconds.
 - Skip for RW apps (Storage Access via Query Service) — every read should be current.
+- Skip for a workspace governed by row-level security. The Python harness turns itself off when the workspace manifest says `"governed": true`, and also when Query Service refuses its refresh: check `enabled()` before `query()`.
 
 ## Files
 
@@ -15,5 +16,7 @@ Generic harness for caching Keboola Snowflake data in an in-memory DuckDB so the
 ## Integration
 
 Copy the relevant file into your app's `api/` (Node) or alongside your data-loader module (Python). Edit `SNOWFLAKE_PULL_SQL`, the `CREATE TABLE`, and the `INSERT` projection to match your data. Wire `refresh()` into a background interval (`setInterval` / `threading.Timer`) and an admin endpoint (`POST /api/refresh`).
+
+The Python harness needs `duckdb`, `pandas` and `keboola-query-service` (for `RowLevelSecurityError`) in the app's dependencies.
 
 See `references/duckdb-caching.md` in the dataapp-development skill for the full pattern.

@@ -2,15 +2,23 @@
 
 Minimal Keboola-deployable Streamlit data app.
 
-**Row-level security is not supported in this template yet.** It does not send the user token, and its `@st.cache_data` is shared by all users. For per-user data or a governed workspace, use `templates/react-vite-app/`. See `references/streamlit-apps.md` §Row-level security — not supported yet.
+Row-level security: every query sends the signed-in user's token, which `keboola-streamlit` renews through the apps proxy before it expires, and the result cache is keyed per user. See `references/streamlit-apps.md` §Row-level security.
+
+## Tests
+
+```bash
+uv run --group dev pytest -q tests
+```
 
 ## Local development
 
 ```bash
 uv sync
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Fill in KBC_URL, KBC_TOKEN, WORKSPACE_ID
-streamlit run streamlit_app.py
+# Fill in KBC_URL, KBC_TOKEN, BRANCH_ID
+# The app's workspace: the platform mounts its manifest; locally, write one with the app's workspace ID
+echo '{"workspaceId": "12345", "governed": false}' > workspace-manifest.json
+KBC_WORKSPACE_MANIFEST_PATH=workspace-manifest.json streamlit run streamlit_app.py
 ```
 
 Open http://localhost:8501.
