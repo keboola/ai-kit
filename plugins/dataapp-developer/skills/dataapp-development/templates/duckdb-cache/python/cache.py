@@ -40,15 +40,16 @@ SNOWFLAKE_PULL_SQL = """
 def init() -> None:
     """Create the cached tables. Idempotent."""
     # EDIT THIS: define the cached schema.
-    _con.execute(
-        """
-        CREATE TABLE IF NOT EXISTS items (
-            id VARCHAR,
-            name VARCHAR,
-            value DOUBLE
+    with _con.cursor() as cur:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS items (
+                id VARCHAR,
+                name VARCHAR,
+                value DOUBLE
+            )
+            """
         )
-        """
-    )
 
 
 def refresh(run_snowflake: Callable[[str], Iterable[dict]], *, force: bool = False) -> None:

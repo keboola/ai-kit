@@ -120,6 +120,26 @@ def test_a_refresh_while_a_reader_runs_inside_duckdb(cache):
     assert _names(cache) == ["new-1", "new-2", "new-3"]
 
 
+def test_init_while_another_thread_uses_the_connection(cache):
+    entered, release = threading.Event(), threading.Event()
+
+    def slow(name):
+        entered.set()
+        release.wait(TIMEOUT)
+        return name
+
+    cache._con.create_function("slow", slow, ["VARCHAR"], "VARCHAR", side_effects=True)
+    other, other_errors = _thread(lambda: cache._con.execute("SELECT slow('x')").fetchall())
+    assert entered.wait(TIMEOUT)
+    try:
+        cache.init()
+    finally:
+        release.set()
+        other.join(TIMEOUT)
+
+    assert other_errors == []
+
+
 def test_refreshing_stays_on_until_a_forced_refresh_ends(cache):
     first_entered, first_release = threading.Event(), threading.Event()
     second_entered, second_release = threading.Event(), threading.Event()

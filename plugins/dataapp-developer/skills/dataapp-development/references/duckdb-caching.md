@@ -161,13 +161,14 @@ SNOWFLAKE_PULL_SQL = '''
 '''
 
 def init():
-    _con.execute('''
-        CREATE TABLE IF NOT EXISTS items (
-            id VARCHAR,
-            name VARCHAR,
-            value DOUBLE
-        )
-    ''')
+    with _con.cursor() as cur:
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS items (
+                id VARCHAR,
+                name VARCHAR,
+                value DOUBLE
+            )
+        ''')
 
 def refresh(run_snowflake, *, force=False):
     global _last_refresh, _row_count, _last_error, _refreshing
@@ -216,7 +217,7 @@ def status():
 ```
 
 Notes:
-- Streamlit runs reruns and fragments on several threads, and one DuckDB connection must not be used from two threads at once. `refresh()` and `query()` each take their own `_con.cursor()` (a separate connection to the same database). Readers keep seeing the last committed rows until the refresh commits, so they never see an empty or half-filled table.
+- Streamlit runs reruns and fragments on several threads, and one DuckDB connection must not be used from two threads at once. `init()`, `refresh()` and `query()` each take their own `_con.cursor()` (a separate connection to the same database). Readers keep seeing the last committed rows until the refresh commits, so they never see an empty or half-filled table.
 - `refresh(force=True)` waits for a running refresh to end and then runs; without `force`, a call during a refresh returns at once.
 - `_con.register("name", df)` is the fastest way to load a DataFrame into DuckDB. No tmp file needed.
 - For very large pulls, write to a parquet file and `INSERT INTO ... FROM read_parquet(...)` instead.
