@@ -173,7 +173,7 @@ What the template does, and what to keep when you change `utils/data_loader.py`:
 
 - The token comes only from `keboola-streamlit` (`get_app_user_token()`, `get_app_user_key()`); never read `X-Kbc-App-User-Token` from `st.context.headers` yourself, or the token stops working after 5 minutes. Every query sends it through `auth=AppUserToken(<callable>, storage_token=...)`, together with the app's Storage token; the SDK calls the callable before every request. Without a token, only the Storage token is sent. The client (`@st.cache_resource`) is shared and never holds the user's token.
 - `@st.cache_data` is one cache for all users of the app, keyed only by the function's arguments. The template's cached function takes `user_key`, the token's `idp` and `sub` from `get_app_user_key()`. Streamlit leaves arguments whose name starts with `_` out of the key, so never rename it to `_user_key`: one user's rows would go to the next user. Key any new `@st.cache_data` of query results the same way.
-- The workspace comes from `get_workspace()` (`keboola-streamlit` 0.5.0 or newer), which reads the workspace manifest on every call; a local run keeps `WORKSPACE_ID` in `.streamlit/secrets.toml`. When `governed` is `True` and no user is signed in, the template shows "This app's data needs a signed-in user." and sends nothing, before the cache. Otherwise nothing changes; Query Service still refuses what the user may not read.
+- The workspace comes from `get_workspace()` (`keboola-streamlit` 0.5.0 or newer), which reads the workspace manifest on every call; a local run sets the `WORKSPACE_ID` environment variable (`get_workspace()` does not read `.streamlit/secrets.toml`). When `governed` is `True` and no user is signed in, the template shows "This app's data needs a signed-in user." and sends nothing, before the cache. Otherwise nothing changes; Query Service still refuses what the user may not read.
 - A failed query raises inside the cached function, so it is not cached. A row-level security refusal (`RowLevelSecurityError`) shows "You have no access to this data."; an expired sign-in (`AppUserTokenError`) shows its own message.
 - The tests in `tests/` check this; run `uv run --group dev pytest -q tests`.
 - The shared DuckDB cache does not fit a governed workspace; `templates/duckdb-cache/python/cache.py` turns itself off when the manifest says `"governed": true`, or when Query Service refuses its refresh (`enabled()` is then False).
@@ -193,10 +193,10 @@ uv sync
 
 # Set local credentials
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Edit secrets.toml with real KBC_URL, KBC_TOKEN, WORKSPACE_ID
+# Edit secrets.toml with real KBC_URL, KBC_TOKEN, BRANCH_ID
 
-# Run
-streamlit run streamlit_app.py
+# Run (keboola-streamlit takes the workspace ID only from the environment)
+WORKSPACE_ID=12345 streamlit run streamlit_app.py
 ```
 
 Then open http://localhost:8501.
@@ -211,8 +211,9 @@ import streamlit as st
 
 kbc_token = os.environ.get('KBC_TOKEN') or st.secrets.get('KBC_TOKEN')
 kbc_url = os.environ.get('KBC_URL') or st.secrets.get('KBC_URL')
-workspace_id = os.environ.get('WORKSPACE_ID') or st.secrets.get('WORKSPACE_ID')
 ```
+
+The workspace is the exception: `get_workspace()` from `keboola-streamlit` reads the workspace manifest, or the `WORKSPACE_ID` environment variable, never `st.secrets`. Locally, set `WORKSPACE_ID` in the environment.
 
 In Keboola the env vars are populated from `dataApp.secrets` and the first lookup wins. Locally, env vars are typically unset, so the code falls through to `st.secrets`, which Streamlit loads from `.streamlit/secrets.toml`. Same module, both environments, no `if PRODUCTION:` branching.
 
@@ -225,7 +226,7 @@ A starter `.streamlit/secrets.toml.example` to commit:
 # Never commit secrets.toml -- it should be in .gitignore.
 KBC_URL = "https://connection.keboola.com"
 KBC_TOKEN = "your-storage-api-token"
-WORKSPACE_ID = "1234567"
+BRANCH_ID = "1234567"
 ```
 
 For the inner-loop workflow on an existing app -- changing a query, adding a filter, fixing a layout -- see [dev-workflow.md](dev-workflow.md), which covers the validate -> build -> verify cycle with the right browser + MCP checkpoints. For deciding when a Streamlit app is the right tool at all (versus a FastAPI service or a Next.js frontend), see [choosing-app-type.md](choosing-app-type.md).

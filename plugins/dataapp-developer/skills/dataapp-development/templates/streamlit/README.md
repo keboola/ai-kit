@@ -15,8 +15,8 @@ uv run --group dev pytest -q tests
 ```bash
 uv sync
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Fill in KBC_URL, KBC_TOKEN, WORKSPACE_ID
-streamlit run streamlit_app.py
+# Fill in KBC_URL, KBC_TOKEN, BRANCH_ID
+WORKSPACE_ID=12345 streamlit run streamlit_app.py
 ```
 
 Open http://localhost:8501.
