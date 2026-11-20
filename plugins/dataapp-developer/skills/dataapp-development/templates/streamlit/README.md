@@ -2,7 +2,7 @@
 
 Minimal Keboola-deployable Streamlit data app.
 
-Row-level security works: every query sends the signed-in user's token, which `keboola-streamlit` renews through the apps proxy before it expires, and the result cache is keyed per user. See `references/streamlit-apps.md` §Row-level security.
+Row-level security: every query sends the signed-in user's token, which `keboola-streamlit` renews through the apps proxy before it expires, and the result cache is keyed per user. See `references/streamlit-apps.md` §Row-level security.
 
 ## Tests
 
