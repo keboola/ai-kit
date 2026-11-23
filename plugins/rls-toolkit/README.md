@@ -31,9 +31,9 @@ it; the kbagent commands are in `skills/rls-policies/references/kbagent.md` and 
   has them yet (keboola/cli PRs #778, #892, #922, #923); until one is released and pinned in this
   marketplace the commands stop at the probe. The kbagent plugin is an external marketplace entry
   pinned by its own release job; this plugin does not bump it.
-- Project feature `row-level-security`; for a data app also `data-apps-storage-workspace`
+- Project feature `row-level-security`
 - A project-admin Storage token for writes; an organization admin for grants and organization scope
-- For a data app: Storage access on, every path behind SSO (oidc, gitlab, github, jumpcloud)
+- For a data app: Storage access on (`runtime.workspace.enabled: true`), every path behind SSO (oidc, gitlab, github, jumpcloud)
 
 ## What it does and does not do
 

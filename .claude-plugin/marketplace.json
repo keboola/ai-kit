@@ -20,7 +20,7 @@
     {
       "name": "dataapp-developer",
       "description": "Toolkit for building and deploying Keboola Apps (Streamlit and Python/JS) — full lifecycle: choosing app type, deployment paths, storage access, authentication, DuckDB caching, styling, dashboard patterns, optional Kai chat, and the validate-build-verify dev workflow; and hosting an MCP server as a data app.",
-      "version": "1.16.0",
+      "version": "1.16.1",
       "source": "./plugins/dataapp-developer",
       "category": "development"
     },
@@ -60,7 +60,7 @@
     {
       "name": "rls-toolkit",
       "description": "Row- and column-level security toolkit for Keboola — guided setup of rls/cls policies in bulk for the tables a data app reads, per IdP group, with binding to the app. Companion to the kbagent plugin (rls / cls commands).",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": "./plugins/rls-toolkit",
       "category": "development"
     },

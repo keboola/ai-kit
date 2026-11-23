@@ -41,7 +41,7 @@ Kai in an app is a platform feature. In the Keboola UI it is the **Kai in the ap
 
 Requirements — the deploy is refused without them, except the last one, which Kai itself checks:
 - The project has the `data-apps-kai` feature.
-- The app has a workspace: `runtime.workspace.enabled: true`, which needs the `data-apps-storage-workspace` feature. For python-js apps that is `storage_access=True` — see [storage-access.md](storage-access.md) §Enabling Storage access on a deployed app; on a project without the feature it falls back to the deprecated `WORKSPACE_ID` secret, and Kai cannot be turned on.
+- The app has a workspace: `runtime.workspace.enabled: true`. For python-js apps that is `storage_access=True` — see [storage-access.md](storage-access.md) §Enabling Storage access on a deployed app.
 - No row- or column-level security: `runtime.kai` cannot be combined with `runtime.workspace.rlsPolicies` or `runtime.workspace.clsPolicies`.
 - A project member deploys it, with a role that can create Storage API tokens.
 - The project has Kai (`agent-chat` feature); otherwise every Kai request is a 403.
