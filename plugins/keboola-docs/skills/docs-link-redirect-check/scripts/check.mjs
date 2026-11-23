@@ -17,7 +17,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? (args[i + 1] ?? true) : null; };
@@ -28,16 +28,17 @@ const SITE = !!flag('--site');
 const PREVIEW = typeof flag('--preview') === 'string' ? flag('--preview').replace(/\/$/, '') : null;
 const PATHS = typeof flag('--paths') === 'string' ? flag('--paths') : null;
 
-const sh = (cmd) => { try { return execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
+// git with an argument array, never through /bin/sh: page paths and refs reach these calls (#140 review).
+const sh = (...args) => { try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 }).trim(); } catch { return ''; } };
 const fail = (m) => { console.error(`✗ ${m}`); process.exit(2); };
 if (!fs.existsSync(DIST)) fail('dist/ not found — run `npm run build` first');
 if (!fs.existsSync(DOCS)) fail('src/content/docs not found — run from the repo root');
 
 // ---- base ref -------------------------------------------------------------------------------
 let base = typeof flag('--base') === 'string' ? flag('--base') : null;
-if (!base) base = sh('git rev-parse --verify -q origin/main') ? 'origin/main' : (sh('git rev-parse --verify -q main') ? 'main' : null);
+if (!base) base = sh('rev-parse', '--verify', '-q', 'origin/main') ? 'origin/main' : (sh('rev-parse', '--verify', '-q', 'main') ? 'main' : null);
 if (!base) fail('no --base and neither origin/main nor main exists');
-const mergeBase = sh(`git merge-base ${base} HEAD`) || base;
+const mergeBase = sh('merge-base', base, 'HEAD') || base;
 
 // ---- dist freshness guard -------------------------------------------------------------------
 if (!flag('--no-build-check')) {
@@ -63,14 +64,14 @@ const fm = (text) => {
 const norm = (u) => { let s = u.split('#')[0].split('?')[0]; if (!s.startsWith('/')) s = '/' + s; if (!/\.[a-z0-9]+$/i.test(s) && !s.endsWith('/')) s += '/'; return s; };
 const slugToUrl = (slug) => norm('/' + String(slug).replace(/^\/|\/$/g, '') + '/');
 const pageUrlOf = (file, text) => { const f = fm(text); if (f.slug) return slugToUrl(f.slug); const rel = path.relative(DOCS, file).replace(/\\/g, '/').replace(/\.(md|mdx)$/, '').replace(/\/index$/, '').replace(/^index$/, ''); return rel ? slugToUrl(rel) : '/'; };
-const readAt = (ref, file) => sh(`git show ${ref}:${JSON.stringify(path.relative(ROOT, file).replace(/\\/g, '/'))}`);
+const readAt = (ref, file) => sh('show', `${ref}:${path.relative(ROOT, file).replace(/\\/g, '/')}`);
 
 // ---- all current pages: url → {file, redirect_from} -----------------------------------------
 const pages = new Map(); const redirects = new Map(); // oldUrl → newUrl
 (function walk(d) { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.(md|mdx)$/.test(e.name)) { const t = fs.readFileSync(p, 'utf8'); const url = pageUrlOf(p, t); const f = fm(t); pages.set(url, { file: p, fm: f }); const rf = f.redirect_from ? (Array.isArray(f.redirect_from) ? f.redirect_from : [f.redirect_from]) : []; for (const r of rf) redirects.set(norm(r), url); } } })(DOCS);
 
 // ---- changed / deleted / renamed since base --------------------------------------------------
-const status = sh(`git diff --name-status -M ${mergeBase} -- src/content/docs`) + '\n' + sh('git status --porcelain -- src/content/docs').split('\n').map((l) => l.trim() ? `${l.slice(0, 2).trim().replace('??', 'A')}\t${l.slice(3)}` : '').join('\n');
+const status = sh('diff', '--name-status', '-M', mergeBase, '--', 'src/content/docs') + '\n' + sh('status', '--porcelain', '--', 'src/content/docs').split('\n').map((l) => l.trim() ? `${l.slice(0, 2).trim().replace('??', 'A')}\t${l.slice(3)}` : '').join('\n');
 const changed = new Set(), deleted = [], renamed = [];
 for (const line of status.split('\n')) {
   if (!line.trim()) continue; const parts = line.split('\t'); const code = parts[0].trim();
@@ -119,7 +120,7 @@ for (const [oldUrl, newUrl] of toCheck) {
 // 3. inbound links to retired slugs (src + nav + sidebar), excluding redirect_from lines
 const retiredUrls = [...new Set([...retired.map((r) => r.oldUrl), ...toCheck.keys()])];
 if (retiredUrls.length) {
-  const files = sh(`git ls-files src _data`).split('\n').filter((f) => f && /\.(md|mdx|astro|yml|yaml|mjs|ts|tsx|json)$/.test(f));
+  const files = sh('ls-files', 'src', '_data').split('\n').filter((f) => f && /\.(md|mdx|astro|yml|yaml|mjs|ts|tsx|json)$/.test(f));
   for (const rel of files) { const p = path.join(ROOT, rel); if (!fs.existsSync(p)) continue; const lines = fs.readFileSync(p, 'utf8').split('\n'); lines.forEach((l, i) => { if (/redirect_from/.test(l) || /^\s+-\s+\//.test(l) && /redirect/.test(lines[i - 1] || '')) return; for (const u of retiredUrls) { const bare = u.replace(/\/$/, ''); if (l.includes(`](${u}`) || l.includes(`](${bare})`) || l.includes(`href="${u}`) || l.includes(`href="${bare}"`) || l.includes(`url: ${u}`) || l.includes(`slug: "${u.replace(/^\/|\/$/g, '')}"`)) report.inbound.push(`${rel}:${i + 1}  →  ${u}`); } }); }
 }
 

@@ -1,6 +1,6 @@
 ---
 name: recording-chatbot-demos
-description: "Use when someone needs screen videos of a chat assistant or chatbot answering prompts (Agnes/KAiDE, Kai, any LLM chat UI) for a demo, sales call, customer or Slack: \"record the 7 prompts\", \"запиши видео как Agnes отвечает\". Clips for help.keboola.com pages belong to docs-clip."
+description: "Use when someone needs screen videos of a Keboola chat assistant (Agnes/KAiDE, Kai) answering prompts for a demo, sales call, customer or Slack: \"record Agnes answering the 7 prompts\", \"запиши видео как Agnes отвечает\". Not for other chatbots or generic screen recording. Clips for help.keboola.com pages belong to docs-clip."
 ---
 
 # Recording chatbot demos

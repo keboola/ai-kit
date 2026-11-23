@@ -25,7 +25,7 @@
 // Exit 1 when a page references a file that does not exist. Read-only.
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { makeSource } from './lib/source.mjs';
@@ -55,7 +55,7 @@ for (let i = 0; i < args.length; i++) {
 }
 const allPages = src.list(DOCS, isPage);
 const wanted = new Set((selected.length ? selected : allPages).map((p) => path.resolve(p)));
-const lastCommit = (rel) => { try { return execSync(`git log -1 --format=%cs -- "${rel}"`, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null; } catch { return null; } };
+const lastCommit = (rel) => { try { return execFileSync('git', ['log', '-1', '--format=%cs', '--', rel], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null; } catch { return null; } };
 const toPath = (r) => (r.resolved.startsWith('public/') ? '/' + r.resolved.slice('public/'.length) : r.resolved);
 
 const referenced = new Map(); // repo-relative resolved path → [pages]
@@ -99,7 +99,7 @@ let twins = [];
 if (TWINS) {
   const byBlob = new Map();
   let ls = '';
-  try { ls = execSync('git ls-files -s -z -- src/content/docs public', { cwd: ROOT, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }); } catch { /* not a git checkout */ }
+  try { ls = execFileSync('git', ['ls-files', '-s', '-z', '--', 'src/content/docs', 'public'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }); } catch { /* not a git checkout */ }
   for (const rec of ls.split('\0')) {
     const m = rec.match(/^\d+ ([0-9a-f]+) \d+\t(.+)$/);
     if (!m || !MEDIA_EXT.test(m[2])) continue;

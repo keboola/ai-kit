@@ -13,7 +13,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { makeSource } from '../../../scripts/lib/source.mjs';
 
 const args = process.argv.slice(2);
@@ -34,7 +34,8 @@ const SRC = makeSource(ROOT, { index: has('--index'), ref: REF });
 
 const usage = (m) => { console.error(`✗ ${m}`); process.exit(2); };
 if (!SRC.exists(DOCS)) usage(`src/content/docs not found under ${ROOT}: run from the repo root or pass --root`);
-const sh = (cmd) => { try { return execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
+// git with an argument array, never through /bin/sh (#140 review).
+const sh = (...args) => { try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 }).trim(); } catch { return ''; } };
 
 // ---- page selection -----------------------------------------------------------------------------
 const isPage = (f) => /\.(md|mdx)$/.test(f) && !f.includes('/dist/');
@@ -43,8 +44,8 @@ const selected = new Set();
 const skipFlagValues = new Set(['--root', '--base', '--paths', '--ref']);
 for (let i = 0; i < args.length; i++) { const a = args[i]; if (a.startsWith('--')) { if (skipFlagValues.has(a)) i++; continue; } selected.add(path.resolve(ROOT, a)); }
 if (BASE) {
-  const mergeBase = sh(`git merge-base ${BASE} HEAD`) || BASE;
-  const lines = (sh(`git diff --name-only -M ${mergeBase} -- src/content/docs`) + '\n' + sh('git status --porcelain -- src/content/docs').split('\n').map((l) => l.slice(3)).join('\n')).split('\n');
+  const mergeBase = sh('merge-base', BASE, 'HEAD') || BASE;
+  const lines = (sh('diff', '--name-only', '-M', mergeBase, '--', 'src/content/docs') + '\n' + sh('status', '--porcelain', '--', 'src/content/docs').split('\n').map((l) => l.slice(3)).join('\n')).split('\n');
   for (const l of lines) { const rel = l.trim(); if (rel && isPage(rel)) selected.add(path.join(ROOT, rel)); }
 }
 if (PATHS) for (const p of walk(path.resolve(ROOT, PATHS))) selected.add(p);

@@ -35,3 +35,12 @@ Copy `src/examples/HubExplainer.tsx`, change the steps, phrases and screens, reg
 - `remotion.config.ts` uses rspack and JPEG frames; `tsc` checks types (`npm run lint`).
 - `public/*.mp4` and `public/clips/` are gitignored: sources are large and belong to the take.
 - A render needs Chrome; Remotion downloads its own on first run.
+
+## Licenses
+
+- **Inter** (`public/fonts/*.otf`): SIL Open Font License 1.1, full text in `public/fonts/OFL.txt`.
+  The OFL requires that text to travel with the font files.
+- **Remotion** is not open source. Its license (remotion.dev/license) is free only for individuals,
+  non-profits and companies of up to 3 people; a larger company needs a Company License. Confirm that
+  Keboola holds one before rendering with these compositions. Until then, treat the Remotion path as
+  unconfirmed and use the forms that need no Remotion (states GIF, narrated recording through the compositor and ffmpeg) in `docs-clip`.

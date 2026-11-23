@@ -12,7 +12,7 @@
     "should_trigger": true
   },
   {
-    "query": "make a screen recording of the AI assistant answering a sales question for the customer call",
+    "query": "make a screen recording of Kai answering a sales question for the customer call",
     "should_trigger": true
   },
   {
@@ -29,6 +29,10 @@
   },
   {
     "query": "write a how-to page about asking Kai questions",
+    "should_trigger": false
+  },
+  {
+    "query": "record a demo of ChatGPT answering my questions for a blog post",
     "should_trigger": false
   }
 ]

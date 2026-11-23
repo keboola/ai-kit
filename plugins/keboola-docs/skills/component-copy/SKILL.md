@@ -1,6 +1,6 @@
 ---
 name: component-copy
-description: Use when a Keboola component's user-facing copy needs to match the house shape — an empty or component-describing short/long description, a missing configuration description, cluttered schema field titles or tooltips — or when a new component is being published and its `component_config` must be right from the start. Edits `component_config/` in the component repo (which the developer portal reads), never a help-docs page. One component, one PR, owner-gated. Stale or out-of-rule copy that exists is component-update; a deprecated or replaced component is component-retire.
+description: Use when a Keboola component's user-facing copy needs to match the house shape — an empty or component-describing short/long description, a missing configuration description, cluttered schema field titles or tooltips — or when a new component is being published and its `component_config` must be right from the start. Edits `component_config/` in the component repo (which the developer portal reads), never a help-docs page. One component, one PR, owner-gated. Stale or out-of-rule copy that exists is component-update; a deprecated or replaced component is component-retire. Only the wording; schema structure, new fields, UI layout and component code belong to component-developer (build-component-ui, develop-component).
 ---
 
 # Component Copy — one component, one PR
@@ -123,7 +123,8 @@ repo it is.
 - **Public only** (owner's rule): not expired, not `excludeFromNewList`, not `deprecated`, as
   `scripts/lib/visible.mjs` defines it. That is a proxy read off the Storage index; when in
   doubt, check the component in the Developer Portal's public listing.
-- Branch name: `PRDCT-586-copy-<component-id>`. Proposals: `$COMPONENT_COPY_PROPOSALS/<id>/`
+- Ticket key: `$TICKET`, the operator's tracker key for this batch (ask for it; there is no default,
+  never reuse another batch's key). Branch name: `$TICKET-copy-<component-id>`. Proposals: `$COMPONENT_COPY_PROPOSALS/<id>/`
   (default `./proposals/<id>/`).
 - `$SKILL_DIR` is `${CLAUDE_PLUGIN_ROOT}/skills/component-copy`.
 - **The installed plugin is read-only.** Anything that changes `references/` (a map refresh
@@ -216,8 +217,9 @@ the PR manually until PRDCT-590's bot exists.
 
 ```bash
 node $SKILL_DIR/scripts/component-facts.mjs <component.id>   # again if the facts are older than today: repos get archived and moved
-gh repo clone <repo> /tmp/cc-<id> -- --depth 1               # <repo> = facts.repo
-cd /tmp/cc-<id> && git checkout -b PRDCT-586-copy-<id>
+WORK=$(mktemp -d -t cc-<id>.XXXXXX)                         # fresh dir per run: a rerun never collides with a stale clone
+gh repo clone <repo> "$WORK" -- --depth 1                  # <repo> = facts.repo
+cd "$WORK" && git checkout -b "$TICKET-copy-<id>"          # $TICKET: the operator's ticket key, see Facts
 cd ./<folder>                                                # facts.folder; '' (the repo root) for a component with its own repo
 # copy ONLY the approved markdown files; schemas never ride along in the first cut
 for f in component_short_description.md component_long_description.md configuration_description.md; do
@@ -226,8 +228,8 @@ done
 # README: replace only its Prerequisites section with the approved one, by hand; never copy a whole README
 node $SKILL_DIR/scripts/lint-copy.mjs component_config --full --bucket <bucket> --readme README.md   # --full: real dir
 git add component_config/*.md README.md && git diff --cached --stat   # nothing but .md files
-git commit -m "PRDCT-586: <what changed> for <component id>"
-gh pr create --draft --title "PRDCT-586: component copy for <component id>" --body "<see below>"
+git commit -m "$TICKET: <what changed> for <component id>"
+gh pr create --draft --title "$TICKET: component copy for <component id>" --body "<see below>"
 ```
 
 In the monorepo the paths stay relative to the component's folder, and `git diff --cached --stat`

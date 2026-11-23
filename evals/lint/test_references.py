@@ -30,6 +30,7 @@ SKILLS = discover_skills()
 SKILL_IDS = [s.qualified for s in SKILLS]
 
 ALL_PLUGIN_MD = sorted(PLUGINS_DIR.glob("**/*.md"))
+KEBOOLA_DOCS_DIR = PLUGINS_DIR / "keboola-docs"
 
 
 @pytest.mark.parametrize("skill", SKILLS, ids=SKILL_IDS)
@@ -58,7 +59,8 @@ def test_relative_markdown_links_resolve(path):
             continue
         # Site-absolute paths (/section/page/) are routes on a docs site, not files next to
         # this markdown: keboola-docs templates and its check.mjs fixtures are docs pages.
-        if target.startswith("/"):
+        # Only that plugin is exempt; everywhere else an absolute link is still checked.
+        if target.startswith("/") and path.is_relative_to(KEBOOLA_DOCS_DIR):
             continue
         # strip anchors and querystrings
         clean = target.split("#", 1)[0].split("?", 1)[0]

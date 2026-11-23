@@ -81,7 +81,13 @@ const INIT = `
 })();
 `;
 
-fs.rmSync(OUT, { recursive: true, force: true });
+// Clear only what an earlier take wrote, and only in a take directory (#140 review): a mistyped --out
+// such as `.` or `~` must not be wiped. A non-empty directory without marks.json is not a take.
+if (!arg('out')) { console.error('--out <take-dir> is required'); process.exit(2); }
+if (fs.existsSync(OUT) && fs.readdirSync(OUT).length && !fs.existsSync(OUT + '/marks.json')) {
+  console.error(`refusing to reuse ${OUT}: not empty and has no marks.json, so it is not a take directory`); process.exit(2);
+}
+for (const f of ['frames', 'marks.json', 'answers.json']) fs.rmSync(path.join(OUT, f), { recursive: true, force: true });
 fs.mkdirSync(OUT + '/frames', { recursive: true });
 const b = await chromium.launch({ headless: true, args: ['--force-device-scale-factor=2'] });
 const ctx = await b.newContext({ storageState: STATE, viewport: { width: W, height: H }, deviceScaleFactor: 2 });

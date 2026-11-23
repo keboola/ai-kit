@@ -8,9 +8,9 @@
 //
 // Row shape is storage-derived ONLY. Link-status fields from the 2026-08-17
 // audit (status / target / inHelp) are NOT re-derived here — they cost a
-// several-hundred-URL curl sweep and belong to PRDCT-648/650. They stay in
-// references/inventory-2026-08-17.json and references/repo_status.txt as
-// dated evidence.
+// several-hundred-URL curl sweep and belong to PRDCT-648/650. The dated
+// evidence (inventory-2026-08-17.json, repo_status.txt, docurls.txt) is no
+// longer shipped with the plugin; it is in the git history of keboola/ai-kit#140.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -27,6 +27,12 @@ const SOURCE = 'https://connection.keboola.com/v2/storage';
 
 const argv = process.argv.slice(2);
 const WRITE = argv.includes('--write');
+// --write into the installed plugin lands in the plugin cache, where it is lost on the next update
+// and never reviewed (#140 review). Require an explicit checkout.
+if (WRITE && !process.env.COMPONENT_COPY_REFS) {
+  console.error('--write needs COMPONENT_COPY_REFS=<ai-kit checkout>/plugins/keboola-docs/skills/component-copy/references');
+  process.exit(2);
+}
 const KEEP_RAW = argv.includes('--raw');
 const AS_JSON = argv.includes('--json');
 

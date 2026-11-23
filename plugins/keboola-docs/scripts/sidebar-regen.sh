@@ -11,7 +11,9 @@ esac
 
 # the checkout the edited file lives in (not the session directory: a worktree elsewhere was skipped)
 root="$(cd "$(dirname "$f")/.." 2>/dev/null && pwd)"
-[ -f "$root/scripts/convert-nav.mjs" ] || root="${CLAUDE_PROJECT_DIR:-$PWD}"
+# No convert-nav.mjs next to the edited file: not a connection-docs checkout. Do nothing rather than
+# fall back to the session directory, which may be a different repo (#140 review).
+[ -f "$root/scripts/convert-nav.mjs" ] || exit 0
 cd "$root" 2>/dev/null || exit 0
 
 if npm run gen:sidebar >/dev/null 2>&1; then

@@ -44,7 +44,7 @@ Then publish the printed file with the Artifact tool (icon `compare` on the firs
 - It stays quiet on other commands, on main, without an open PR, without changed pages, when the report already covers this HEAD, and when nothing renders differently.
 - It says why it skipped when another `astro build` is running (shared `node_modules`) or the run failed; then run this skill by hand.
 - `DOCS_BEFORE_AFTER=skip git push` (or the env var) turns it off for one command.
-- Only `gh pr create` builds `dist/` when it is stale (about 40 s). After a `git push` the report renders only from a fresh `dist/` (a few seconds); with a stale one the hook says so and you run `npm run build` and this skill when the author wants the report.
+- The hook never builds `dist/`: the build can hold the session for minutes. After `gh pr create` or a `git push` the report renders only from a fresh `dist/` (a few seconds); with a stale one the hook says so, and you run this skill with `--build` when the author wants the report.
 
 ## Reading it
 

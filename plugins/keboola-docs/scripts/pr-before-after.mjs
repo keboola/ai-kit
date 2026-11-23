@@ -8,8 +8,8 @@
 // manual page-by-page check. A hook cannot publish an Artifact itself; it writes the file and hands
 // Claude the path in additionalContext.
 //
-// `gh pr create` builds dist/ if needed; a `git push` renders only from a fresh dist/ (a build blocks
-// the session for minutes) and otherwise says how to get the report.
+// The hook never builds: it renders only from a fresh dist/ and otherwise says how to get the report.
+// A build here held the session for up to ~5 minutes after `gh pr create` (#140 review).
 // Silent when: the command is anything else or failed; no docs checkout; branch main/master; no open
 // PR for the branch; no changed page under src/content/docs; the report already covers this HEAD;
 // the report finds no rendered change. Says why it skipped when another astro build is running
@@ -90,17 +90,16 @@ if (common) {
 const busy = run('pgrep', ['-f', 'astro build']).stdout?.trim();
 if (busy) say(`docs-before-after (hook): skipped the report for PR #${pr}: another \`astro build\` is running and the worktrees share node_modules. When it finishes, run the docs-before-after skill on ${root}.`);
 
-// Only `gh pr create` may build: a build takes minutes and the hook blocks the session meanwhile.
-// After a push the report runs only when dist/ is already fresh, and otherwise says how to get it.
-const created = segs[ti].argv[0] === 'gh';
-const r = run('node', [path.join(HERE, 'before-after.mjs'), '--root', root, '--base', base, ...(created ? ['--build'] : []), '--title', `PR #${pr} review`, '--out', outDir], { timeout: 280000, maxBuffer: 32 << 20 });
-if (!created && r.status === 2 && /dist\/ is missing or older/.test(r.stderr || '')) {
+// Never build here: a build takes minutes and the hook blocks the session meanwhile. The report runs
+// only when dist/ is already fresh, and otherwise says how to get it.
+const r = run('node', [path.join(HERE, 'before-after.mjs'), '--root', root, '--base', base, '--title', `PR #${pr} review`, '--out', outDir], { timeout: 100000, maxBuffer: 32 << 20 });
+if (r.status === 2 && /dist\/ is missing or older/.test(r.stderr || '')) {
   say(`docs-before-after (hook): PR #${pr} changed, but dist/ is older than the pages, so no report was rendered (building here would block the session for minutes). Run \`npm run build\` and the docs-before-after skill when you want the before/after for ${head.slice(0, 9)}.`);
 }
 const file = (r.stdout || '').trim().split('\n').pop();
 const summary = (r.stderr || '').split('\n').reverse().find((l) => / visible · /.test(l)) || '';
 if (r.status !== 0 || !file || !fs.existsSync(file)) {
-  const why = r.error?.code === 'ETIMEDOUT' ? 'timed out after 280 s' : ((r.stderr || '').trim().split('\n').slice(-3).join(' / ') || `exit ${r.status}`);
+  const why = r.error?.code === 'ETIMEDOUT' ? 'timed out after 100 s' : ((r.stderr || '').trim().split('\n').slice(-3).join(' / ') || `exit ${r.status}`);
   say(`docs-before-after (hook): the report for PR #${pr} failed (${why}). Run the docs-before-after skill on ${root} by hand.`);
 }
 fs.writeFileSync(stamp, head + '\n');

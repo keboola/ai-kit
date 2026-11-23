@@ -21,6 +21,12 @@ const SKILL_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
 const REFS = process.env.COMPONENT_COPY_REFS || join(SKILL_DIR, 'references');
 const argv = process.argv.slice(2);
 const WRITE = argv.includes('--write');
+// --write into the installed plugin lands in the plugin cache, where it is lost on the next update
+// and never reviewed (#140 review). Require an explicit checkout.
+if (WRITE && !process.env.COMPONENT_COPY_REFS) {
+  console.error('--write needs COMPONENT_COPY_REFS=<ai-kit checkout>/plugins/keboola-docs/skills/component-copy/references');
+  process.exit(2);
+}
 const AS_MD = argv.includes('--md');
 
 const inv = JSON.parse(readFileSync(join(REFS, 'inventory.json'), 'utf8'));

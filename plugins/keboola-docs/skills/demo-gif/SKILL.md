@@ -1,6 +1,6 @@
 ---
 name: demo-gif
-description: "Use when a README or a code repository needs a demo GIF: recording a terminal session (vhs) or a web demo, rendering, optimizing and embedding it. Triggers: \"add a demo gif\", \"record a demo\", \"make the README more visual\". Clips for help.keboola.com pages belong to docs-clip."
+description: "Use when the README of a Keboola repository (a component, kbagent, ai-kit, connection-docs) needs a demo GIF: recording a terminal session (vhs) or a web demo, rendering, optimizing and embedding it; docs-clip also uses its GIF recipe. Triggers: \"add a demo gif to the component README\", \"record a vhs demo of kbagent\". Not for repositories outside Keboola. Clips for help.keboola.com pages belong to docs-clip."
 version: 1.0.0
 license: MIT
 compatibility: Any AI coding assistant that supports agentskills.io SKILL.md format (Claude Code, Cursor, OpenClaw, Hermes Agent, etc.). Requires vhs or Playwright plus ffmpeg on the host for rendering.
