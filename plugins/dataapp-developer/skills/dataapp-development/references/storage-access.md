@@ -63,10 +63,8 @@ than a passing mention:
 and a git merge moves source code, not config. See
 [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) §2.
 
-Underneath, this sets `runtime.workspace.enabled`, or on projects without the
-`data-apps-storage-workspace` feature falls back to a deprecated
-`parameters.dataApp.secrets.WORKSPACE_ID` entry. You do not need to care which — the argument
-drives both and the response reports the outcome.
+Underneath, this sets `runtime.workspace.enabled` in the app's configuration. That per-app switch
+is the only thing that decides Storage access; no project feature is involved.
 
 ## Getting the env vars for local development
 
@@ -187,7 +185,7 @@ Required env vars (Keboola auto-injects them on deploy once Storage access is en
 "Enabling Storage access on a deployed app" above if the app is missing `WORKSPACE_ID`):
 - `KBC_URL`, `KBC_TOKEN` — auth + base host. In a deployed app the Storage token is also the file named by `STORAGE_API_TOKEN_PATH`, which the platform can rotate; the image then restarts the app (see "The app user token" below).
 - `QUERY_SERVICE_URL` — Query Service host. If unset, read it from the Storage API index (`GET {KBC_URL}/v2/storage/?exclude=components` → the `services` entry with `id: "query"`); the React + Vite template's `runQuery` does that for you.
-- `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "..." }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric).
+- `KBC_WORKSPACE_MANIFEST_PATH` — JSON file with `{ "workspaceId": "...", "governed": true|false }`. Preferred source per the docs; falls back to the `WORKSPACE_ID` env var (numeric). `governed` says whether row-level security governs the workspace.
 - `BRANCH_ID` — **must be numeric.** Query Service rejects the string `"default"`. Get it from `mcp__keboola__get_project_info.branch_id`.
 
 The **Query Service is the preferred path on both backends** — Snowflake and BigQuery alike. The Query Service passes SQL through to the backend unchanged; it does **not** translate dialects, so the one thing that changes between backends is the SQL dialect you emit — identifier quoting and dataset naming. See "BigQuery SQL dialect" below.
@@ -382,10 +380,8 @@ is created — see [python-js-prod-and-drafts.md](python-js-prod-and-drafts.md) 
 differently from forgetting Storage access: reads keep working and only the writes fail, because
 the workspace has no grant on the destination table.
 
-Setup (the first step is the project feature; the rest is about **writable tables** — the app's
-own read-only workspace is the separate `storage_access` argument covered in "Enabling Storage
-access on a deployed app" above):
-- Project Settings → Features → enable "Storage Access".
+Setup (this is about **writable tables** — the app's own read-only workspace is the separate
+`storage_access` argument covered in "Enabling Storage access on a deployed app" above):
 - App configuration → Advanced Settings → Storage Access section → add writable tables.
 - Or programmatically: set `storage.output.tables[].destination` to the table ID and `unload_strategy: "direct-grant"`:
   ```json
@@ -770,6 +766,6 @@ On a workspace without row-level security the app answers as before.
 - The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables; a table without one reads as empty. The config is refused unless the app also has an OAuth/OIDC login on every path, so set both in one config change, then redeploy; the redeploy gives the app a new governed workspace.
 - Only the prod app is governed. A draft gets no `rlsPolicies`, so the filtering shows only after promote, with a real login.
 
-**Streamlit is not supported yet**, see [streamlit-apps.md](streamlit-apps.md) §Row-level security — not supported yet.
+**Streamlit** needs `keboola-streamlit` 0.4.0 or newer to keep the token valid, see [streamlit-apps.md](streamlit-apps.md) §Row-level security.
 
 Column-level permissions are not part of this.

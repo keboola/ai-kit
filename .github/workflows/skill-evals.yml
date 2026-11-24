@@ -38,6 +38,26 @@ jobs:
       - name: Run the consistency checks of the rls-toolkit skill
         run: uv run --with pytest --with jsonschema pytest -q plugins/rls-toolkit/tests
 
+  python-template-tests:
+    name: "Python data app template tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Run the tests of the Streamlit data app template
+        working-directory: plugins/dataapp-developer/skills/dataapp-development/templates/streamlit
+        run: uv run --python 3.12 --group dev pytest -q tests
+
+      - name: Run the tests of the Python DuckDB cache template
+        working-directory: plugins/dataapp-developer/skills/dataapp-development/templates/duckdb-cache/python
+        run: uv run --no-project --python 3.12 --with duckdb --with pandas --with "keboola-query-service>=0.4.0" --with pytest pytest -q
+
   tier1-activation:
     name: "Tier 1: skill activation routing"
     runs-on: ubuntu-latest

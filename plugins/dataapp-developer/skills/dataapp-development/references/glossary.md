@@ -78,7 +78,7 @@ Python SDK: https://github.com/keboola/query-service-api-python-sdk
 
 JS/TS: `@keboola/api-client`'s `queryService` client + `queryService` SDK (https://github.com/keboola/ui, `packages/api-client`) — the formerly-standalone `query-service-api-js-sdk` repo is retired; `executeQuery`/`waitForJob`/pagination now live in `createQueryServiceSdk` (`@keboola/api-client/sdk/queryService`), composed on top of the plain `queryService` client (`@keboola/api-client/queryService`).
 
-Used when the app writes back to Storage tables via the Query Service (Snowflake projects with the **Storage Access** feature enabled). Provides authenticated `execute_query` against a permission-scoped workspace.
+Used when the app writes back to Storage tables via the Query Service (apps with Storage access on, `runtime.workspace.enabled: true`). Provides authenticated `execute_query` against a permission-scoped workspace.
 
 First-class SQL helpers (`SQL.literal()`, `SQL.ident()`, `sql.format()`) are in development for the Python SDK. Until released, use the manual sanitization pattern shown in `references/storage-access.md` (allowlists for strings, type-coercion for numbers).
 
@@ -103,7 +103,7 @@ Streamlit utility package: read/write tables via simple `keboola.read_table()` /
 - **`X-Kbc-App-User-Token`** — a request header that Keboola's apps proxy adds after an OAuth/OIDC login: a JWT that says "user X, acting through app Y". It lives 5 minutes and is new on each request. The user key is its `idp` + `sub` claims. The app forwards it unchanged to Query Service, always together with the app's `X-StorageApi-Token`; the browser cannot send it. It works on any workspace.
 - **`STORAGE_API_TOKEN_PATH`** — the file with the app's Storage token, mounted by the platform, which can rotate it; the image then restarts the app. `KBC_TOKEN` holds the same value; the React + Vite template reads the file before every request as a safeguard.
 - **Credential provider** — `@keboola/api-client`'s `createQueryServiceClient({ auth: () => credential })` and `keboola-query-service` 0.4.0's `Client(auth=lambda: credential)`: a function the client calls before every request, so it can pick the request's user and read a rotated token.
-- **Governed workspace** — a workspace where Query Service enforces row-level security policies.
+- **Governed workspace** — a workspace where Query Service enforces row-level security policies. The workspace manifest (`KBC_WORKSPACE_MANIFEST_PATH`) says `"governed": true`.
 - **Row-level security refusal** — Query Service `403` with the exception `Row-level security does not allow this query`, for a call with no signed-in user, an unsupported query or an invalid policy. A signed-in app user gets 0 rows instead when no policy grants a table. A `503` `Row-level security could not be applied to this workspace` means Query Service could not enforce the policies.
 
 Details and the app-side rules: "The app user token" and "Row-level security" in [storage-access.md](storage-access.md).
@@ -117,7 +117,7 @@ When a reference mentions a UI navigation step, here's where to find it. The exa
 | Workspaces (provision a Snowflake/BigQuery workspace) | **Workspaces** (older UI: "Sandboxes" or "Transformations → Workspaces") |
 | API Tokens (create a scoped Storage API token) | **Settings → API Tokens** (or "Users & Settings → API Tokens") |
 | Data Apps (list, deploy, view logs, edit config) | **Apps** in the left nav |
-| Storage Access feature toggle | **Settings → Features → Storage Access** (must be enabled per project) |
+| Storage access of an app (per app, no project feature) | inside the data app config: **Advanced Settings → Storage Access** |
 | Storage tables and buckets | **Storage** in the left nav |
 | Development Branches (find numeric branch ID) | **Development Branches** in the left nav |
 | Data App Terminal Log | inside the data app config: **Terminal Log** tab |
