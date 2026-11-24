@@ -9,7 +9,7 @@
 // Claude the path in additionalContext.
 //
 // The hook never builds: it renders only from a fresh dist/ and otherwise says how to get the report.
-// A build here held the session for up to ~5 minutes after `gh pr create` (#140 review).
+// A build here held the session for up to ~5 minutes after `gh pr create`.
 // Silent when: the command is anything else or failed; no docs checkout; branch main/master; no open
 // PR for the branch; no changed page under src/content/docs; the report already covers this HEAD;
 // the report finds no rendered change. Says why it skipped when another astro build is running

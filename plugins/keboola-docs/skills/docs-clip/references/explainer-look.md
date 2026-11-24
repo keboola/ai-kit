@@ -1,11 +1,10 @@
-# Explainer look: Remotion clips in Keboola's style
+# Explainer look: Keboola's style for explainer clips
 
 An explainer is a clip with no screen recording in it: a line that draws itself, numbered dots,
 short phrases, a product still on a card. The Getting Started hub clip and the Apps range clip
 are the two shipped examples. This file holds the look and the pacing they settled on, so the
-next one starts from the same place. Reference projects (not in the plugin): the Remotion
-projects under `~/docs-ops/remotion/` (`hub-explainer`, `apps-range`, `where-kai`), each with a
-README that has the rebuild commands.
+next one starts from the same place. Both were rendered with Remotion outside this plugin; a new
+explainer is `scripts/explainer.html`, recorded with `record-composite.mjs` (docs-clip `SKILL.md`).
 
 ## Look (from `@keboola/design`, public npm package, light mode)
 
@@ -37,15 +36,7 @@ project's `public/fonts/` (Raycast.app ships them); never load fonts from the ne
 
 ## Encode and measure
 
-Remotion renders full-range video (`yuvj420p`, `color_range=pc`), which reads about 18 luma
-points higher than the tv-range files the budgets were set on. Convert before measuring:
-
-```bash
-ffmpeg -y -i out/clip.mp4 -vf "scale=in_range=pc:out_range=tv,format=yuv420p" \
-  -c:v libx264 -preset slow -crf 28 -movflags +faststart -an public/<section>/<clip>.mp4
-npx remotion still <composition> --frame=<n> public/<section>/<clip>-poster.png
-```
-
+Encode with the ffmpeg recipe in the skill's `SKILL.md` (step 3) and take the poster from the MP4.
 Then the usual budgets: at most 1 MB, mean luma at least 200 and no frame under 180, poster
 bright and under 250 KB, text at least 24 px on a 1280 canvas (`clip_metrics.sh`). The hub clip
-shipped at 201 KB with luma 228/227 after conversion.
+shipped at 201 KB with luma 228/227.

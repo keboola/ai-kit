@@ -50,22 +50,13 @@ An existing chat can be checked without recording anything: `record-chat.mjs ...
 | Answer being written | squeezed to about 10 s, so about 1x for a normal answer (a long stretch is mostly tool steps); `--write-max` caps it | 3-9x on text was too fast |
 | Typing | 1.3x | 4x |
 | After the answer | the still wait is cut; the question scrolls to the top, a short pause, then the page reads down to the end at 1x | 8 s of still screen while the recorder waited to call the answer done. On another run the chat did not follow a long answer, so only its first lines were in frame |
-| Camera | decided by the screen, see "Zoom or the whole screen" below | KAiDE's chat fills the screen, so a 1.6x zoom only hid the interface and was taken out |
+| Camera | the whole screen, 1:1, see "The camera" below | KAiDE's chat fills the screen, so a 1.6x zoom only hid the interface |
 | Sidebar | only the chat being recorded is listed | hiding every chat looked broken; leaving them all showed other people's runs |
 | Retakes | re-record the whole prompt | an insert spliced into a take made the page jump back for a moment and showed a "Files 2" badge from a later answer |
 
-## Zoom or the whole screen
+## The camera
 
-Look at a frame of the take at the size it will be watched, then pick:
-
-| What the frame shows | Camera |
-|---|---|
-| The chat takes most of the screen and the point is the interface itself | the whole screen, 1:1 (no `--zoom`) |
-| A large UI where the answer text is too small to read at the delivered size | `--zoom chat`: the whole screen for a moment, then the chat column |
-| The prompt is hard to read while it is typed | `--zoom typing`: ease in on the composer, back out after Send |
-| One detail is the point (a Sources row, a refusal line, a generated file) inside a screen that should otherwise be seen whole | `--zoom detail`: after each answer, ease in on the config's `zoomOn` element, hold, ease back out (adds 3 s per answer) |
-
-Modes combine (`--zoom typing,detail`). A zoom renders through the `Plain` composition of `keboola-docs:docs-clip` (its `remotion/` needs `npm install` once, and `REMOTION_DIR` points elsewhere), so a 35 s clip takes about a minute and a 5-minute one several. The camera rules (cue on the whole screen first, keep a landmark in frame) are in that skill's `docs-clip/references/clip-grammar.md`.
+The whole screen, 1:1, for every clip. An eased zoom (on the chat column, the composer or one detail) needs a Remotion composition, and this plugin ships none while no Remotion Company License is confirmed.
 
 ## Common mistakes
 

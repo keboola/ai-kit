@@ -94,7 +94,7 @@ Lint with `--full --schemas`.
 
 Lint the proposal (`lint-copy.mjs <dir> --name "<name>" --bucket <bucket>`, exit 0), then stop
 and show a before/after per file. After an explicit yes, follow component-copy steps 5 and 6:
-branch `PRDCT-586-update-<component-id>`, draft PR with the publish caveat for the repo's
+branch `$TICKET-update-<component-id>` (`$TICKET` as in component-copy), draft PR with the publish caveat for the repo's
 `publish.trigger`, a ledger row in the plugin repo checkout. Done means the live copy in
 `/v2/storage` matches, not that the PR merged; re-run `drift.mjs` to confirm.
 

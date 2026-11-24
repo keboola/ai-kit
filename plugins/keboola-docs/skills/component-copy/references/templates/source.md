@@ -114,16 +114,8 @@ the matching item); never rewrite the rest of the README.
 
 ## configuration_description.md
 
-```
-{{non_trivial_setup_notes}}
-```
-
-- **Optional; leave it empty** unless the component already has text here. The owner would
-  rather remove the field from the UI than fill it (2026-11-12). Existing text is kept and must
-  follow the rules below; images in it are removed (they go in the README).
-- Must **not** start with a header (the UI prepends a level-2 one) and may use only `###` and
-  `####`.
-- Must not repeat what Configuration and Row schema already make obvious.
+Not written: `component-developer:migrate-to-uv` deletes this file as Bitbucket-era, so a proposal
+leaves it out and an existing one stays as it is.
 
 ## configSchema.json / configRowSchema.json
 

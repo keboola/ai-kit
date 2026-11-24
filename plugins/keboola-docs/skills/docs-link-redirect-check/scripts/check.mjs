@@ -28,7 +28,7 @@ const SITE = !!flag('--site');
 const PREVIEW = typeof flag('--preview') === 'string' ? flag('--preview').replace(/\/$/, '') : null;
 const PATHS = typeof flag('--paths') === 'string' ? flag('--paths') : null;
 
-// git with an argument array, never through /bin/sh: page paths and refs reach these calls (#140 review).
+// git with an argument array, never through /bin/sh: page paths and refs reach these calls.
 const sh = (...args) => { try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 }).trim(); } catch { return ''; } };
 const fail = (m) => { console.error(`✗ ${m}`); process.exit(2); };
 if (!fs.existsSync(DIST)) fail('dist/ not found — run `npm run build` first');

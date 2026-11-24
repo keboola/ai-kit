@@ -34,7 +34,7 @@ const SRC = makeSource(ROOT, { index: has('--index'), ref: REF });
 
 const usage = (m) => { console.error(`✗ ${m}`); process.exit(2); };
 if (!SRC.exists(DOCS)) usage(`src/content/docs not found under ${ROOT}: run from the repo root or pass --root`);
-// git with an argument array, never through /bin/sh (#140 review).
+// git with an argument array, never through /bin/sh.
 const sh = (...args) => { try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 }).trim(); } catch { return ''; } };
 
 // ---- page selection -----------------------------------------------------------------------------

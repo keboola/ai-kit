@@ -93,4 +93,4 @@ Every element must survive the markdown twin: plain-string props on one line, on
 
 - States GIF, narrated recording, explainer: `docs-clip` (form chosen from `clip-grammar.md`).
 - UI-locator screenshots: `capturing-keboola-ui-screenshots`.
-- Hub explainer clips: Remotion compositions in `docs-clip/remotion/`.
+- Hub explainer clips: `docs-clip/scripts/explainer.html`, recorded with `record-composite.mjs`.

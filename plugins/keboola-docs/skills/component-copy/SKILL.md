@@ -1,6 +1,6 @@
 ---
 name: component-copy
-description: Use when a Keboola component's user-facing copy needs to match the house shape — an empty or component-describing short/long description, a missing configuration description, cluttered schema field titles or tooltips — or when a new component is being published and its `component_config` must be right from the start. Edits `component_config/` in the component repo (which the developer portal reads), never a help-docs page. One component, one PR, owner-gated. Stale or out-of-rule copy that exists is component-update; a deprecated or replaced component is component-retire. Only the wording; schema structure, new fields, UI layout and component code belong to component-developer (build-component-ui, develop-component).
+description: Use when a Keboola component's user-facing copy needs to match the house shape — an empty or component-describing short/long description, cluttered schema field titles or tooltips — or when a new component is being published and its `component_config` must be right from the start. Edits `component_config/` in the component repo (which the developer portal reads), never a help-docs page. One component, one PR, owner-gated. Stale or out-of-rule copy that exists is component-update; a deprecated or replaced component is component-retire. Only the wording; schema structure, new fields, UI layout and component code belong to component-developer (build-component-ui, develop-component).
 ---
 
 # Component Copy — one component, one PR
@@ -35,8 +35,7 @@ rules already forbid:
 `lint-copy.mjs`; reshaped the same day on the owner's review): a connector's load behaviour in
 the long description (unknown → `VERIFY(owner)`), a `## Prerequisites` section in the connector's
 README (Account and plan, Access, Permissions, Network, Set up first), and no images in the copy
-the UI shows. The configuration description is optional and usually stays empty: the owner would
-rather remove that field from the UI. The templates hold the detail, including where each field
+the UI shows. This skill never writes the configuration description: `component-developer:migrate-to-uv` deletes that file as Bitbucket-era (`rm -f component_config/configuration_description.md`), so text written there would be lost. The templates hold the detail, including where each field
 shows in Keboola and on components.keboola.com (checked live 2026-11-12: in a project the long description sits in a
 collapsed box on the component's and each configuration's page, and images render there).
 
@@ -58,7 +57,7 @@ repo it is.
 
 ## When to use
 
-- A component has an empty `longDescription` or `configurationDescription` (the gap-fill pass).
+- A component has an empty `longDescription` (the gap-fill pass).
 - A component's copy describes the component, or buries detail that belongs in a tooltip.
 - A new component is being published and `component_config` should be right from the start —
   this is the long-term reason the skill exists (PRDCT-586).
@@ -83,6 +82,8 @@ repo it is.
 | configurationSchema | `component_config/configSchema.json` |
 | configurationRowSchema | `component_config/configRowSchema.json` |
 | documentationUrl | `component_config/documentationUrl.md` |
+
+- `configuration_description.md` is never part of a proposal: `component-developer:migrate-to-uv` deletes that file as Bitbucket-era (`rm -f component_config/configuration_description.md`), so text written there would be lost. An existing file is left as it is.
 
 - The mapping is applied by `scripts/developer_portal/update_properties.sh` in the component
   repo, called from the `update_developer_portal_properties` job in `.github/workflows/push.yml`.
@@ -186,8 +187,7 @@ marketing. Anything you cannot source gets `VERIFY(owner)` inline — a guess th
 the worst possible output here, because nobody downstream can tell it from a fact.
 
 **In the first cut, touch only the short and long description and the README's
-`## Prerequisites` section** (the configuration description only to remove an image or a rule
-break in text that is already there). Schema field copy (titles,
+`## Prerequisites` section** (never the configuration description, see Facts). Schema field copy (titles,
 tooltips, enum titles) is a separate PR through `component-update` step 3 and
 `scripts/schema-copy.mjs`.
 
@@ -222,7 +222,7 @@ gh repo clone <repo> "$WORK" -- --depth 1                  # <repo> = facts.repo
 cd "$WORK" && git checkout -b "$TICKET-copy-<id>"          # $TICKET: the operator's ticket key, see Facts
 cd ./<folder>                                                # facts.folder; '' (the repo root) for a component with its own repo
 # copy ONLY the approved markdown files; schemas never ride along in the first cut
-for f in component_short_description.md component_long_description.md configuration_description.md; do
+for f in component_short_description.md component_long_description.md; do
   [ -f "<proposal-dir>/$f" ] && cp "<proposal-dir>/$f" component_config/
 done
 # README: replace only its Prerequisites section with the approved one, by hand; never copy a whole README
@@ -291,7 +291,7 @@ GIFs or video with `docs-clip`; do not invent a second capture pipeline here.
   images and 6 of them were broken: a vendor logo answering 404 (four revolt-bi components)
   and README-relative paths that mean nothing outside the repo (`kds-team.wr-lytics-v2`,
   `keboola.processor-duckdb`).
-- `lint-copy.mjs` fails any image in the short, long or configuration description. A proposal
+- `lint-copy.mjs` fails any image in the short or long description. A proposal
   drops it, and moves it to the README when the README lacks it; the PR says which.
 
 ## Fleet audit

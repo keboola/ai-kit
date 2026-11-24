@@ -1,6 +1,6 @@
 ---
 name: docs-clip
-description: "Use when a help.keboola.com page needs motion: choosing the form (states GIF, narrated recording with a caption band, Remotion explainer), recording in Keboola, encoding a budgeted MP4 or GIF, re-rendering a clip, or a GIF for Slack or a PR. Triggers: \"запиши гифку/клип\", \"переснять клип\", \"record a demo\"."
+description: "Use when a help.keboola.com page needs motion: choosing the form (states GIF, narrated recording, explainer), recording in Keboola, encoding a budgeted MP4 or GIF, re-rendering a clip, or a GIF for Slack or a PR. Triggers: \"запиши гифку/клип\", \"переснять клип\", \"record a clip for a docs page\"."
 ---
 
 # Clips for the Keboola docs
@@ -8,7 +8,7 @@ description: "Use when a help.keboola.com page needs motion: choosing the form (
 
 ## Working Directory Context
 
-Scripts run from the root of a connection-docs worktree: Playwright resolves from its `node_modules`, finished clips go under its `public/<section>/`. They locate their own files (`compositor.html`, `explainer*.html`) themselves; raw takes and composites go to a scratch directory, never into the repo. The Remotion project in `remotion/` is the exception: `cd` into it for `npm install` and renders.
+Scripts run from the root of a connection-docs worktree: Playwright resolves from its `node_modules`, finished clips go under its `public/<section>/`. They locate their own files (`compositor.html`, `explainer*.html`) themselves; raw takes and composites go to a scratch directory, never into the repo.
 
 ## Decide first: does this need a clip?
 
@@ -18,7 +18,7 @@ when a single screenshot says the same thing, and a numbered list plus a still i
 correct than a video. One clip per page, maximum. Stripe's docs, which people hold up as the bar,
 have almost none: the code beside the prose does the work.
 
-Which form the page gets (states GIF, narrated recording with a caption band, or an explainer)
+Which form the page gets (states GIF, narrated recording, or an explainer)
 is decided first, from `references/clip-grammar.md`. A how-to step gets a states GIF or a
 narrated recording placed under the step; a hub gets an explainer; words never sit on the UI.
 
@@ -111,8 +111,9 @@ times.
   hold at the end. This is what turns a 104-second take into a 36-second clip that still reads.
 - `chip` is a caption in the site's palette, bottom-left, with a plain dot — no icons, no emoji.
   **Retired for new clips (2026-10-14):** a caption on the UI hides what the reader should look at.
-  New narrated clips put captions in a band above the frame (the where-kai Remotion composition,
-  `references/clip-grammar.md`); the chip stays only to re-render old clips.
+  The caption band above the frame that replaced it needs Remotion, which the plugin does not ship
+  (see "Remotion" below), so a new narrated clip carries no words in the picture: the sentence above
+  it and the `aria-label` say what happens. The chip stays only to re-render old clips.
 - `spot` dims everything outside a rectangle. It is the only pointer. Give it the element's real
   rect from the recording, not an approximation.
 - `hl` (a pulsing outline) still exists for the rare case where dimming the page would hide
@@ -176,12 +177,13 @@ Read `references/checklist.md` and actually do it. The short version: contact sh
 frame read with your eyes, no mascot, no names, budgets met, the page and the clip in the same
 commit, `docs-link-redirect-check` run (it checks `<video>` and `poster` paths).
 
-## Remotion, in the plugin
+## Remotion
 
-`remotion/` holds the three house compositions (`Narrated` with the caption band, `HubExplainer`,
-`AppsRange`) with Inter and a sample timeline; `remotion/README.md` is the six-step recipe
-(record at 2x → `plan.json` → `scripts/pace.py` → studio → render → encode). `npm install` there
-once; renders go to `remotion/out/`, never into the repo.
+This plugin ships no Remotion code. Rendering with Remotion at Keboola's size needs a Remotion
+Company License, and none is confirmed. The caption band and the eased camera of the narrated form,
+and the Remotion explainers already on the site (the Getting Started hub clip, the Apps range clip),
+stay as published; re-rendering them waits for a confirmed licence. Everything else in this skill
+(the states clip, the compositor, the HTML explainer, ffmpeg) needs no Remotion.
 
 ## What lives where
 

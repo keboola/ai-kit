@@ -21,10 +21,8 @@ it only for connectors).
 
 ## configuration_description.md
 
-Optional; leave it empty unless it already has text (the owner would rather remove the field from
-the UI, 2026-11-12). Existing text covers only what the form does not make obvious: order of
-operations, side effects on the external system, what a failed run leaves behind. Starts with a
-sentence; `###`/`####` only; no images.
+Not written: `component-developer:migrate-to-uv` deletes this file as Bitbucket-era, so a proposal
+leaves it out and an existing one stays as it is.
 
 ## configSchema.json / configRowSchema.json
 

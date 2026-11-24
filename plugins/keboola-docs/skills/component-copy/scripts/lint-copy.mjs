@@ -149,21 +149,12 @@ export function lintCopy(read, opts = {}) {
 
   function lintCfgDesc(text) {
     const f = 'configuration_description.md';
-    // Optional, and empty on most components: the owner would rather drop the field from the UI than
-    // fill it (2026-11-12). When it has text, the published rules below apply.
-    if (text === null) return;
-    const t = text.trim();
-    if (!t) return;
-    lintImages(f, t);
-    if (/^#/.test(t)) {
-      add('error', f, 'publish#component-configuration',
-        'Opens with a header. Verbatim rule: "Your markdown should not start with a header and should use only level 3 and level 4 headers (level 2 header is prepended before the configuration description)." Start with a sentence; a `###` may follow later.');
-    }
-    const bad = [...t.matchAll(/^(#{1,2})\s+\S/gm)];
-    if (bad.length) {
-      add('error', f, 'checklist#configuration-description',
-        `Uses ${bad.length} level-1/level-2 header(s); only ### and #### are allowed.`);
-    }
+    // Never written by component-copy: component-developer:migrate-to-uv deletes this file as
+    // Bitbucket-era, so text put there would be lost. A proposal leaves it out; in a real
+    // component_config/ (--full) an existing file is not ours to judge.
+    if (FULL || text === null || !text.trim()) return;
+    add('error', f, 'house#no-configuration-description',
+      'Leave configuration_description.md out of the proposal: component-developer:migrate-to-uv deletes it, so this text would be lost.');
   }
 
   function lintDocUrl(text) {
@@ -254,7 +245,7 @@ export function lintCopy(read, opts = {}) {
     // the form an existing configuration opens: "Deprecated: use <successor> instead." or
     // "Deprecated: no replacement."
     function lintRetired() {
-      for (const f of ['component_long_description.md', 'configuration_description.md']) {
+      for (const f of ['component_long_description.md']) {
         const t = (read(f) ?? '').trim();
         if (!t) {
           if (f === 'component_long_description.md') add('error', f, 'house#retired', 'A deprecated component needs a long description that opens with "Deprecated: ...".');

@@ -20,8 +20,6 @@
 //   sessionParam  query parameter holding the chat id, if any ("session"); otherwise the link's URL is compared
 //   busyLabel     regex on button labels shown while the assistant works ("stop|cancel generat")
 //   viewport      [1280, 800] css px; recorded at 2x
-//   zoomOn        optional selector of the detail edit-clip.py --zoom detail eases in on after each answer
-//                 (its last visible match, e.g. the Sources row ".msg-sources")
 //
 // What it does per prompt: the pointer clicks the composer, types the prompt at a human rate, clicks
 // Send, waits until the busy control is gone and the page text has not changed for 8 s (cap 6 min),
@@ -38,6 +36,7 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ?
 const C = JSON.parse(fs.readFileSync(arg('config'), 'utf8'));
 const PROMPTS = JSON.parse(fs.readFileSync(arg('prompts'), 'utf8')).map((x) => (typeof x === 'string' ? x : x.prompt));
 const DRY = process.argv.includes('--dry'), EXTRACT = process.argv.includes('--extract');
+if (!arg('out')) { console.error('--out <take-dir> is required'); process.exit(2); }
 const OUT = path.resolve(arg('out'));
 const FROM = +arg('from', 1);
 const ONLY = +arg('only', PROMPTS.length);
@@ -81,9 +80,8 @@ const INIT = `
 })();
 `;
 
-// Clear only what an earlier take wrote, and only in a take directory (#140 review): a mistyped --out
+// Clear only what an earlier take wrote, and only in a take directory: a mistyped --out
 // such as `.` or `~` must not be wiped. A non-empty directory without marks.json is not a take.
-if (!arg('out')) { console.error('--out <take-dir> is required'); process.exit(2); }
 if (fs.existsSync(OUT) && fs.readdirSync(OUT).length && !fs.existsSync(OUT + '/marks.json')) {
   console.error(`refusing to reuse ${OUT}: not empty and has no marks.json, so it is not a take directory`); process.exit(2);
 }
@@ -230,13 +228,6 @@ try {
       mark(`q${n}-down`, { px: down });
       if (down > 0) await scrollBy(down, Math.max(2500, down * 9));
       mark(`q${n}-read`);
-    }
-    if (C.zoomOn) {
-      const r = await p.locator(C.zoomOn).evaluateAll((els) => {
-        const vis = els.map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0 && r.bottom > 0 && r.top < innerHeight);
-        const r = vis[vis.length - 1]; return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null;
-      });
-      mark(r ? `q${n}-detail` : `q${n}-WARN-detail-not-found`, r);
     }
     await sleep(2500);
     mark(`q${n}-end`, { url: p.url() });

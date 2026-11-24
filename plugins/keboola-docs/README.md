@@ -1,6 +1,6 @@
 # keboola-docs
 
-**Version**: 0.16.0
+**Version**: 0.17.0
 
 Write, update, retire and ship pages on help.keboola.com (keboola/connection-docs, Astro +
 Starlight) by the Diátaxis rules, with the checks, the media tooling and a commit gate in one
@@ -28,8 +28,6 @@ screenshots from your own logged-in Chrome (Chrome 136+ needs a separate profile
 open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.keboola-shots/chrome-cdp"
 ```
 
-For Remotion clips, run `npm install` once in `skills/docs-clip/remotion/`.
-
 States clips and UI screenshots come from that debug Chrome: log in to Keboola in it yourself.
 `docs-update` finds screenshots that still show a renamed label with
 `node scripts/media-inventory.mjs --text "<old label>" <pages>` (Vision OCR, macOS).
@@ -49,7 +47,7 @@ the commit with the reasons; `DOCS_GATE=skip git commit …` bypasses it when yo
 | Check a page's Diátaxis type and shape (script + judge agent) | `/keboola-docs:docs-diataxis-check` |
 | Verify links, anchors, media and redirects | `/keboola-docs:docs-link-redirect-check` |
 | Flag claims you could not check live | `/keboola-docs:docs-verify-markers` |
-| Record a clip, build an explainer (Remotion compositions ship in the skill), or a **states clip** of one screen: a 30 fps MP4 loop with rings and dissolves, the whole screen or the action area (the skill asks) | `/keboola-docs:docs-clip`, `demo-gif` |
+| Record a clip, build an explainer, or a **states clip** of one screen: a 30 fps MP4 loop with rings and dissolves, the whole screen or the action area (the skill asks) | `/keboola-docs:docs-clip`, `demo-gif` |
 | Record a chat assistant (Kai, an LLM chat UI) answering demo prompts, with gentle pacing and chapters | `/keboola-docs:recording-chatbot-demos` |
 | Pick the page elements (Prereqs box, Prompt/UI/CLI tabs, flow and stage strips, cards, diagrams) the Apps and Getting Started pages use | `/keboola-docs:docs-visuals` |
 | Shoot a product-UI screenshot | `/keboola-docs:capturing-keboola-ui-screenshots` |
@@ -89,7 +87,7 @@ directory, keyed by checkout and branch, so a page can be resumed later.
 ```
 skills/      docs-page (templates/, references/phases.md, stops.md), docs-update, docs-retire, docs-ship,
              docs-diataxis-check (references/rules.md, scripts/check.mjs + tests + fixtures),
-             docs-link-redirect-check, docs-verify-markers, docs-clip (references/, remotion/),
+             docs-link-redirect-check, docs-verify-markers, docs-clip (references/),
              docs-stage-strip, docs-visuals (references/catalog.md),
              docs-clip/scripts (capture-states.mjs, ring-frames.py, states-to-gif.sh, test/ fixture),
              capturing-keboola-ui-screenshots (scripts/shoot-cdp.mjs), demo-gif, recording-chatbot-demos,

@@ -55,8 +55,8 @@ because the code moved to `keboola/components` or `keboola/components-private`.
 - `component_long_description.md` opens with one line, then keeps what is still true:
   `Deprecated: use [<Successor name>](<successor documentation URL>) instead.` or
   `Deprecated: no replacement.` Add the date when the owner gave one.
-- `configuration_description.md`, when it has text, opens with the same line, because existing
-  configurations still open this form. When it is empty, leave it empty.
+- `configuration_description.md` is not written: `component-developer:migrate-to-uv` deletes it as
+  Bitbucket-era. An existing one is left as it is.
 - `component_short_description.md` stays as it is; the catalog marks deprecated components
   itself.
 - `documentationUrl.md` keeps pointing at the component's own docs while they exist.
@@ -81,7 +81,7 @@ page that still teaches the deprecated component as current.
 ### 5. Gate, apply, record
 
 Stop and show the diff. After an explicit yes: component-copy steps 5 and 6, branch
-`PRDCT-586-retire-<component-id>`, a ledger row with the successor. Done means the live copy
+`$TICKET-retire-<component-id>` (`$TICKET` as in component-copy), a ledger row with the successor. Done means the live copy
 shows the deprecation line.
 
 ## Common mistakes

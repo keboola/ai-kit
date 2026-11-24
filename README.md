@@ -127,7 +127,7 @@ Write, update, retire and ship pages on help.keboola.com (keboola/connection-doc
 **Features:**
 - 📝 **Page lifecycle**: `docs-page` (new page from a PRDCT id or a phrase, six templates), `docs-update`, `docs-retire` (redirects, nav, inbound links), `docs-ship` (PR only on "ok")
 - ✅ **Checks**: Diátaxis rules D1–D16 (script + judge agent), links and redirects, VERIFY markers, fact-checker and guide-tester agents
-- 🎬 **Media**: UI screenshots from your own Chrome over CDP, states GIFs with click rings, Remotion compositions for narrated clips and explainers, and `docs-visuals`, a catalog of the page elements the Apps and Getting Started sections use
+- 🎬 **Media**: UI screenshots from your own Chrome over CDP, states GIFs with click rings, narrated clips and explainers, and `docs-visuals`, a catalog of the page elements the Apps and Getting Started sections use
 - 🚦 **Commit gate**: a hook that blocks commits with FAIL-tier findings, plus sidebar regeneration and PR labels
 - 🔍 **Before/after**: `docs-before-after` renders every changed spot of a docs branch, live site vs local build, with word diffs, as one Artifact page
 - 🧩 **Component copy**: `component-copy`, `component-update` and `component-retire` write, update and deprecate the copy a component shows in Keboola and its README's Prerequisites section, with a catalog audit and a linter that component CI can run

@@ -12,7 +12,7 @@ esac
 # the checkout the edited file lives in (not the session directory: a worktree elsewhere was skipped)
 root="$(cd "$(dirname "$f")/.." 2>/dev/null && pwd)"
 # No convert-nav.mjs next to the edited file: not a connection-docs checkout. Do nothing rather than
-# fall back to the session directory, which may be a different repo (#140 review).
+# fall back to the session directory, which may be a different repo.
 [ -f "$root/scripts/convert-nav.mjs" ] || exit 0
 cd "$root" 2>/dev/null || exit 0
 

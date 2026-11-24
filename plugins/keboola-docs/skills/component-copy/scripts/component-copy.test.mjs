@@ -15,11 +15,11 @@ test('lint passes the clean fixture with schemas', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
 });
 
-test('lint finds 9 errors and 4 warnings in the broken fixture', () => {
+test('lint finds 8 errors and 4 warnings in the broken fixture', () => {
   const r = run('lint-copy.mjs', join(FIX, 'broken'), '--schemas');
   assert.notEqual(r.status, 0);
   const out = r.stdout + r.stderr;
-  assert.match(out, /\b9 errors?\b/, out);
+  assert.match(out, /\b8 errors?\b/, out);
   assert.match(out, /\b4 warnings?\b/, out);
 });
 
@@ -55,7 +55,7 @@ test('a connector long description without load behaviour fails, VERIFY about lo
   assert.equal(run('lint-copy.mjs', verify, '--bucket', 'source/saas-api').status, 0);
 });
 
-test('the configuration description is optional; text in it still follows the published rules', () => {
+test('a proposal never carries configuration_description.md; an existing one in a full dir is left alone', () => {
   assert.equal(run('lint-copy.mjs', proposal({ 'configuration_description.md': '  \n' })).status, 0);
   const full = proposal({
     'component_short_description.md': 'CRM platform for marketing, sales and service teams.\n',
@@ -63,12 +63,21 @@ test('the configuration description is optional; text in it still follows the pu
     'documentationUrl.md': 'https://github.com/keboola/component-hubspot-v2/blob/main/README.md\n',
   });
   assert.equal(run('lint-copy.mjs', full, '--full').status, 0, 'no configuration_description.md is fine');
-  assert.equal(run('lint-copy.mjs', proposal({ 'configuration_description.md': '## Setup\n\nText.\n' })).status, 1);
+  const withCfg = run('lint-copy.mjs', proposal({ 'configuration_description.md': 'Paste the token.\n' }));
+  assert.equal(withCfg.status, 1);
+  assert.match(withCfg.stdout, /house#no-configuration-description/);
+  const existing = proposal({
+    'component_short_description.md': 'CRM platform for marketing, sales and service teams.\n',
+    'component_long_description.md': LONG_OK,
+    'documentationUrl.md': 'https://github.com/keboola/component-hubspot-v2/blob/main/README.md\n',
+    'configuration_description.md': '## Setup\n\nText.\n',
+  });
+  assert.equal(run('lint-copy.mjs', existing, '--full').status, 0, 'an existing file is not judged');
 });
 
 test('any image in the copy the UI shows fails, wherever it is hosted', () => {
   for (const img of ['![a](docs/imgs/a.png)', '![a](https://help.keboola.com/a.png)', '![a][ref]', '<img src="https://i.ibb.co/a.png">']) {
-    const d = proposal({ 'configuration_description.md': `Where the token comes from.\n\n${img}\n` });
+    const d = proposal({ 'component_long_description.md': `Where the token comes from.\n\n${img}\n` });
     const r = run('lint-copy.mjs', d);
     assert.equal(r.status, 1, img);
     assert.match(r.stdout, /house#images/);
@@ -112,7 +121,6 @@ test('--connector applies connector rules without a bucket; --retired needs the 
   assert.doesNotMatch(notMarked.stdout, /before-you-start|load-behaviour/);
   const marked = proposal({
     'component_long_description.md': 'Deprecated: use [HubSpot v2](https://example.com) instead.\n\nReads contacts.\n',
-    'configuration_description.md': 'Deprecated: use HubSpot v2 instead.\n',
   });
   assert.equal(run('lint-copy.mjs', marked, '--connector', '--retired').status, 0);
 });
