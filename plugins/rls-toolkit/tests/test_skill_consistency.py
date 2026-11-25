@@ -137,3 +137,11 @@ def test_verified_facts_are_stated_without_a_question_mark():
     assert "An app with neither list is not governed" in skill
     assert "a policy that is not listed is ignored" in skill
     assert "'10' < '2'" in _text(SKILL / "references" / "policy-model.md")
+
+
+@pytest.mark.parametrize("name", ["gotchas.md", "data-app-discovery.md"])
+def test_deploy_refusals_name_both_lists_the_feature_and_the_login(name):
+    """Both refusals of an app deploy must stay described the same way in both files."""
+    text = _text(SKILL / "references" / name)
+    for term in ("clsPolicies", "row-level-security", "OAuth/OIDC", "config update"):
+        assert term in text, f"{name}: {term}"
