@@ -7,10 +7,11 @@ Facts marked (?) are not verified against the platform docs: confirm with a test
 
 | Check | Where | If not |
 |---|---|---|
+| Backend | the project's default backend is `snowflake` or `bigquery` | RLS/CLS for a data app is not supported on that backend; tell the user and stop |
 | App can use the user token | the app forwards `X-Kbc-App-User-Token`, per-user caches; supported app types: see the "Row-level security" section of the `dataapp-development` skill (`references/storage-access.md`) | Query Service refuses every query of an app that does not forward the token (HTTP 403 "Row-level security does not allow this query", logged as `ACCESS_DENIED`), so every user sees an error, not an empty page; tell the user |
 | Storage access on | `runtime.workspace.enabled: true` | RLS has nothing to govern; offer to enable it |
-| Every path requires SSO | `authorization.app_proxy.auth_rules[]`: `auth_required: true`, `auth[]` lists providers; providers in `auth_providers[]`, type oidc, gitlab, github or jumpcloud (provider list: `authentication.md` of `dataapp-development`) | the platform refuses the configuration with HTTP 400 on app update and on deployment when `rlsPolicies` is set and a path is public, has no provider, names an unknown provider or one of another type, or the app has no login rule at all |
-| Project feature | `row-level-security` (policies, the RLS switch in the app settings) | a project admin turns `row-level-security` on in Project settings → Features (free public beta until 28 February 2027); without it the deploy of an app with `rlsPolicies` / `clsPolicies` is refused |
+| Every path signs visitors in through OAuth/OIDC | `authorization.app_proxy.auth_rules[]`: `auth_required: true`, `auth[]` lists providers; providers in `auth_providers[]`, type oidc, gitlab, github or jumpcloud (provider list: `authentication.md` of `dataapp-development`) | when `rlsPolicies` or `clsPolicies` is set, the platform refuses the configuration with HTTP 400 on app update and on deployment ("... requires an OAuth/OIDC login ...") if a path is public, has no provider, uses a `password` provider, names an unknown provider or one of another type, or the app has no login rule at all |
+| Project feature | `row-level-security` (policies, the RLS switch in the app settings) | during the free public beta (until 28 February 2027) a project admin turns `row-level-security` on in Project settings → Features; without it the deploy of an app with `rlsPolicies` / `clsPolicies` is refused |
 
 Show what you found. Never change an app's authentication silently.
 
