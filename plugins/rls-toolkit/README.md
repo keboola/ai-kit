@@ -33,7 +33,7 @@ it; the kbagent commands are in `skills/rls-policies/references/kbagent.md` and 
   pinned by its own release job; this plugin does not bump it.
 - Project feature `row-level-security`
 - A project-admin Storage token for writes; an organization admin for grants and organization scope
-- For a data app: Storage access on (`runtime.workspace.enabled: true`), every path behind SSO (oidc, gitlab, github, jumpcloud)
+- For a data app: Storage access on (`runtime.workspace.enabled: true`), an OAuth/OIDC login on every path (oidc, gitlab, github, jumpcloud)
 
 ## What it does and does not do
 

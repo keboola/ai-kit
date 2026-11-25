@@ -10,7 +10,8 @@
 | App reads every row | the app has Storage access but no `rlsPolicies` key: it is not governed | add the key with the policies and redeploy |
 | Earlier policies of the app vanished | the list was written with only the new UUID: a merge replaces a list | write the complete list |
 | `rlsPolicies: []` is refused | the platform refuses an empty list | remove the key (see `data-app-discovery.md`) |
-| Deployment or app update fails with HTTP 400 | `rlsPolicies` is set and a path is public (`auth_required: false`), has no provider, names an unknown provider or one of another type than oidc, gitlab, github, jumpcloud, or the app has no login rule | all paths need SSO |
+| Deployment or app update fails with HTTP 400 "... requires an OAuth/OIDC login ..." | `rlsPolicies` or `clsPolicies` is set and a path is public (`auth_required: false`), has no provider, uses a `password` provider, names an unknown provider or one of another type than oidc, gitlab, github, jumpcloud, or the app has no login rule | every path needs an OAuth/OIDC login (oidc, gitlab, github, jumpcloud) |
+| Deployment fails with `Row-level security ("runtime.workspace.rlsPolicies") requires the "row-level-security" project feature, which this project does not have.` (or `Column-level security ("runtime.workspace.clsPolicies")`, `Row- and column-level security (...)`) | the project does not have the `row-level-security` feature | during the free public beta (until 28 February 2027) a project admin turns it on in Project settings → Features |
 | 409 deleting a policy | it is listed in a binding | unbind, or remove the UUID from the app config |
 | A cls-policy does nothing for an app | its UUID is not in `runtime.workspace.clsPolicies` (the rls list does not carry it), or the app was not redeployed | add it to `clsPolicies`, redeploy |
 | A table created later is unreadable | new tables have no policy: default deny | offer a policy at the end of the conversation |
