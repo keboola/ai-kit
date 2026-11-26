@@ -25,6 +25,7 @@ Answer these questions in order. Each answer routes to the right reference.
 | See what a draft actually shows | `references/dev-workflow.md` §Verify a draft — a preview link opened in your own browser |
 | Read, describe, or push from a clone you did not just make | `references/existing-clone.md` |
 | Deploy or redeploy | `references/deployment-paths.md` |
+| Start or restart an app on a schedule or after other jobs | `references/deployment-paths.md` §Start or restart an app from a flow — a `keboola.data-app-control` flow task, never `keboola.data-apps` as a job |
 | Deploy from a private GitHub repo, or about to ask the user for a PAT or SSH key | `references/github-organization-auth.md` — offer the organization connection first |
 | Debug a deployment or runtime issue | `references/troubleshooting.md` |
 | Migrate an existing app between types | `references/choosing-app-type.md` + `references/streamlit-apps.md` + `references/python-js-apps.md` |
