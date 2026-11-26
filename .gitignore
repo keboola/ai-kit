@@ -21,3 +21,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.egg-info/
+
+# Local worktree env (wtm fork)
+.env
