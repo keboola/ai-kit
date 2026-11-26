@@ -66,7 +66,7 @@ Every Kai request sends three headers:
 Pick the token in this order:
 1. `KAI_STORAGE_API_TOKEN` is set → use it.
 2. `KAI_ENABLED` set (the platform sets `1`; any value except `""`, `0`, `false`, `no` and `off` counts) but no `KAI_STORAGE_API_TOKEN` → Kai is unavailable in this run (the app was started without a user). Say so in the UI and keep the rest of the app working; do **not** fall back to another token. A new deployment by a user restores it.
-3. `KAI_ENABLED` unset or off (an app without `runtime.kai`, or local dev) → `STORAGE_API_TOKEN`, a secret holding a project member's personal token. Kai then acts with that member's full access.
+3. `KAI_ENABLED` unset or off (an app without `runtime.kai`, or local dev) → `STORAGE_API_TOKEN`, a secret holding a project member's personal token. Kai then acts with that member's full access, writes included, for **every visitor** of the app: use it for local development, not in a deployed app.
 
 **Never use `KBC_TOKEN` for Kai.** It is the app's own token with no Keboola user behind it, and Kai refuses it with 403 `Storage token has no associated Keboola user`. The reverse holds too: use the Kai token for Kai only — the app's own queries keep `KBC_TOKEN` (see [storage-access.md](storage-access.md)).
 
@@ -347,11 +347,15 @@ app.post('/api/chat/:chatId/approval', async (req, res) => {
     return res.status(503).json({ error: err.message });
   }
   const { toolUseId, approved, reason } = req.body;
+  // Every visitor is the same Kai user, and kai-agent approves whatever tool waits: only "no" passes.
+  if (approved !== false) {
+    return res.status(403).json({ error: 'Visitors of this app can only decline Kai actions.' });
+  }
   const chatId = encodeURIComponent(req.params.chatId);
   const upstream = await fetch(`${await getKaiUrl(creds)}/api/chat/${chatId}/approval`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...kaiHeaders(creds) },
-    body: JSON.stringify({ toolUseId, approved, ...(reason && { reason }) }),
+    body: JSON.stringify({ toolUseId, approved: false, ...(reason && { reason }) }),
   });
   res.status(upstream.status).json(await upstream.json().catch(() => ({})));
 });
@@ -405,8 +409,8 @@ location /api/chat {
 Most tools run without asking. A tool that changes something, or an interactive question Kai asks the user, waits for a decision, and on `kai-agent` the chat stream **stays open** meanwhile:
 
 1. The stream emits `{ type: 'tool-approval-request', toolCallId, approvalId }` (JS: send `supportsApprovalRequestedEvent: true` in the chat request, as above).
-2. Show the user what Kai wants to do and let them decide. Never approve automatically.
-3. The backend POSTs the decision to `{kai}/api/chat/{chatId}/approval` with the same headers and `{ "toolUseId": "<toolCallId>", "approved": true }` (add `"reason"` when denying).
+2. Decline it, and tell the user what Kai wanted. **A data app never approves:** every visitor is the same Kai user, and kai-agent approves whatever tool is waiting, a write included, whatever `answers` the request carries. So the backend forwards only `approved: false`, and refuses an approval from the browser (Pattern B). Kai's questions (`AskUserQuestion`) are declined too, as in Streamlit.
+3. The backend POSTs the decision to `{kai}/api/chat/{chatId}/approval` with the same headers and `{ "toolUseId": "<toolCallId>", "approved": false, "reason": "<why>" }`.
 4. The original stream continues with the tool's output.
 
 Responses to the POST:
