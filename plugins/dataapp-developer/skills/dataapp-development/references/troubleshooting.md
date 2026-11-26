@@ -21,7 +21,9 @@
 - `Row-level security does not allow this query` (403)
 - A governed app shows no rows for a table
 - 500 after login: `Error while parsing OAuth2 state: invalid length`
+- Deploy refused: `runtime.kai` requires the `data-apps-kai` project feature
 - Kai chat returns 400 / 401 / 403
+- Kai's answer shows raw JSON blocks or `icon:` words
 - Reading logs (incl. Streamlit silent exceptions)
 
 ## "Cannot POST /" / "Method Not Allowed" on startup
@@ -146,6 +148,12 @@
 
 **Fix:** open the app's URL again to start a fresh login. If it fails on a fresh login every time, report it with the exception ID shown on the page.
 
+## Deploy refused: `runtime.kai` requires the `data-apps-kai` project feature
+
+**Cause:** the deploy returns 400 `Kai in data apps ("runtime.kai") requires the "data-apps-kai" project feature, which this project does not have.` The configuration turns Kai on in a project without the feature. A 400 `… is not available for this app: it mounts no configuration or has no workspace` means `runtime.workspace.enabled` is missing.
+
+**Fix:** the project feature is added by Keboola, not from inside the project: ask Keboola support, then deploy again. Until then take `runtime.kai` out of the configuration to deploy the app without Kai. See [kai-integration.md](kai-integration.md) §Turn Kai on for the app.
+
 ## Kai chat returns 400 / 401 / 403
 
 **Cause:** The Kai request carries the wrong token or workspace, or the project or app is not set up for Kai. The error message names which:
@@ -158,6 +166,12 @@
 - 401 `Invalid storage API token` — the Kai token expired (90 days after the deploy) or was revoked.
 
 **Fix:** Send `KAI_STORAGE_API_TOKEN` (with `runtime.kai.enabled`) and `x-workspace-id: $WORKSPACE_ID` on every Kai request; redeploy the app for a fresh token. See [kai-integration.md](kai-integration.md) §Token and headers.
+
+## Kai's answer shows raw JSON blocks or `icon:` words
+
+**Cause:** the app prints Kai's text as it comes. The text carries blocks for the Keboola UI's chat: ```` ```next_actions ````, ```` ```flint ```` charts, ```` ```mermaid ```` and `icon:<name>`.
+
+**Fix:** turn the blocks into buttons and charts, or cut them out. See [kai-integration.md](kai-integration.md) §Rendering Kai's answer.
 
 ## Reading logs
 
