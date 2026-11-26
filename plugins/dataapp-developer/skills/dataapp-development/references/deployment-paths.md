@@ -9,6 +9,7 @@ There are three deployment paths, distinguished by what the agent has access to:
 - Path A — Claude Desktop / web (MCP-only)
 - Path B — Claude Code / local agent with filesystem + MCP
 - Path C — CLI agent (kbagent)
+- Start or restart an app from a flow
 - How to choose
 
 ## Pick one path per session — don't mix
@@ -217,6 +218,31 @@ kbagent data-app password --app-id N    # if basic-auth
   The deployment record's `configVersion` does NOT auto-advance when Storage advances. You must redeploy to pick up the new config.
 
 - Detailed gotchas (per-project KMS encryption, transient `state == stopped` during initial deploy, auto-injected `parameters.id`) live in the kbagent skill's `references/data-app-workflow.md`. Don't duplicate them here — link there if needed.
+
+---
+
+## Start or restart an app from a flow
+
+To start or restart an app on a schedule or after other jobs, add a task with the `keboola.data-app-control` component to a flow. `appId` is the app's ID. You find it as **App ID** in the app's **App Info** panel; it is the same value as `parameters.id` in the app's `keboola.data-apps` config. The task has no `configId`:
+
+```json
+{
+  "type": "job",
+  "componentId": "keboola.data-app-control",
+  "configData": {
+    "parameters": {
+      "appId": "<App ID>"
+    }
+  },
+  "mode": "run"
+}
+```
+
+By default (`forceRestart` true) the task restarts the app's currently deployed version in place, or starts it if it is not running. The restart keeps the same code and the same configuration version. The task never builds new code and never deploys a new configuration version, so new code or saved settings need `kbagent data-app deploy` / `deploy_data_app` first. Add `"forceRestart": false` to `configData.parameters` to only start a stopped or sleeping app and leave a running one alone.
+
+The job waits until the new container serves. A failed restart leaves the app stopped. An app with no production deployment fails the job ("Deploy it first").
+
+**Do not run `keboola.data-apps` as a job or add it as a flow task.** The `keboola.data-apps` configs only store app settings. Start, stop and deploy an app with the data-app tools (`deploy_data_app`, `kbagent data-app ...`), or with the flow task above. Reading and updating these configs (`config detail`, `config update --component-id keboola.data-apps`) is fine.
 
 ---
 
