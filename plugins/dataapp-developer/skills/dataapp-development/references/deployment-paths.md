@@ -238,7 +238,9 @@ To start or restart an app on a schedule or after other jobs, add a task with th
 }
 ```
 
-By default the task starts a stopped or sleeping app and restarts a running one. It rebuilds from the latest code and keeps the configuration version of the last deploy, so settings saved since then still need `kbagent data-app deploy` / `deploy_data_app`. Add `"forceRestart": false` to `configData.parameters` to start only a stopped or sleeping app and leave a running one alone.
+By default (`forceRestart` true) the task restarts the app's currently deployed version in place, or starts it if it is not running. The restart keeps the same code and the same configuration version. The task never builds new code and never deploys a new configuration version, so new code or saved settings need `kbagent data-app deploy` / `deploy_data_app` first. Add `"forceRestart": false` to `configData.parameters` to only start a stopped or sleeping app and leave a running one alone.
+
+The job waits until the new container serves. A failed restart leaves the app stopped. An app with no production deployment fails the job ("Deploy it first").
 
 **Do not run `keboola.data-apps` as a job or add it as a flow task.** The `keboola.data-apps` configs only store app settings. Start, stop and deploy an app with the data-app tools (`deploy_data_app`, `kbagent data-app ...`), or with the flow task above. Reading and updating these configs (`config detail`, `config update --component-id keboola.data-apps`) is fine.
 
