@@ -764,7 +764,7 @@ On a workspace without row-level security the app answers as before.
   ```
 
   `dialect` is optional (`snowflake` or `bigquery`); on a BigQuery project use `"bigquery"`, or leave it out.
-- Row-level security for an app works only on a project whose default backend is Snowflake or BigQuery, and the project needs the **Row-Level and Column-Level Security** feature (`row-level-security`): a project admin turns it on in Project settings → Features (search for the label, not the name).
+- Row-level security for an app works only on a project whose default backend is Snowflake or BigQuery, and the project needs the **Row-Level and Column-Level Security** feature (`row-level-security`): during the free public beta (until 28 February 2027) a project admin turns it on in Project settings → Features (search for the label, not the name).
 - The app names the policy IDs in its config, `runtime.workspace.rlsPolicies: ["<id>", …]`: one for every table it queries, including a transformation's output tables; a table without one reads as empty. The app deploy is refused (HTTP 400) unless the project has the `row-level-security` feature and the app has an OAuth/OIDC login on every path, so set the login and the list in one config change, then redeploy; the redeploy gives the app a new governed workspace. Saving the config alone checks neither: the refusal comes only at the deploy.
 - Only the prod app is governed. A draft gets no `rlsPolicies`, so the filtering shows only after promote, with a real login.
 
