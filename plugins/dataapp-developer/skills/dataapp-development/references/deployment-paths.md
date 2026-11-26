@@ -223,7 +223,7 @@ kbagent data-app password --app-id N    # if basic-auth
 
 ## Start or restart an app from a flow
 
-To start or restart an app on a schedule or after other jobs, add a task with the `keboola.data-app-control` component to a flow. `appId` is the app's ID (`parameters.id` of its `keboola.data-apps` config, or **App ID** in the app's **App Info** panel). The task has no `configId`:
+To start or restart an app on a schedule or after other jobs, add a task with the `keboola.data-app-control` component to a flow. `appId` is the app's ID. You find it as **App ID** in the app's **App Info** panel; it is the same value as `parameters.id` in the app's `keboola.data-apps` config. The task has no `configId`:
 
 ```json
 {
