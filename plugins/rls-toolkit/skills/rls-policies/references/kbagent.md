@@ -19,6 +19,7 @@ later call. Rule files and read results go there.
 | Need | Command |
 |---|---|
 | Is the token a master token | `kbagent --json project info --project P` (`is_master_token`) |
+| Backend and Project feature (`data-app-discovery.md`) | the same `project info` result: `default_backend` (`snowflake` or `bigquery`), `features` (contains `row-level-security`) |
 | Existing policies | `kbagent --json rls list --project P`, `kbagent --json cls list --project P`; one in full: `rls detail` / `cls detail` |
 | Candidate tables | `kbagent --json storage tables --project P`, columns: `storage table-detail --table-id ID` |
 | Data apps | `kbagent --json data-app list --project P`, `data-app detail --app-id ID` |

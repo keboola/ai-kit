@@ -23,7 +23,7 @@ whole run) and the scratch path (`<SCRATCH>` below). Run the reads in one call, 
 results in `<SCRATCH>` and reuse them (create versus update, coverage gap, discovery):
 
 ```bash
-kbagent --conversation-id CONV --json project info --project $P > <SCRATCH>/project.json &   # is_master_token must be true
+kbagent --conversation-id CONV --json project info --project $P > <SCRATCH>/project.json &   # is_master_token, default_backend, features
 kbagent --conversation-id CONV --json rls schema --project $P > <SCRATCH>/schema.json &      # also the kbagent version probe
 kbagent --conversation-id CONV --json rls list --project $P > <SCRATCH>/rls.json &
 kbagent --conversation-id CONV --json cls list --project $P > <SCRATCH>/cls.json &
@@ -38,7 +38,10 @@ Author with `groups` / `subjects` only; kbagent refuses `principal` / `principal
 ## 2. Target and interview
 
 Where to enforce: a data app (`data-app list`), the MCP workspace, another governed workspace. For an app
-run `references/data-app-discovery.md` (reuse one `config detail`). Then run the interview. Write one
+run `references/data-app-discovery.md` (reuse one `config detail`). Check its Backend and Project feature
+rows first, from `<SCRATCH>/project.json`: `default_backend` must be `snowflake` or `bigquery`, and
+`features` must contain `row-level-security`. If either fails, tell the user what the discovery table says
+and stop before the interview; do not write policies that only fail later at the app deploy. Then run the interview. Write one
 rules file per table into `<SCRATCH>` (`rls_<bucket>_<table>.json`, `cls_<bucket>_<table>.json`), never in
 the user's repository.
 

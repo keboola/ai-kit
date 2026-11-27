@@ -7,10 +7,11 @@ Facts marked (?) are not verified against the platform docs: confirm with a test
 
 | Check | Where | If not |
 |---|---|---|
+| Backend | the project's default backend is `snowflake` or `bigquery` | RLS/CLS for a data app is not supported on that backend; tell the user and stop |
 | App can use the user token | the app forwards `X-Kbc-App-User-Token`, per-user caches; supported app types: see the "Row-level security" section of the `dataapp-development` skill (`references/storage-access.md`) | Query Service refuses every query of an app that does not forward the token (HTTP 403 "Row-level security does not allow this query", logged as `ACCESS_DENIED`), so every user sees an error, not an empty page; tell the user |
 | Storage access on | `runtime.workspace.enabled: true` | RLS has nothing to govern; offer to enable it |
-| Every path requires SSO | `authorization.app_proxy.auth_rules[]`: `auth_required: true`, `auth[]` lists providers; providers in `auth_providers[]`, type oidc, gitlab, github or jumpcloud (provider list: `authentication.md` of `dataapp-development`) | the platform refuses the configuration with HTTP 400 on app update and on deployment when `rlsPolicies` is set and a path is public, has no provider, names an unknown provider or one of another type, or the app has no login rule at all |
-| Project feature | `row-level-security` (policies, the RLS switch in the app settings) | ask support or an admin |
+| Every path signs visitors in through OAuth/OIDC | `authorization.app_proxy.auth_rules[]`: `auth_required: true`, `auth[]` lists providers; providers in `auth_providers[]`, type oidc, gitlab, github or jumpcloud (provider list: `authentication.md` of `dataapp-development`) | when `rlsPolicies` or `clsPolicies` is set, the app deploy or start fails with HTTP 400 ("... requires an OAuth/OIDC login ...") if a path is public, has no provider, uses a `password` provider, names an unknown provider or one of another type, or the app has no login rule at all; an organization-enforced password login for apps overrides a valid app login and fails the same way. The check runs when the app is deployed or started (the app update API with a state change, and building the deployment), not on a Storage configuration update (`config update`): such a write saves the bad configuration, and only the next deploy fails |
+| Project feature | **Row-Level and Column-Level Security** (`row-level-security`) in Project settings → Features; search for the label, the name `row-level-security` finds nothing | during the free public beta (until 28 February 2027) a project admin turns it on. Without it, when `rlsPolicies` or `clsPolicies` is set, the app deploy or start fails with HTTP 400 ("... requires the "row-level-security" project feature ..."). Like the login check, it runs at the app deploy or start, not on a Storage configuration update (`config update`), which saves the configuration anyway |
 
 Show what you found. Never change an app's authentication silently.
 
@@ -49,7 +50,7 @@ Advanced settings in the UI over rewriting the whole configuration.
 Bind cls-policies with `runtime.workspace.clsPolicies`, a list of 1-100 unique policy UUIDs like
 `rlsPolicies`; an empty list is refused (remove the key instead) and a changed list needs a redeploy.
 The two keys are independent: an app is governed when either is set, and the same preconditions
-(SSO login, no public path) apply. A cls-policy alone opens a table for the readers it names, with all
+(OAuth/OIDC login on every path) apply. A cls-policy alone opens a table for the readers it names, with all
 rows and only the columns it allows; a reader it does not name is refused. With both an rls-policy and
 a cls-policy on a table, rows come from the rls-policy and columns from the cls-policy. List the
 cls-policy UUIDs separately from the rls ones: the lists are not interchangeable.
