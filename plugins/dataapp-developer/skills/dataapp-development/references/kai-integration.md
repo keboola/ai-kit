@@ -10,7 +10,7 @@
 - Library
 - Service discovery
 - Pattern A — Streamlit embed
-- Pattern B — JS data-app embed
+- Pattern B — JS data-app embed (`KaiChat`)
 - Tool approval
 - Pre-built skills
 - DIY alternative — Anthropic SDK directly
@@ -87,32 +87,6 @@ def kai_credentials(environ=os.environ) -> dict[str, str | None]:
     return {"storage_api_token": token, "storage_api_url": url, "workspace_id": environ.get("WORKSPACE_ID") or None}
 ```
 
-```javascript
-function isKaiEnabled() {
-  const value = (process.env.KAI_ENABLED || '').trim().toLowerCase();
-  return !['', '0', 'false', 'no', 'off'].includes(value);
-}
-
-function kaiCredentials() {
-  let token = process.env.KAI_STORAGE_API_TOKEN;
-  if (!token) {
-    if (isKaiEnabled()) throw new Error('Kai is not available in this run of the app.');
-    token = process.env.STORAGE_API_TOKEN;
-  }
-  const url = process.env.KBC_URL;
-  if (!token || !url) throw new Error('Kai needs KBC_URL and KAI_STORAGE_API_TOKEN or STORAGE_API_TOKEN.');
-  return { token, url, workspaceId: process.env.WORKSPACE_ID };
-}
-
-function kaiHeaders({ token, url, workspaceId }) {
-  return {
-    'x-storageapi-token': token,
-    'x-storageapi-url': url,
-    ...(workspaceId && { 'x-workspace-id': workspaceId }),
-  };
-}
-```
-
 Keep the token on the app's backend; it never reaches the browser.
 
 ## What Kai can reach in the app
@@ -142,32 +116,17 @@ It needs **kai-client 0.14.0 or later**, which this reference describes:
 
 If 0.14.0 is not on PyPI yet, install its tag from GitHub: `uv add "kai-client @ git+https://github.com/keboola/kai-client@v0.14.0"`.
 
-JS apps don't need a separate JS package — they proxy HTTP requests to the same `/api/chat` endpoint Kai exposes and stream the SSE response straight back to the browser.
+JS apps use two packages: the Kai relay in `@keboola/api-client/sdk/dataAppServer` (`kbc.kai`, on the backend) and `@keboola/kai-app-chat` (`<KaiChat />` and the headless `useKaiChat()`, in the browser).
 
 ## Service discovery
 
 The Kai service URL is stack-specific. Discover the `kai-agent` service from the Storage API services list rather than hard-coding it. Do not use `kai-assistant`: it is the legacy backend and does not apply the app's scoping.
 
-**Python:**
 ```python
 from kai_client import KaiClient
 
 async def make_client() -> KaiClient:
     return await KaiClient.from_storage_api(**kai_credentials())  # discovers kai-agent
-```
-
-**JS:**
-```javascript
-async function discoverKaiUrl(storageApiUrl, storageApiToken) {
-  const res = await fetch(`${storageApiUrl.replace(/\/$/, '')}/v2/storage`, {
-    headers: { 'x-storageapi-token': storageApiToken },
-  });
-  if (!res.ok) throw new Error(`Storage API discovery failed: ${res.status}`);
-  const data = await res.json();
-  const kai = (data.services || []).find((s) => s.id === 'kai-agent');
-  if (!kai?.url) throw new Error('kai-agent service not found');
-  return kai.url.replace(/\/$/, '');
-}
 ```
 
 Cache the discovered URL after the first lookup — it doesn't change for the lifetime of the app.
@@ -282,135 +241,33 @@ elif prompt := st.chat_input("Ask about your project data"):
     st.session_state.messages.append({"role": "assistant", "content": full})
 ```
 
-## Pattern B — JS data-app embed
+## Pattern B — JS data-app embed (`KaiChat`)
 
-Express backend proxies POST requests to Kai and streams the SSE response back to the browser unchanged. The backend adds the headers; the browser sends only the chat id and the text.
+The backend mounts the Kai relay from `@keboola/api-client`, and the page renders `<KaiChat />` (or the headless `useKaiChat()`) from `@keboola/kai-app-chat`. The relay picks the token and sends the headers by §Token and headers, keeps each visitor's chats apart, and declines every approval.
 
-```javascript
-import express from 'express';
-const app = express();
-app.use(express.json());
-
-let kaiBaseUrl = null;
-async function getKaiUrl(creds) {
-  if (kaiBaseUrl) return kaiBaseUrl;
-  kaiBaseUrl = await discoverKaiUrl(creds.url, creds.token);
-  return kaiBaseUrl;
-}
-
-app.post('/api/chat', async (req, res) => {
-  let creds;
-  try {
-    creds = kaiCredentials();
-  } catch (err) {
-    return res.status(503).json({ error: err.message }); // Kai is off; the rest of the app runs
-  }
-  try {
-    const { chatId, text } = req.body;
-    const upstream = await fetch(`${await getKaiUrl(creds)}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...kaiHeaders(creds) },
-      body: JSON.stringify({
-        id: chatId, // UUID, one per conversation
-        message: { id: crypto.randomUUID(), role: 'user', parts: [{ type: 'text', text }] },
-        selectedVisibilityType: 'private',
-        supportsApprovalRequestedEvent: true,
-      }),
-    });
-    if (!upstream.ok) {
-      return res.status(upstream.status).json({ error: await upstream.text() });
-    }
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(decoder.decode(value, { stream: true }));
-    }
-    res.end();
-  } catch (err) {
-    if (res.headersSent) return res.end();
-    res.status(502).json({ error: String(err) });
-  }
-});
-
-// Tool approval: a plain JSON call. The chat stream from /api/chat stays open and
-// continues with the tool output once Kai gets the decision (see §Tool approval).
-app.post('/api/chat/:chatId/approval', async (req, res) => {
-  let creds;
-  try {
-    creds = kaiCredentials();
-  } catch (err) {
-    return res.status(503).json({ error: err.message });
-  }
-  const { toolUseId, approved, reason } = req.body;
-  // Every visitor is the same Kai user, and kai-agent approves whatever tool waits: only "no" passes.
-  if (approved !== false) {
-    return res.status(403).json({ error: 'Visitors of this app can only decline Kai actions.' });
-  }
-  const chatId = encodeURIComponent(req.params.chatId);
-  const upstream = await fetch(`${await getKaiUrl(creds)}/api/chat/${chatId}/approval`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...kaiHeaders(creds) },
-    body: JSON.stringify({ toolUseId, approved: false, ...(reason && { reason }) }),
-  });
-  res.status(upstream.status).json(await upstream.json().catch(() => ({})));
-});
+```bash
+npm i @keboola/kai-app-chat@^0.1.0 @keboola/api-client@^62   # the template's api-client predates kbc.kai
 ```
 
-The frontend reads the SSE stream with `fetch` and a manual reader (`EventSource` supports only GET). Kai's frames are `data: <json>` lines with the event type inside the JSON, ending with `data: [DONE]`:
+How to wire them, after the install (the installed version's own docs, so read them rather than guess):
 
-```javascript
-async function sendMessage(chatId, text, onEvent) {
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chatId, text }),
-  });
-  if (!res.ok) throw new Error((await res.json()).error);
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    // SSE frames are separated by a blank line; each frame is "data: <json>\n"
-    const frames = buffer.split('\n\n');
-    buffer = frames.pop();
-    for (const frame of frames) {
-      const line = frame.split('\n').find((l) => l.startsWith('data: '));
-      if (!line || line === 'data: [DONE]') continue;
-      // e.g. { type: 'text-delta', delta }, { type: 'error', errorText }
-      onEvent(JSON.parse(line.slice(6)));
-    }
-  }
-}
-```
+- `node_modules/@keboola/kai-app-chat/README.md`: the server mount, the `styles.css` import, `<KaiChat />` props, `useKaiChat()`.
+- `node_modules/@keboola/api-client/docs/query-service.md` §Kai for the app's visitors: the relay's routes, limits and errors.
 
-**Important:** disable nginx buffering for `/api/chat` in `keboola-config/nginx/sites/default.conf` or the response arrives all at once:
+What the package docs don't say:
 
-```nginx
-location /api/chat {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_buffering off;
-    proxy_cache off;
-    proxy_set_header Host $host;
-    proxy_http_version 1.1;
-    proxy_set_header Connection '';
-}
-```
+- In `templates/react-vite-app`, mount the relay in `server/index.ts` on the `kbc` from `server/kbcQuery.ts`, before the `/api` 404 catch-all.
+- In the Python+Node template Python owns `/api/*`, and `KaiChat` needs this relay; there call Kai with kai-client from Python and draw your own chat.
+- No nginx change: the relay turns off buffering for its stream.
+- Local dev without `runtime.kai` may use a project member's token through the relay's personal-token option. Remove the option before you deploy (§Token and headers, rule 3).
 
 ## Tool approval
 
 Most tools run without asking. A tool that changes something, or an interactive question Kai asks the user, waits for a decision, and on `kai-agent` the chat stream **stays open** meanwhile:
 
-1. The stream emits `{ type: 'tool-approval-request', toolCallId, approvalId }` (JS: send `supportsApprovalRequestedEvent: true` in the chat request, as above).
-2. Decline it, and tell the user what Kai wanted. **A data app never approves:** every visitor is the same Kai user, and kai-agent approves whatever tool is waiting, a write included, whatever `answers` the request carries. So the backend forwards only `approved: false`, and refuses an approval from the browser (Pattern B). Kai's questions (`AskUserQuestion`) are declined too, as in Streamlit.
-3. The backend POSTs the decision to `{kai}/api/chat/{chatId}/approval` with the same headers and `{ "toolUseId": "<toolCallId>", "approved": false, "reason": "<why>" }`.
+1. The stream emits `{ type: 'tool-approval-request', toolCallId, approvalId }` when the chat request sends `supportsApprovalRequestedEvent: true`.
+2. Decline it, and tell the user what Kai wanted. **A data app never approves:** every visitor is the same Kai user, and kai-agent approves whatever tool is waiting, a write included, whatever `answers` the request carries. So the backend forwards only `approved: false`; in a JS app the relay enforces this (Pattern B). Kai's questions (`AskUserQuestion`) are declined too, as in Streamlit.
+3. The backend (kai-client in Python, the relay in JS) POSTs the decision to `{kai}/api/chat/{chatId}/approval` with the same headers and `{ "toolUseId": "<toolCallId>", "approved": false, "reason": "<why>" }`.
 4. The original stream continues with the tool's output.
 
 Responses to the POST:
@@ -422,7 +279,7 @@ Python: from 0.14.0, kai-client's `send_message()` sends `supportsApprovalReques
 
 ## Pre-built skills
 
-This reference covers awareness + the minimum embed pattern. For production-quality integration (full chat UI, history, voting, tool-approval UX, SSE reconnection), install the `kai-client` plugin's dedicated `kai-streamlit` / `kai-js` skills.
+This reference covers awareness + the minimum embed pattern. A JS app gets the full chat UI from `KaiChat` (Pattern B). For Streamlit beyond this sketch, see the `kai-client` plugin's `kai-streamlit` skill.
 
 ## DIY alternative — Anthropic SDK directly
 

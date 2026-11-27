@@ -60,9 +60,9 @@ Useful sub-docs in that repo:
 
 Source: https://github.com/keboola/kai-client
 
-Python async client for the Keboola AI Assistant (Kai). Provides SSE streaming, session management, tool-approval flow, and a `kai` CLI; it talks to the `kai-agent` backend by default. JS apps integrate by proxying HTTP requests to the same `/api/chat` endpoint — no separate JS package needed.
+Python async client for the Keboola AI Assistant (Kai). Provides SSE streaming, session management, tool-approval flow, and a `kai` CLI; it talks to the `kai-agent` backend by default. JS apps use `@keboola/kai-app-chat` (`<KaiChat />`) with the Kai relay in `@keboola/api-client` instead.
 
-The repo also ships its own skill plugin (`plugins/kai-dataapp/skills/{kai-js, kai-streamlit}`) covering deeper integration patterns (full chat UI, history, voting, tool-approval UX).
+The repo also ships its own skill plugin (`plugins/kai-dataapp/skills/kai-streamlit`) for deeper Streamlit patterns.
 
 Install (Python apps):
 

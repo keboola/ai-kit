@@ -46,7 +46,7 @@
 
 **Cause:** Nginx buffers the entire upstream response before forwarding (SSE / long responses).
 
-**Fix:** `proxy_buffering off; proxy_cache off; proxy_request_buffering off;` in the relevant location block. See [python-js-apps.md](python-js-apps.md) §Nginx (SSE snippet); for Kai chat specifically, [kai-integration.md](kai-integration.md) §Pattern B.
+**Fix:** `proxy_buffering off; proxy_cache off; proxy_request_buffering off;` in the relevant location block. See [python-js-apps.md](python-js-apps.md) §Nginx (SSE snippet). The Kai relay in a JS app turns buffering off itself ([kai-integration.md](kai-integration.md) §Pattern B).
 
 ## App won't start / restart loop
 
@@ -157,7 +157,7 @@
 - 400 `Invalid x-workspace-id header; expected a positive integer` — `WORKSPACE_ID` is not numeric; see §Non-numeric `WORKSPACE_ID`.
 - 401 `Invalid storage API token` — the Kai token expired (90 days after the deploy) or was revoked.
 
-**Fix:** Send `KAI_STORAGE_API_TOKEN` (with `runtime.kai.enabled`) and `x-workspace-id: $WORKSPACE_ID` on every Kai request; redeploy the app for a fresh token. See [kai-integration.md](kai-integration.md) §Token and headers.
+**Fix:** Send `KAI_STORAGE_API_TOKEN` (with `runtime.kai.enabled`) and `x-workspace-id: $WORKSPACE_ID` on every Kai request (a JS app's api-client relay sends both); redeploy the app for a fresh token. See [kai-integration.md](kai-integration.md) §Token and headers.
 
 ## Reading logs
 
