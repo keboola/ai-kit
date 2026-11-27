@@ -268,7 +268,7 @@ import { KaiChat } from '@keboola/kai-app-chat';
 />
 ```
 
-- `<KaiChat />` renders nothing while the app has no Kai (its `/config` says off), so the rest of the app keeps working. Other props (`title`, `context`, `placement`, `colorScheme`, `defaultOpen`): the package README.
+- `<KaiChat />` renders nothing while the app has no Kai (its `/config` says off), so the rest of the app keeps working. The panel's code loads on first open, so the page's first load stays small. Other props (`title`, `context`, `placement`, `colorScheme`, `defaultOpen`): the package README.
 - For your own chat UI, use the headless `useKaiChat()` from the same package.
 - A Fetch server (not Express) calls `kbc.kai.handle(request)` instead.
 - In the Python+Node template Python owns `/api/*`, and `KaiChat` needs this relay; there call Kai with kai-client from Python and draw your own chat.
