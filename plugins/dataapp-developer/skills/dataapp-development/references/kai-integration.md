@@ -11,6 +11,8 @@
 - Service discovery
 - Pattern A — Streamlit embed
 - Pattern B — JS data-app embed (`KaiChat`)
+- Pattern C — FastAPI backend relay
+- Rendering Kai's answer
 - Tool approval
 - Pre-built skills
 - DIY alternative — Anthropic SDK directly
@@ -52,6 +54,24 @@ Turning Kai on does not change a running app: **deploy the app again** after tur
 3. Sets `KAI_ENABLED=1`.
 
 Apps without `runtime.kai` are unchanged. Like Storage access, the setting lives in the app's Storage configuration, so a draft and its prod app each need it.
+
+### With kbagent
+
+`config update --merge` deep-merges the JSON into the app's configuration, so one call maps the tables, turns on the workspace and turns on Kai. This body gives strict mode (see §What Kai can reach in the app):
+
+```bash
+kbagent config update --project P --component-id keboola.data-apps --config-id CONFIG_ID --merge \
+  --change-description "Map the app's tables, enable Kai" \
+  --configuration '{
+    "storage": {"input": {"read_only_storage_access": false, "tables": [
+      {"source": "in.c-sales.orders", "load_strategy": "direct-grant"}
+    ]}},
+    "runtime": {"workspace": {"enabled": true}, "kai": {"enabled": true}}
+  }'
+kbagent data-app deploy --project P --app-id APP_ID --wait
+```
+
+`CONFIG_ID` is in the output of `kbagent data-app detail --project P --app-id APP_ID`. After the deploy the app's environment has `KAI_ENABLED`, `KAI_STORAGE_API_TOKEN` and a new `WORKSPACE_ID`: a deploy can replace the workspace, so read `WORKSPACE_ID` from the environment and never store it.
 
 ## Token and headers
 
@@ -97,6 +117,7 @@ What Kai reaches depends on the app's input mapping:
 
 - **Direct-grant input mapping** (`storage.input.read_only_storage_access: false`) — Kai runs in strict mode:
   - It sees only the buckets of the tables named by `source` in the input mapping and `destination` in the output mapping that exist at deploy time, and queries only the tables mapped into the workspace. A table mapped with `source_search` and file input never get a grant. An app with no mapping gives Kai no data at all.
+  - The grant is per bucket, not per table. Kai lists every table of such a bucket with its columns and row count, also the ones the app does not map, and the token itself can read their rows through the Storage API. Only Kai's SQL is limited to the mapped tables. Keep a table the app must not expose in a bucket the app does not map.
   - It gets only read tools: `query_data` (read-only SQL), `get_buckets`, `get_tables`, `get_project_info` and `docs_query`.
   - Kai can still ask the user a question (`AskUserQuestion`), which waits for a decision like a write (see §Tool approval).
 - **Read-only Storage access** (the default) — Kai's token reads every bucket that exists in the app's branch at deploy time, and its queries run in the app's workspace, which reads the whole project's Storage (also a bucket created after the deploy, which Kai's token does not list). Kai is still offered its write tools, which ask for approval (see §Tool approval), but Storage refuses them. Use strict mode to keep Kai to the app's own data and to the read tools.
@@ -257,9 +278,182 @@ How to wire them, after the install (the installed version's own docs, so read t
 What the package docs don't say:
 
 - In `templates/react-vite-app`, mount the relay in `server/index.ts` on the `kbc` from `server/kbcQuery.ts`, before the `/api` 404 catch-all.
-- In the Python+Node template Python owns `/api/*`, and `KaiChat` needs this relay; there call Kai with kai-client from Python and draw your own chat.
+- In the Python+Node template Python owns `/api/*`, and `KaiChat` needs this relay; there relay Kai from Python (Pattern C) and draw your own chat (§Rendering Kai's answer).
 - No nginx change: the relay turns off buffering for its stream.
 - Local dev without `runtime.kai` may use a project member's token through the relay's personal-token option. Remove the option before you deploy (§Token and headers, rule 3).
+
+## Pattern C — FastAPI backend relay
+
+For an app with a Python backend (`templates/python-node-app/`), where `KaiChat` cannot be used (Pattern B). The backend passes Kai's stream to the browser unchanged, and the page draws its own chat (§Rendering Kai's answer). It needs `httpx` in the backend's dependencies. The relay also declines every tool that waits for a decision (see §Tool approval), so the browser needs no approval call. Unlike the JS relay it does not keep visitors' chats apart: keep each visitor's chat id in their own session (§What Kai can reach in the app).
+
+```python
+import json
+import os
+import uuid
+
+import httpx
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
+
+router = APIRouter()  # in main.py: app.include_router(router)
+DECLINE_REASON = "This app cannot show approvals or questions to the user. Continue without them."
+_kai_url: str | None = None
+
+
+def kai_headers() -> dict[str, str]:
+    """Headers of a Kai request; raises RuntimeError when Kai is off in this run (see §Token and headers)."""
+    token = os.environ.get("KAI_STORAGE_API_TOKEN")
+    if not token:
+        if os.environ.get("KAI_ENABLED", "").strip().lower() not in ("", "0", "false", "no", "off"):
+            raise RuntimeError("Kai is not available in this run of the app.")
+        token = os.environ.get("STORAGE_API_TOKEN")  # local development only
+    url = os.environ.get("KBC_URL")
+    if not token or not url:
+        raise RuntimeError("Kai needs KBC_URL and KAI_STORAGE_API_TOKEN or STORAGE_API_TOKEN.")
+    headers = {"x-storageapi-token": token, "x-storageapi-url": url}
+    if os.environ.get("WORKSPACE_ID"):
+        headers["x-workspace-id"] = os.environ["WORKSPACE_ID"]
+    return headers
+
+
+async def kai_url() -> str:
+    global _kai_url
+    if _kai_url is None:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(f"{os.environ['KBC_URL'].rstrip('/')}/v2/storage")
+            response.raise_for_status()
+        services = {s["id"]: s["url"] for s in response.json().get("services", [])}
+        _kai_url = services["kai-agent"].rstrip("/")  # KeyError: the stack has no kai-agent
+    return _kai_url
+
+
+async def decline(client: httpx.AsyncClient, url: str, headers: dict, chat_id: str, tool_call_id: str) -> None:
+    """Decline a waiting tool so the turn goes on; one retry on 404 (see §Tool approval)."""
+    body = {"toolUseId": tool_call_id, "approved": False, "reason": DECLINE_REASON}
+    for _ in range(2):
+        try:
+            response = await client.post(f"{url}/api/chat/{chat_id}/approval", headers=headers, json=body, timeout=30)
+        except httpx.HTTPError:
+            return
+        if response.status_code != 404:
+            return
+
+
+class ChatRequest(BaseModel):
+    chatId: str = Field(pattern=r"^[0-9a-f-]{36}$")  # UUID, one per conversation
+    text: str = Field(min_length=1, max_length=8000)
+
+
+@router.post("/api/chat")
+async def chat(request: ChatRequest):
+    try:
+        headers = kai_headers()
+    except RuntimeError as e:
+        return JSONResponse({"error": str(e)}, status_code=503)  # Kai is off; the rest of the app runs
+    try:
+        url = await kai_url()
+    except (httpx.HTTPError, KeyError) as e:
+        return JSONResponse({"error": f"Kai service discovery failed: {e!r}"}, status_code=502)
+    body = {
+        "id": request.chatId,
+        "message": {"id": str(uuid.uuid4()), "role": "user", "parts": [{"type": "text", "text": request.text}]},
+        "selectedVisibilityType": "private",
+        "supportsApprovalRequestedEvent": True,
+        "client": "data-app",
+    }
+    client = httpx.AsyncClient(timeout=httpx.Timeout(600, connect=30))
+    try:
+        upstream = await client.send(client.build_request("POST", f"{url}/api/chat", headers=headers, json=body), stream=True)
+    except httpx.HTTPError as e:
+        await client.aclose()
+        return JSONResponse({"error": f"Kai request failed: {e!r}"}, status_code=502)
+    if upstream.status_code >= 300:
+        text = (await upstream.aread()).decode(errors="replace")
+        await upstream.aclose()
+        await client.aclose()
+        return JSONResponse({"error": text[:1000]}, status_code=upstream.status_code)
+
+    async def relay():
+        pending = b""
+        try:
+            async for chunk in upstream.aiter_raw():
+                yield chunk  # the browser gets Kai's SSE frames unchanged
+                pending += chunk
+                *lines, pending = pending.split(b"\n")
+                for line in lines:
+                    if not line.startswith(b"data:") or b"tool-approval-request" not in line:
+                        continue
+                    try:
+                        event = json.loads(line[5:])
+                    except ValueError:
+                        continue
+                    if event.get("type") == "tool-approval-request" and event.get("toolCallId"):
+                        await decline(client, url, headers, request.chatId, event["toolCallId"])
+        finally:
+            await upstream.aclose()
+            await client.aclose()
+
+    return StreamingResponse(relay(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+```
+
+Disable nginx buffering for the route, or the answer arrives in one piece at the end: a `location /api/chat` block with the SSE snippet from [python-js-apps.md](python-js-apps.md) §Nginx and a long `proxy_read_timeout` (e.g. `600s`), before the general `location /api/`.
+
+In the browser, read the stream and hand each event to the chat (§Rendering Kai's answer):
+
+```javascript
+async function sendMessage(chatId, text, onEvent) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chatId, text }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    // SSE frames are separated by a blank line; each frame is "data: <json>\n"
+    const frames = buffer.split('\n\n');
+    buffer = frames.pop();
+    for (const frame of frames) {
+      const line = frame.split('\n').find((l) => l.startsWith('data: '));
+      if (!line || line === 'data: [DONE]') continue;
+      // e.g. { type: 'text-delta', delta }, { type: 'error', errorText }
+      onEvent(JSON.parse(line.slice(6)));
+    }
+  }
+}
+```
+
+## Rendering Kai's answer
+
+Kai's stream is more than text, and its text is more than plain markdown. Kai writes for the chat in the Keboola UI: an app that prints `text-delta` as it comes shows raw JSON blocks and `icon:` words to the user.
+
+Events in the stream (`data: <json>` lines, the type inside the JSON):
+
+| `type` | Fields | What to do |
+|---|---|---|
+| `text-start`, `text-delta`, `text-end` | `delta` | One text block per `text-start`. Kai writes several in one answer, with tool calls between them: start a new paragraph on `text-start`, or the blocks run together. |
+| `tool-input-available` | `toolCallId`, `toolName`, `input` | A tool call. Keboola tools are named `mcp__keboola__<tool>`; `input` of `query_data` has `sql_query` and `query_name`. Show the name, and the SQL on demand. |
+| `tool-output-available` | `toolCallId`, `output` | The tool finished. For a Keboola tool the result is in `output.structuredContent`; a declined tool has `output._declined: true`. |
+| `tool-output-error` | `toolCallId`, `errorText` | The tool failed, e.g. Storage or the workspace refused the access. Kai goes on and explains it in the text. |
+| `tool-approval-request` | `toolCallId` | A tool waits for a decision — see §Tool approval. |
+| `error` | `errorText` | The turn is over. |
+| `finish`, `start`, `tool-input-start`, `data-*` | | Ignore. `finish` also comes between the steps of one answer. |
+
+Markup in the text, besides GitHub-flavoured markdown (tables included — use a renderer with GFM, e.g. `react-markdown` with `remark-gfm`):
+
+- **```` ```next_actions ````** — the answer ends with a list of suggested follow-up prompts, one per `- ` line. Cut the block out of the text and show the lines as buttons that send the prompt.
+- **```` ```flint ````** — a chart as JSON: `data.values` (rows), `chart_spec.chartType` (`Bar Chart`, `Grouped Bar Chart`, `Stacked Bar Chart`, `Line Chart`, `Area Chart`, `Scatter Plot`, `Pie Chart`, `Donut Chart`, `Histogram`, `Heatmap`) and `chart_spec.encodings.x.field` / `.y.field`, optionally `.color.field`. Draw it with the app's chart library, or cut it out: Kai always states the numbers in the text too.
+- **```` ```mermaid ````** — a diagram. Render it with Mermaid or cut it out.
+- **`icon:<name>`** — an inline icon (e.g. `icon:lock` before a refusal) from the Keboola UI's icon set. Remove the word, or map the few names the app cares about.
+- Links to tables and buckets point into the Keboola UI, which a visitor of the app may have no access to.
+
+While the answer streams, a block can be incomplete: hide a fenced block until its closing fence arrives.
 
 ## Tool approval
 
