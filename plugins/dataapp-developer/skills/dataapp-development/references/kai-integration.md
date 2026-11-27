@@ -116,7 +116,7 @@ It needs **kai-client 0.14.0 or later**, which this reference describes:
 
 If 0.14.0 is not on PyPI yet, install its tag from GitHub: `uv add "kai-client @ git+https://github.com/keboola/kai-client@v0.14.0"`.
 
-JS apps use two packages: the Kai relay in `@keboola/api-client/sdk/dataAppServer` (`kbc.kai`, on the backend, already in the template) and `@keboola/kai-app-chat` (`<KaiChat />` and the headless `useKaiChat()`, in the browser).
+JS apps use two packages: the Kai relay in `@keboola/api-client/sdk/dataAppServer` (`kbc.kai`, on the backend) and `@keboola/kai-app-chat` (`<KaiChat />` and the headless `useKaiChat()`, in the browser).
 
 ## Service discovery
 
@@ -243,10 +243,10 @@ elif prompt := st.chat_input("Ask about your project data"):
 
 ## Pattern B — JS data-app embed (`KaiChat`)
 
-The backend mounts the Kai relay from `@keboola/api-client`, and the page renders `<KaiChat />` from `@keboola/kai-app-chat`. The relay picks the token and sends the headers by §Token and headers, keeps each visitor's chats apart, and declines every approval. Details: `@keboola/api-client` › `docs/query-service.md` › "Kai for the app's visitors".
+The backend mounts the Kai relay from `@keboola/api-client`, and the page renders `<KaiChat />` from `@keboola/kai-app-chat`. The relay picks the token and sends the headers by §Token and headers, keeps each visitor's chats apart, and declines every approval. Details: ["Kai for the app's visitors"](https://github.com/keboola/ui/blob/main/packages/api-client/docs/query-service.md#kai-for-the-apps-visitors) in the api-client docs.
 
 ```bash
-npm i @keboola/kai-app-chat
+npm i @keboola/kai-app-chat @keboola/api-client@latest   # the template's api-client predates kbc.kai
 ```
 
 ```ts
@@ -271,6 +271,7 @@ import { KaiChat } from '@keboola/kai-app-chat';
 - `<KaiChat />` renders nothing while the app has no Kai (its `/config` says off), so the rest of the app keeps working. Other props (`title`, `context`, `placement`, `colorScheme`, `defaultOpen`): the package README.
 - For your own chat UI, use the headless `useKaiChat()` from the same package.
 - A Fetch server (not Express) calls `kbc.kai.handle(request)` instead.
+- In the Python+Node template Python owns `/api/*`, and `KaiChat` needs this relay; there call Kai with kai-client from Python and draw your own chat.
 - No nginx change: the relay turns off buffering for its stream.
 - Local dev without `runtime.kai`: put a project member's token into `.env` as `STORAGE_API_TOKEN` and use `initializeApp({ kai: { allowPersonalToken: true } })`. Remove the option before you deploy (§Token and headers, rule 3).
 
