@@ -246,7 +246,7 @@ elif prompt := st.chat_input("Ask about your project data"):
 The backend mounts the Kai relay from `@keboola/api-client`, and the page renders `<KaiChat />` (or the headless `useKaiChat()`) from `@keboola/kai-app-chat`. The relay picks the token and sends the headers by §Token and headers, keeps each visitor's chats apart, and declines every approval.
 
 ```bash
-npm i @keboola/kai-app-chat @keboola/api-client@latest   # the template's api-client predates kbc.kai
+npm i @keboola/kai-app-chat@^0.1.0 @keboola/api-client@^62   # the template's api-client predates kbc.kai
 ```
 
 How to wire them, after the install (the installed version's own docs, so read them rather than guess):
