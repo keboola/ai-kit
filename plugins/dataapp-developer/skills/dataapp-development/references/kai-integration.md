@@ -243,37 +243,23 @@ elif prompt := st.chat_input("Ask about your project data"):
 
 ## Pattern B — JS data-app embed (`KaiChat`)
 
-The backend mounts the Kai relay from `@keboola/api-client`, and the page renders `<KaiChat />` from `@keboola/kai-app-chat`. The relay picks the token and sends the headers by §Token and headers, keeps each visitor's chats apart, and declines every approval. Details: ["Kai for the app's visitors"](https://github.com/keboola/ui/blob/main/packages/api-client/docs/query-service.md#kai-for-the-apps-visitors) in the api-client docs.
+The backend mounts the Kai relay from `@keboola/api-client`, and the page renders `<KaiChat />` (or the headless `useKaiChat()`) from `@keboola/kai-app-chat`. The relay picks the token and sends the headers by §Token and headers, keeps each visitor's chats apart, and declines every approval.
 
 ```bash
 npm i @keboola/kai-app-chat @keboola/api-client@latest   # the template's api-client predates kbc.kai
 ```
 
-```ts
-// server/index.ts: `kbc` from server/kbcQuery.ts (`initializeApp()`); mount before the `/api` 404 catch-all
-app.use('/api/kai', kbc.kai.expressHandler());
-```
+How to wire them, after the install (the installed version's own docs, so read them rather than guess):
 
-```tsx
-// src/main.tsx
-import '@keboola/kai-app-chat/styles.css';
+- `node_modules/@keboola/kai-app-chat/README.md`: the server mount, the `styles.css` import, `<KaiChat />` props, `useKaiChat()`.
+- `node_modules/@keboola/api-client/docs/query-service.md` §Kai for the app's visitors: the relay's routes, limits and errors.
 
-// src/App.tsx
-import { KaiChat } from '@keboola/kai-app-chat';
+What the package docs don't say:
 
-<KaiChat
-  endpoint="/api/kai"
-  greeting="Ask about the numbers on this page."
-  suggestedPrompts={['Why did revenue drop last week?']}
-/>
-```
-
-- `<KaiChat />` renders nothing while the app has no Kai (its `/config` says off), so the rest of the app keeps working. The panel's code loads on first open, so the page's first load stays small. Other props (`title`, `context`, `placement`, `colorScheme`, `defaultOpen`): the package README.
-- For your own chat UI, use the headless `useKaiChat()` from the same package.
-- A Fetch server (not Express) calls `kbc.kai.handle(request)` instead.
+- In `templates/react-vite-app`, mount the relay in `server/index.ts` on the `kbc` from `server/kbcQuery.ts`, before the `/api` 404 catch-all.
 - In the Python+Node template Python owns `/api/*`, and `KaiChat` needs this relay; there call Kai with kai-client from Python and draw your own chat.
 - No nginx change: the relay turns off buffering for its stream.
-- Local dev without `runtime.kai`: put a project member's token into `.env` as `STORAGE_API_TOKEN` and use `initializeApp({ kai: { allowPersonalToken: true } })`. Remove the option before you deploy (§Token and headers, rule 3).
+- Local dev without `runtime.kai` may use a project member's token through the relay's personal-token option. Remove the option before you deploy (§Token and headers, rule 3).
 
 ## Tool approval
 
