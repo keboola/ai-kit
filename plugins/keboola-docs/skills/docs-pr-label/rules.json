@@ -1,0 +1,44 @@
+{
+  "repo": "keboola/connection-docs",
+  "authors": [],
+  "sections": [
+    {
+      "label": "getting-started",
+      "tickets": [
+        "PRDCT-487"
+      ],
+      "paths": [
+        "src/content/docs/getting-started/",
+        "public/getting-started/",
+        "src/components/getting-started/"
+      ]
+    },
+    {
+      "label": "apps-ga",
+      "tickets": [
+        "PRDCT-692",
+        "AJDA-3380"
+      ],
+      "paths": [
+        "src/content/docs/data-apps/",
+        "public/data-apps/"
+      ]
+    }
+  ],
+  "touches": [
+    {
+      "label": "site-tooling",
+      "paths": [
+        "scripts/",
+        "src/integrations/",
+        "astro.config.mjs",
+        "package.json",
+        "package-lock.json",
+        ".github/",
+        "vercel.json",
+        "api/"
+      ]
+    }
+  ],
+  "sectionShare": 0.3
+}

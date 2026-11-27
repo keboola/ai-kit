@@ -1,0 +1,10 @@
+[
+  {"query": "keboola.ex-google-analytics is deprecated, mark it in the description and point to the GA4 extractor", "should_trigger": true},
+  {"query": "the old HubSpot extractor is replaced by HubSpot v2, update its copy so users move", "should_trigger": true},
+  {"query": "компонента устарела, нужно пометить её deprecated в описании и убрать картинки", "should_trigger": true},
+  {"query": "we are removing the revolt-bi smartsupp component from the catalog, what happens to its description", "should_trigger": true},
+  {"query": "delete the old data-apps page on help.keboola.com and add a redirect", "should_trigger": false},
+  {"query": "the Snowflake writer copy is missing a load behaviour line", "should_trigger": false},
+  {"query": "write the component_config copy for a new writer we are publishing", "should_trigger": false},
+  {"query": "run the audit of all component descriptions", "should_trigger": false}
+]

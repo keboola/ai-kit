@@ -1,0 +1,2 @@
+# Raw /v2/storage snapshots are ~7.6 MB and regenerable — kept locally as evidence, not versioned.
+storage-index*.json
